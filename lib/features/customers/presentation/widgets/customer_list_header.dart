@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_sizes.dart';
+import '../../../../core/theme/mf_tokens.dart';
 import '../../../../core/constants/app_strings.dart';
 
 class CustomerListHeader extends StatelessWidget {
@@ -16,15 +14,24 @@ class CustomerListHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark
+        ? MFTokens.textPrimaryDark
+        : MFTokens.textPrimaryLight;
+    final textSecondary = isDark
+        ? MFTokens.textSecondaryDark
+        : MFTokens.textSecondaryLight;
+    final accent = isDark ? MFTokens.primaryDarkMode : MFTokens.accent;
+    final warningBg = isDark ? MFTokens.warningBgDark : MFTokens.warningBg;
+
     return Padding(
-      padding: EdgeInsets.only(
-        left: AppSizes.spacingMedium,
-        right: AppSizes.spacingMedium,
-        top: AppSizes.spacingMedium,
-        bottom: AppSizes.spacingSmall,
+      padding: const EdgeInsets.only(
+        left: MFTokens.sp16,
+        right: MFTokens.sp16,
+        top: MFTokens.sp16,
+        bottom: MFTokens.sp8,
       ),
       child: Row(
-        textDirection: TextDirection.rtl,
         children: [
           Expanded(
             child: Column(
@@ -34,49 +41,49 @@ class CustomerListHeader extends StatelessWidget {
                   AppStrings.customersTitle,
                   style: TextStyle(
                     fontFamily: 'Cairo',
-                    fontSize: AppSizes.fontXXLarge,
+                    fontSize: MFTokens.font2XL,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
+                    color: textPrimary,
                   ),
                 ),
-                SizedBox(height: AppSizes.spacingTiny),
+                const SizedBox(height: MFTokens.sp4),
                 Text(
                   '$totalCount ${AppStrings.customerStore}',
                   style: TextStyle(
                     fontFamily: 'Cairo',
-                    fontSize: AppSizes.fontMedium,
-                    color: AppColors.textSecondary,
+                    fontSize: MFTokens.fontSM,
+                    color: textSecondary,
                   ),
                 ),
               ],
             ),
           ),
-          SizedBox(width: AppSizes.spacingSmall),
+          const SizedBox(width: MFTokens.sp8),
           Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: AppSizes.spacingSmall,
-              vertical: 4.h,
+            padding: const EdgeInsets.symmetric(
+              horizontal: MFTokens.sp8,
+              vertical: 4,
             ),
             decoration: BoxDecoration(
-              color: AppColors.lightOrange,
-              borderRadius: BorderRadius.circular(AppSizes.radiusSmall),
+              color: warningBg,
+              borderRadius: BorderRadius.circular(MFTokens.radiusSM),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
                   Icons.account_balance_wallet_outlined,
-                  size: AppSizes.iconSmall,
-                  color: AppColors.accent,
+                  size: MFTokens.sp16,
+                  color: accent,
                 ),
-                SizedBox(width: AppSizes.spacingSmall),
+                const SizedBox(width: MFTokens.sp8),
                 Text(
                   '${AppStrings.customerDebtsLabel}: ${totalDebt.toInt()} ${AppStrings.currencyEg}',
                   style: TextStyle(
                     fontFamily: 'Cairo',
-                    fontSize: AppSizes.fontMedium,
+                    fontSize: MFTokens.fontSM,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.accent,
+                    color: accent,
                   ),
                 ),
               ],

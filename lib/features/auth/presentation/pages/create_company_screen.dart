@@ -1,16 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:makhzanflow/core/constants/app_colors.dart';
-import 'package:makhzanflow/core/constants/app_sizes.dart';
+import 'package:makhzanflow/core/theme/mf_tokens.dart';
 import 'package:makhzanflow/core/constants/app_routes.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
-import 'package:makhzanflow/core/di/service_locator.dart';
 import 'package:makhzanflow/core/widgets/app_snackbar.dart';
-import 'package:makhzanflow/core/company/company_cubit.dart';
-import 'package:makhzanflow/features/companies/domain/usecases/create_company_full_usecase.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:makhzanflow/features/auth/presentation/cubit/create_company_cubit.dart';
 import 'package:makhzanflow/features/auth/presentation/widgets/logo_picker.dart';
 
@@ -70,93 +64,87 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? MFTokens.surfaceDark : MFTokens.surfaceLight;
+    final textPrimary = isDark ? MFTokens.textPrimaryDark : MFTokens.textPrimaryLight;
+    final textSecondary = isDark ? MFTokens.textSecondaryDark : MFTokens.textSecondaryLight;
+
     return Scaffold(
-      backgroundColor: AppColors.surface,
-      body: BlocProvider(
-        create: (_) => CreateCompanyCubit(
-          createCompanyFullUseCase: sl<CreateCompanyFullUseCase>(),
-          companyCubit: sl<CompanyCubit>(),
-          picker: ImagePicker(),
-          supabase: Supabase.instance.client,
-        ),
-        child: BlocConsumer<CreateCompanyCubit, CreateCompanyState>(
-          listener: (context, state) {
-            if (state.status == CreateCompanyStatus.success) {
-              context.go(AppRoutes.dashboard);
-            } else if (state.status == CreateCompanyStatus.error &&
-                state.errorMessage != null) {
-              AppSnackbar.error(context, state.errorMessage!);
-            }
-          },
-          builder: (context, state) {
-            return SafeArea(
-              child: Column(
-                children: [
-                  _buildHeader(context),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: EdgeInsets.fromLTRB(
-                        AppSizes.spacingMedium,
-                        AppSizes.spacingSmall,
-                        AppSizes.spacingMedium,
-                        AppSizes.spacingMedium,
-                      ),
-                      child: AnimatedBuilder(
-                        animation: _contentSlide,
-                        builder: (context, child) => Opacity(
-                          opacity: _contentFade.value,
-                          child: Transform.translate(
-                            offset: Offset(
-                              0,
-                              AppSizes.spacingLarge * (1 - _contentSlide.value),
-                            ),
-                            child: child,
+      backgroundColor: bg,
+      body: BlocConsumer<CreateCompanyCubit, CreateCompanyState>(
+        listener: (context, state) {
+          if (state.status == CreateCompanyStatus.success) {
+            context.go(AppRoutes.dashboard);
+          } else if (state.status == CreateCompanyStatus.error &&
+              state.errorMessage != null) {
+            AppSnackbar.error(context, state.errorMessage!);
+          }
+        },
+        builder: (context, state) {
+          return SafeArea(
+            child: Column(
+              children: [
+                _buildHeader(context, textPrimary, textSecondary),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(
+                      MFTokens.sp16,
+                      MFTokens.sp8,
+                      MFTokens.sp16,
+                      MFTokens.sp16,
+                    ),
+                    child: AnimatedBuilder(
+                      animation: _contentSlide,
+                      builder: (context, child) => Opacity(
+                        opacity: _contentFade.value,
+                        child: Transform.translate(
+                          offset: Offset(
+                            0,
+                            MFTokens.sp24 * (1 - _contentSlide.value),
                           ),
+                          child: child,
                         ),
-                        child: Form(
-                          key: _formKey,
-                          child: _buildFormContent(context, state),
-                        ),
+                      ),
+                      child: Form(
+                        key: _formKey,
+                        child: _buildFormContent(context, state, textPrimary, textSecondary),
                       ),
                     ),
                   ),
-                ],
-              ),
-            );
-          },
-        ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, Color textPrimary, Color textSecondary) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
-      padding: EdgeInsets.fromLTRB(
-        AppSizes.spacingMedium,
-        AppSizes.spacingTiny,
-        AppSizes.spacingMedium,
-        AppSizes.spacingSmall,
+      padding: const EdgeInsets.fromLTRB(
+        MFTokens.sp16,
+        MFTokens.sp4,
+        MFTokens.sp16,
+        MFTokens.sp8,
       ),
       child: Row(
         children: [
           Container(
-            width: AppSizes.backButtonSize,
-            height: AppSizes.backButtonSize,
-            decoration: const BoxDecoration(
-              color: AppColors.chipBg,
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: isDark ? MFTokens.surfaceMutedDark : MFTokens.surfaceMutedLight,
               shape: BoxShape.circle,
             ),
             child: IconButton(
-              icon: Icon(
-                Icons.arrow_back_rounded,
-                size: AppSizes.backButtonSize / 2,
-                color: AppColors.textDark,
-              ),
+              icon: const Icon(Icons.arrow_back_rounded, size: 18),
               onPressed: () => context.pop(),
               padding: EdgeInsets.zero,
             ),
           ),
-          SizedBox(width: AppSizes.spacingSmall),
+          const SizedBox(width: MFTokens.sp8),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -164,18 +152,18 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen>
                 AppStrings.createBusiness,
                 style: TextStyle(
                   fontFamily: 'Cairo',
-                  fontSize: AppSizes.fontXLarge,
+                  fontSize: MFTokens.fontLG,
                   fontWeight: FontWeight.w400,
-                  color: AppColors.secondary,
+                  color: textPrimary,
                 ),
               ),
               Text(
                 AppStrings.createBusinessSubtitle,
                 style: TextStyle(
                   fontFamily: 'Cairo',
-                  fontSize: AppSizes.fontMedium,
+                  fontSize: MFTokens.fontSM,
                   fontWeight: FontWeight.w400,
-                  color: AppColors.amountGrey,
+                  color: textSecondary,
                 ),
               ),
             ],
@@ -185,7 +173,7 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen>
     );
   }
 
-  Widget _buildFormContent(BuildContext context, CreateCompanyState state) {
+  Widget _buildFormContent(BuildContext context, CreateCompanyState state, Color textPrimary, Color textSecondary) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -199,37 +187,43 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen>
             onClear: () => context.read<CreateCompanyCubit>().clearImage(),
           ),
         ),
-        SizedBox(height: AppSizes.formFieldTopPadding),
+        const SizedBox(height: MFTokens.sp20),
         _buildFormField(
           label: AppStrings.businessNameLabel,
           hint: AppStrings.businessNameHint,
           icon: Icons.store_outlined,
           controller: _nameController,
           enabled: state.status != CreateCompanyStatus.loading,
+          textPrimary: textPrimary,
+          textSecondary: textSecondary,
           validator: (v) => v == null || v.trim().isEmpty
               ? AppStrings.businessNameRequired
               : null,
         ),
-        _buildTypeLabel(),
-        SizedBox(height: AppSizes.spacingTiny),
-        _buildTypeChips(context),
+        _buildTypeLabel(textPrimary),
+        const SizedBox(height: MFTokens.sp4),
+        _buildTypeChips(context, textSecondary),
         _buildFormField(
           label: AppStrings.phone,
-          hint: '01XXXXXXXXX',
+          hint: AppStrings.phoneHint,
           icon: Icons.phone_outlined,
           controller: _phoneController,
           enabled: state.status != CreateCompanyStatus.loading,
           keyboardType: TextInputType.phone,
+          textPrimary: textPrimary,
+          textSecondary: textSecondary,
         ),
         _buildFormField(
           label: AppStrings.address,
-          hint: 'مثال: ١٥ شارع التحرير، القاهرة',
+          hint: AppStrings.addressHint,
           icon: Icons.location_on_outlined,
           controller: _addressController,
           enabled: state.status != CreateCompanyStatus.loading,
           maxLines: 2,
+          textPrimary: textPrimary,
+          textSecondary: textSecondary,
         ),
-        SizedBox(height: AppSizes.spacingLarge),
+        const SizedBox(height: MFTokens.sp24),
         _buildBottomButtons(context, state),
       ],
     );
@@ -240,13 +234,16 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen>
     required String hint,
     required IconData icon,
     required TextEditingController controller,
+    required Color textPrimary,
+    required Color textSecondary,
     bool enabled = true,
     TextInputType? keyboardType,
     String? Function(String?)? validator,
     int maxLines = 1,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
-      padding: EdgeInsets.only(top: AppSizes.spacingLarge),
+      padding: const EdgeInsets.only(top: MFTokens.sp24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -254,21 +251,21 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen>
             label,
             style: TextStyle(
               fontFamily: 'Cairo',
-              fontSize: AppSizes.fontMedium,
+              fontSize: MFTokens.fontSM,
               fontWeight: FontWeight.w500,
-              color: AppColors.darkGrey,
+              color: textSecondary,
             ),
           ),
-          SizedBox(height: AppSizes.spacingSmall),
+          const SizedBox(height: MFTokens.sp8),
           Container(
-            constraints: BoxConstraints(minHeight: AppSizes.fieldHeight),
+            constraints: const BoxConstraints(minHeight: MFTokens.inputHeight),
             decoration: BoxDecoration(
-              color: AppColors.inputBackground,
+              color: isDark ? MFTokens.inputBgDark : MFTokens.inputBgLight,
               border: Border.all(
-                color: AppColors.inputBorder,
-                width: AppSizes.borderWidthThin,
+                color: isDark ? MFTokens.borderDark : MFTokens.borderLight,
+                width: 0.8,
               ),
-              borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
+              borderRadius: BorderRadius.circular(MFTokens.radiusMD),
             ),
             child: TextFormField(
               controller: controller,
@@ -280,18 +277,18 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen>
                 hintText: hint,
                 hintStyle: TextStyle(
                   fontFamily: 'Cairo',
-                  fontSize: AppSizes.fontLarge,
-                  color: AppColors.hintText,
+                  fontSize: MFTokens.fontMD,
+                  color: isDark ? MFTokens.textMutedDark : MFTokens.textMutedLight,
                 ),
                 prefixIcon: Icon(
                   icon,
-                  size: AppSizes.fieldIconSize,
-                  color: AppColors.hintText,
+                  size: 14,
+                  color: isDark ? MFTokens.textMutedDark : MFTokens.textMutedLight,
                 ),
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(
-                  horizontal: AppSizes.spacingSmall,
-                  vertical: maxLines > 1 ? AppSizes.spacingSmall : 0,
+                  horizontal: MFTokens.sp8,
+                  vertical: maxLines > 1 ? MFTokens.sp8 : 0,
                 ),
               ),
             ),
@@ -301,52 +298,57 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen>
     );
   }
 
-  Widget _buildTypeLabel() {
+  Widget _buildTypeLabel(Color textSecondary) {
     return Padding(
-      padding: EdgeInsets.only(top: AppSizes.spacingLarge),
+      padding: const EdgeInsets.only(top: MFTokens.sp24),
       child: Text(
         AppStrings.businessTypeLabel,
         style: TextStyle(
           fontFamily: 'Cairo',
-          fontSize: AppSizes.fontMedium,
+          fontSize: MFTokens.fontSM,
           fontWeight: FontWeight.w500,
-          color: AppColors.darkGrey,
+          color: textSecondary,
         ),
       ),
     );
   }
 
-  Widget _buildTypeChips(BuildContext context) {
+  Widget _buildTypeChips(BuildContext context, Color textSecondary) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
-      padding: EdgeInsets.only(top: AppSizes.spacingTiny),
+      padding: const EdgeInsets.only(top: MFTokens.sp4),
       child: Wrap(
-        spacing: AppSizes.spacingTiny,
-        runSpacing: AppSizes.spacingTiny,
+        spacing: MFTokens.sp4,
+        runSpacing: MFTokens.sp4,
         children: _businessTypes.map((type) {
           final isSelected = _selectedType == type;
           return GestureDetector(
             onTap: () => setState(() => _selectedType = type),
             child: Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: AppSizes.spacingSmall + 2,
-                vertical: AppSizes.spacingTiny / 2,
+              padding: const EdgeInsets.symmetric(
+                horizontal: MFTokens.sp10,
+                vertical: MFTokens.sp2,
               ),
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.lightGreen : AppColors.chipBg,
+                color: isSelected
+                    ? (isDark ? MFTokens.primaryDarkModeSubtle : MFTokens.primarySubtle)
+                    : (isDark ? MFTokens.surfaceMutedDark : MFTokens.surfaceMutedLight),
                 border: isSelected
                     ? Border.all(
-                        color: AppColors.primary.withValues(alpha: 0.19),
-                        width: AppSizes.borderWidthThin,
+                        color: (isDark ? MFTokens.primaryDarkMode : MFTokens.primary).withValues(alpha: 0.19),
+                        width: 0.8,
                       )
                     : null,
-                borderRadius: BorderRadius.circular(AppSizes.radiusXXLarge),
+                borderRadius: BorderRadius.circular(MFTokens.radiusXXL),
               ),
               child: Text(
                 type,
                 style: TextStyle(
                   fontFamily: 'Cairo',
-                  fontSize: AppSizes.chipFontSize,
-                  color: isSelected ? AppColors.primary : AppColors.amountGrey,
+                  fontSize: MFTokens.fontXS,
+                  color: isSelected
+                      ? (isDark ? MFTokens.primaryDarkMode : MFTokens.primary)
+                      : textSecondary,
                 ),
               ),
             ),
@@ -357,67 +359,51 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen>
   }
 
   Widget _buildBottomButtons(BuildContext context, CreateCompanyState state) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textSecondary = isDark ? MFTokens.textSecondaryDark : MFTokens.textSecondaryLight;
     final isLoading = state.status == CreateCompanyStatus.loading;
 
     return Row(
       children: [
         Expanded(
           child: SizedBox(
-            height: AppSizes.buttonBottomHeight,
+            height: MFTokens.buttonHeightMD,
             child: OutlinedButton(
               onPressed: isLoading ? null : () => context.pop(),
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(
-                  color: AppColors.inputBorder,
-                  width: AppSizes.borderWidthThin,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
-                ),
-              ),
               child: Text(
                 AppStrings.cancelButton,
                 style: TextStyle(
                   fontFamily: 'Cairo',
-                  fontSize: AppSizes.fontLarge,
+                  fontSize: MFTokens.fontMD,
                   fontWeight: FontWeight.w500,
-                  color: AppColors.darkGrey,
+                  color: textSecondary,
                 ),
               ),
             ),
           ),
         ),
-        SizedBox(width: AppSizes.spacingSmall),
+        const SizedBox(width: MFTokens.sp8),
         Expanded(
           child: SizedBox(
-            height: AppSizes.buttonBottomHeight,
+            height: MFTokens.buttonHeightMD,
             child: ElevatedButton(
               onPressed: isLoading ? null : () => _submitForm(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.white,
-                shadowColor: AppColors.primary.withValues(alpha: 0.25),
-                elevation: 8,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
-                ),
-              ),
               child: isLoading
-                  ? SizedBox(
-                      width: AppSizes.iconMedium,
-                      height: AppSizes.iconMedium,
+                  ? const SizedBox(
+                      width: MFTokens.sp24,
+                      height: MFTokens.sp24,
                       child: CircularProgressIndicator(
-                        strokeWidth: AppSizes.strokeWidthMedium,
-                        color: AppColors.white,
+                        strokeWidth: 2,
+                        color: MFTokens.textOnPrimary,
                       ),
                     )
                   : Text(
                       AppStrings.createBusinessButton,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontFamily: 'Cairo',
-                        fontSize: AppSizes.fontLarge,
+                        fontSize: MFTokens.fontMD,
                         fontWeight: FontWeight.w500,
-                        color: AppColors.white,
+                        color: MFTokens.textOnPrimary,
                       ),
                     ),
             ),
@@ -437,4 +423,3 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen>
     );
   }
 }
-

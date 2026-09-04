@@ -64,7 +64,13 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
 
   Future<void> _loadJoinCode() async {
     setState(() => _joinCodeLoading = true);
-    final code = await context.read<CompanySettingsCubit>().getJoinCode();
+    final companyState = context.read<CompanyCubit>().state;
+    final companyId = companyState is CompanySelected ? companyState.company.id : null;
+    if (companyId == null) {
+      setState(() => _joinCodeLoading = false);
+      return;
+    }
+    final code = await context.read<CompanySettingsCubit>().getJoinCode(companyId);
     if (mounted) {
       setState(() {
         _joinCode = code;
@@ -232,7 +238,7 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
         ),
         _buildFormField(
           label: AppStrings.phone,
-          hint: '01XXXXXXXXX',
+          hint: AppStrings.phoneHint,
           icon: Icons.phone_outlined,
           controller: _phoneController,
           enabled: !isLoading,
@@ -257,7 +263,7 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
         // -- Join Code Section (owner-only) --
         if (isOwner) ...[
           SizedBox(height: AppSizes.spacingLarge),
-          _buildSectionTitle('رمز الدعوة'),
+          _buildSectionTitle(AppStrings.inviteCode),
           SizedBox(height: AppSizes.spacingSmall),
           _joinCodeLoading
               ? Center(child: CircularProgressIndicator())
@@ -266,13 +272,13 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
                       code: _joinCode!,
                       onCopy: () {
                         Clipboard.setData(ClipboardData(text: _joinCode!));
-                        AppSnackbar.success(context, 'تم نسخ الرمز');
+                        AppSnackbar.success(context, AppStrings.codeCopied);
                       },
                       onRegenerate: () => _confirmRegenerateCode(),
                     )
                   : ElevatedButton(
                       onPressed: _loadJoinCode,
-                      child: Text('عرض رمز الدعوة'),
+                      child: Text(AppStrings.viewInviteCode),
                     ),
           SizedBox(height: AppSizes.spacingLarge),
           Divider(color: AppColors.inputBorder),
@@ -284,7 +290,7 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
         SizedBox(height: AppSizes.spacingSmall),
         _buildLinkCard(
           icon: Icons.people,
-          label: 'عرض فريق العمل',
+          label: AppStrings.viewTeam,
           onTap: () => context.push('/settings/members'),
         ),
 
@@ -294,10 +300,10 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
         // -- Danger Zone (owner-only) --
         if (isOwner) ...[
           SizedBox(height: AppSizes.spacingLarge),
-          _buildSectionTitle('منطقة الخطر', color: AppColors.error),
+          _buildSectionTitle(AppStrings.dangerZone, color: AppColors.error),
           SizedBox(height: AppSizes.spacingSmall),
           _buildDangerButton(
-            label: 'حذف الشركة',
+            label: AppStrings.deleteCompany,
             icon: Icons.delete_forever,
             onTap: () => _confirmDeleteCompany(company.id),
           ),
@@ -307,7 +313,7 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
           Divider(color: AppColors.inputBorder),
           SizedBox(height: AppSizes.spacingLarge),
           _buildDangerButton(
-            label: 'مغادرة الشركة',
+            label: AppStrings.leaveCompany,
             icon: Icons.exit_to_app,
             onTap: _confirmLeaveCompany,
           ),
@@ -396,11 +402,11 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
       context: context,
       builder: (_) => AlertDialog(
         title: Text(
-          'حذف الشركة',
+          AppStrings.deleteCompany,
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         content: Text(
-          'هل أنت متأكد من حذف الشركة؟ لا يمكن التراجع عن هذا الإجراء.',
+          AppStrings.deleteCompanyConfirm,
         ),
         actions: [
           TextButton(
@@ -416,7 +422,7 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
               backgroundColor: AppColors.error,
               foregroundColor: AppColors.white,
             ),
-            child: Text('حذف'),
+            child: Text(AppStrings.deleteAction),
           ),
         ],
       ),
@@ -428,10 +434,10 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
       context: context,
       builder: (_) => AlertDialog(
         title: Text(
-          'مغادرة الشركة',
+          AppStrings.leaveCompany,
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        content: Text('هل أنت متأكد من مغادرة هذه الشركة؟'),
+        content: Text(AppStrings.leaveCompanyConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -446,7 +452,7 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
               backgroundColor: AppColors.error,
               foregroundColor: AppColors.white,
             ),
-            child: Text('مغادرة'),
+            child: Text(AppStrings.leaveAction),
           ),
         ],
       ),
@@ -457,8 +463,8 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text('تغيير رمز الدعوة'),
-        content: Text('سيتم تعطيل الرمز الحالي وإنشاء رمز جديد. هل أنت متأكد؟'),
+        title: Text(AppStrings.changeInviteCode),
+        content: Text(AppStrings.changeInviteCodeConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -468,13 +474,19 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
             onPressed: () async {
               Navigator.pop(context);
               final cubit = context.read<CompanySettingsCubit>();
-              final newCode = await cubit.regenerateJoinCode();
+              final companyState = context.read<CompanyCubit>().state;
+              final companyId = companyState is CompanySelected
+                  ? companyState.company.id
+                  : null;
+              final newCode = companyId == null
+                  ? null
+                  : await cubit.regenerateJoinCode(companyId);
               if (mounted) {
                 if (newCode != null) {
                   setState(() => _joinCode = newCode);
-                  AppSnackbar.success(context, 'تم تغيير رمز الدعوة');
+                  AppSnackbar.success(context, AppStrings.inviteCodeChanged);
                 } else {
-                  AppSnackbar.error(context, 'فشل تغيير رمز الدعوة');
+                  AppSnackbar.error(context, AppStrings.inviteCodeChangeFailed);
                 }
               }
             },
@@ -482,7 +494,7 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
               backgroundColor: AppColors.error,
               foregroundColor: AppColors.white,
             ),
-            child: Text('تأكيد'),
+            child: Text(AppStrings.confirm),
           ),
         ],
       ),

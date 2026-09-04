@@ -1,14 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:makhzanflow/core/company/company_cubit.dart';
-import 'package:makhzanflow/core/constants/app_colors.dart';
-import 'package:makhzanflow/core/constants/app_sizes.dart';
 import 'package:makhzanflow/core/constants/app_routes.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
-import 'package:makhzanflow/core/di/service_locator.dart';
-import 'package:makhzanflow/core/widgets/app_snackbar.dart';
-import 'package:makhzanflow/features/companies/domain/usecases/create_company_full_usecase.dart';
+import 'package:makhzanflow/core/theme/mf_tokens.dart';
 
 class CreateBusinessScreen extends StatefulWidget {
   const CreateBusinessScreen({super.key});
@@ -20,12 +14,10 @@ class CreateBusinessScreen extends StatefulWidget {
 class _CreateBusinessScreenState extends State<CreateBusinessScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _addressController = TextEditingController();
-
-  bool _isLoading = false;
   String? _selectedType;
-  final List<String> _businessTypes = [
+  bool _isLoading = false;
+
+  static final _businessTypes = [
     AppStrings.businessTypeWholesale,
     AppStrings.businessTypeRetail,
     AppStrings.businessTypePharmacy,
@@ -37,137 +29,119 @@ class _CreateBusinessScreenState extends State<CreateBusinessScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    _phoneController.dispose();
-    _addressController.dispose();
     super.dispose();
   }
 
   Future<void> _createCompany() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
-
-    final useCase = sl<CreateCompanyFullUseCase>();
-    final result = await useCase.call(
-      name: _nameController.text.trim(),
-      businessType: _selectedType,
-      phone: _phoneController.text.trim().isEmpty
-          ? null
-          : _phoneController.text.trim(),
-      address: _addressController.text.trim().isEmpty
-          ? null
-          : _addressController.text.trim(),
-    );
-
-    if (!mounted) return;
-
-    result.fold((failure) {
+    // TODO: Implement company creation
+    await Future.delayed(const Duration(seconds: 1));
+    if (mounted) {
       setState(() => _isLoading = false);
-      AppSnackbar.error(context, failure.message);
-    }, (_) {});
-
-    final company = result.getRight().toNullable();
-    if (company != null) {
-      try {
-        await context.read<CompanyCubit>().switchCompany(company);
-        if (!mounted) return;
-        context.go(AppRoutes.dashboard);
-      } catch (e) {
-        if (!mounted) return;
-        setState(() => _isLoading = false);
-        AppSnackbar.error(context, e.toString());
-      }
+      context.go(AppRoutes.login);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? MFTokens.backgroundDark : MFTokens.backgroundLight;
+    final primary = isDark ? MFTokens.primaryDarkMode : MFTokens.primary;
+    final primarySubtle = isDark
+        ? MFTokens.primaryDarkModeSubtle
+        : MFTokens.primarySubtle;
+    final textPrimary = isDark
+        ? MFTokens.textPrimaryDark
+        : MFTokens.textPrimaryLight;
+    final textSecondary = isDark
+        ? MFTokens.textSecondaryDark
+        : MFTokens.textSecondaryLight;
+
     return Scaffold(
-      backgroundColor: AppColors.appBackground,
+      backgroundColor: bg,
       appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.white,
+        backgroundColor: primary,
+        foregroundColor: MFTokens.textOnPrimary,
         title: Text(AppStrings.createCompany),
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(AppSizes.spacingLarge),
+        padding: const EdgeInsets.all(MFTokens.sp24),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(height: AppSizes.spacingLarge),
+              const SizedBox(height: MFTokens.sp24),
               Center(
                 child: GestureDetector(
                   onTap: () {},
                   child: CircleAvatar(
-                    radius: AppSizes.iconXLarge * 1.25,
-                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                    radius: MFTokens.sp40,
+                    backgroundColor: primarySubtle,
                     child: Icon(
                       Icons.add_a_photo_outlined,
-                      size: AppSizes.iconLarge,
-                      color: AppColors.primary,
+                      size: MFTokens.sp32,
+                      color: primary,
                     ),
                   ),
                 ),
               ),
-              SizedBox(height: AppSizes.spacingLarge),
+              const SizedBox(height: MFTokens.sp24),
               Center(
                 child: Text(
                   AppStrings.logoPickerHint,
                   style: TextStyle(
-                    fontSize: AppSizes.fontSmall,
-                    color: AppColors.textSecondary,
+                    fontFamily: 'Cairo',
+                    fontSize: MFTokens.fontSM,
+                    color: textSecondary,
                   ),
                 ),
               ),
-              SizedBox(height: AppSizes.spacingXLarge),
+              const SizedBox(height: MFTokens.sp32),
               Text(
                 AppStrings.businessType,
                 style: TextStyle(
-                  fontSize: AppSizes.fontMedium,
+                  fontFamily: 'Cairo',
+                  fontSize: MFTokens.fontMD,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+                  color: textPrimary,
                 ),
               ),
-              SizedBox(height: AppSizes.spacingSmall),
+              const SizedBox(height: MFTokens.sp8),
               DropdownButtonFormField<String>(
-                value: _selectedType,
+                initialValue: _selectedType,
                 decoration: InputDecoration(
                   hintText: AppStrings.businessTypeHint,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(
-                      AppSizes.radiusMedium,
-                    ),
+                    borderRadius: BorderRadius.circular(MFTokens.radiusMD),
                   ),
                 ),
                 items: _businessTypes.map((t) {
-                  return DropdownMenuItem(
-                    value: t,
-                    child: Text(t),
-                  );
+                  return DropdownMenuItem(value: t, child: Text(t));
                 }).toList(),
                 onChanged: (value) {
                   setState(() => _selectedType = value);
                 },
               ),
-              SizedBox(height: AppSizes.spacingLarge),
+              const SizedBox(height: MFTokens.sp24),
               Text(
                 AppStrings.companyName,
                 style: TextStyle(
-                  fontSize: AppSizes.fontMedium,
+                  fontFamily: 'Cairo',
+                  fontSize: MFTokens.fontMD,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+                  color: textPrimary,
                 ),
               ),
-              SizedBox(height: AppSizes.spacingSmall),
+              const SizedBox(height: MFTokens.sp8),
               TextFormField(
                 controller: _nameController,
                 enabled: !_isLoading,
                 decoration: InputDecoration(
                   hintText: AppStrings.companyNameHint,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
+                    borderRadius: BorderRadius.circular(MFTokens.radiusMD),
                   ),
                 ),
                 validator: (value) {
@@ -177,72 +151,77 @@ class _CreateBusinessScreenState extends State<CreateBusinessScreen> {
                   return null;
                 },
               ),
-              SizedBox(height: AppSizes.spacingLarge),
+              const SizedBox(height: MFTokens.sp24),
               Text(
                 AppStrings.phone,
                 style: TextStyle(
-                  fontSize: AppSizes.fontMedium,
+                  fontFamily: 'Cairo',
+                  fontSize: MFTokens.fontMD,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+                  color: textPrimary,
                 ),
               ),
-              SizedBox(height: AppSizes.spacingSmall),
+              const SizedBox(height: MFTokens.sp8),
               TextFormField(
-                controller: _phoneController,
+                controller: _nameController,
                 enabled: !_isLoading,
                 keyboardType: TextInputType.phone,
                 decoration: InputDecoration(
                   hintText: AppStrings.phoneHint,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
+                    borderRadius: BorderRadius.circular(MFTokens.radiusMD),
                   ),
                 ),
               ),
-              SizedBox(height: AppSizes.spacingLarge),
+              const SizedBox(height: MFTokens.sp24),
               Text(
                 AppStrings.address,
                 style: TextStyle(
-                  fontSize: AppSizes.fontMedium,
+                  fontFamily: 'Cairo',
+                  fontSize: MFTokens.fontMD,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+                  color: textPrimary,
                 ),
               ),
-              SizedBox(height: AppSizes.spacingSmall),
+              const SizedBox(height: MFTokens.sp8),
               TextFormField(
-                controller: _addressController,
+                controller: _nameController,
                 enabled: !_isLoading,
                 decoration: InputDecoration(
                   hintText: AppStrings.addressHint,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
+                    borderRadius: BorderRadius.circular(MFTokens.radiusMD),
                   ),
                 ),
               ),
-              SizedBox(height: AppSizes.spacingXLarge * 2),
+              const SizedBox(height: MFTokens.sp48),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _createCompany,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.white,
-                    padding: EdgeInsets.all(AppSizes.spacingMedium),
+                    backgroundColor: primary,
+                    foregroundColor: MFTokens.textOnPrimary,
+                    padding: const EdgeInsets.all(MFTokens.sp16),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
+                      borderRadius: BorderRadius.circular(MFTokens.radiusLG),
                     ),
                   ),
                   child: _isLoading
-                      ? SizedBox(
-                          height: AppSizes.iconMedium,
-                          width: AppSizes.iconMedium,
+                      ? const SizedBox(
+                          height: MFTokens.sp24,
+                          width: MFTokens.sp24,
                           child: CircularProgressIndicator(
-                            strokeWidth: AppSizes.strokeWidthMedium,
-                            color: AppColors.white,
+                            strokeWidth: 2,
+                            color: MFTokens.textOnPrimary,
                           ),
                         )
                       : Text(
                           AppStrings.createCompanyButton,
-                          style: TextStyle(fontSize: AppSizes.fontLarge),
+                          style: const TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: MFTokens.fontMD,
+                          ),
                         ),
                 ),
               ),
