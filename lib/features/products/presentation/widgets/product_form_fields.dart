@@ -134,6 +134,20 @@ class _ProductFormFieldsState extends State<ProductFormFields> {
         ),
         const SizedBox(height: MFTokens.sp16),
         _buildField(
+          label: AppStrings.productSkuLabel,
+          hint: AppStrings.productSkuHint,
+          controller: _skuController,
+          onChanged: widget.onSkuChanged,
+        ),
+        SizedBox(height: AppSizes.spacingMedium),
+        _buildField(
+          label: AppStrings.productBarcodeLabel,
+          hint: AppStrings.productBarcodeHint,
+          controller: _barcodeController,
+          onChanged: widget.onBarcodeChanged,
+        ),
+        SizedBox(height: AppSizes.spacingMedium),
+        _buildField(
           label: AppStrings.productPriceLabel,
           hint: AppStrings.productPriceHint,
           controller: _priceController,
