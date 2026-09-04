@@ -1,27 +1,26 @@
 import 'package:flutter/material.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_sizes.dart';
+import '../../../../core/theme/mf_tokens.dart';
 
 class AuthHeader extends StatelessWidget {
   final String title;
   final String subtitle;
 
-  const AuthHeader({
-    super.key,
-    required this.title,
-    required this.subtitle,
-  });
+  const AuthHeader({super.key, required this.title, required this.subtitle});
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? MFTokens.textPrimaryDark : MFTokens.textPrimaryLight;
+    final textSecondary = isDark ? MFTokens.textSecondaryDark : MFTokens.textSecondaryLight;
+
     return Column(
       children: [
         Container(
-          width: AppSizes.loginIconBoxSize,
-          height: AppSizes.loginIconBoxSize,
+          width: 64,
+          height: 64,
           decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
+            color: isDark ? MFTokens.surfaceDark : MFTokens.surfaceLight,
+            borderRadius: BorderRadius.circular(MFTokens.radiusLG),
           ),
           child: Image.asset(
             'assets/images/logo.png',
@@ -30,23 +29,23 @@ class AuthHeader extends StatelessWidget {
             fit: BoxFit.contain,
           ),
         ),
-        SizedBox(height: AppSizes.spacingMedium),
+        const SizedBox(height: MFTokens.sp16),
         Text(
           title,
           style: TextStyle(
             fontFamily: 'Cairo',
-            fontSize: AppSizes.fontXXLarge,
-            color: AppColors.secondary,
+            fontSize: MFTokens.font2XL,
+            color: textPrimary,
             fontWeight: FontWeight.bold,
           ),
         ),
-        SizedBox(height: AppSizes.spacingTiny),
+        const SizedBox(height: MFTokens.sp4),
         Text(
           subtitle,
           style: TextStyle(
             fontFamily: 'Cairo',
-            fontSize: AppSizes.fontMedium,
-            color: AppColors.textSecondary,
+            fontSize: MFTokens.fontSM,
+            color: textSecondary,
           ),
         ),
       ],

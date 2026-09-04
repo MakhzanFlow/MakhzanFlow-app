@@ -1,5 +1,6 @@
 import 'package:makhzanflow/core/error/failures.dart';
 import 'package:makhzanflow/features/customers/domain/entities/customer.dart';
+import 'package:makhzanflow/features/invoice/domain/constants/invoice_constants.dart';
 
 sealed class CreateInvoiceState {}
 
@@ -16,9 +17,9 @@ sealed class CreateInvoiceFormState extends CreateInvoiceState {
   CreateInvoiceFormState({
     this.selectedCustomer,
     this.products = const [],
-    this.discountType = 'fixed',
+    this.discountType = InvoiceConstants.discountFixed,
     this.discountValue = 0,
-    this.paymentMethod = 'full',
+    this.paymentMethod = InvoiceConstants.paymentFull,
     this.paidNow = 0,
   });
 
@@ -26,7 +27,7 @@ sealed class CreateInvoiceFormState extends CreateInvoiceState {
 
   double get discountAmount {
     if (discountValue <= 0) return 0;
-    if (discountType == 'percentage') {
+    if (discountType == InvoiceConstants.discountPercentage) {
       return subtotal * (discountValue / 100);
     }
     return discountValue;
@@ -35,8 +36,8 @@ sealed class CreateInvoiceFormState extends CreateInvoiceState {
   double get totalAfterDiscount => subtotal - discountAmount;
 
   double get remainingDebt {
-    if (paymentMethod == 'full') return 0;
-    if (paymentMethod == 'deferred') return totalAfterDiscount;
+    if (paymentMethod == InvoiceConstants.paymentFull) return 0;
+    if (paymentMethod == InvoiceConstants.paymentDeferred) return totalAfterDiscount;
     return totalAfterDiscount - paidNow;
   }
 }

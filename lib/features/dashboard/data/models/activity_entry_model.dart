@@ -12,20 +12,26 @@ class ActivityEntryModel extends ActivityEntry {
     required super.createdAt,
   });
 
-  /// Expects the row shape returned by the [get_activity_log] RPC:
-  /// id, user_id, user_name, action, entity_type, entity_id, details, created_at
+  /// Supports both REST `{entity,changes}` and legacy RPC `{entity_type,details}` shapes.
   factory ActivityEntryModel.fromJson(Map<String, dynamic> json) {
+    final entity = (json['entity'] as String?) ?? (json['entity_type'] as String?) ?? '';
+    final detailsRaw = json['details'] ?? json['changes'];
+    Map<String, dynamic>? details;
+    if (detailsRaw is Map<String, dynamic>) {
+      details = detailsRaw;
+    } else if (detailsRaw is Map) {
+      details = Map<String, dynamic>.from(detailsRaw);
+    }
+    final createdStr = json['created_at'] as String?;
     return ActivityEntryModel(
-      id: json['id'] as String,
-      userId: json['user_id'] as String,
+      id: json['id'] as String? ?? '',
+      userId: json['user_id'] as String? ?? '',
       userName: json['user_name'] as String? ?? '',
-      action: json['action'] as String,
-      entityType: json['entity_type'] as String,
+      action: json['action'] as String? ?? '',
+      entityType: entity,
       entityId: json['entity_id'] as String?,
-      details: json['details'] != null
-          ? Map<String, dynamic>.from(json['details'] as Map)
-          : null,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      details: details,
+      createdAt: createdStr != null ? DateTime.tryParse(createdStr) ?? DateTime.now() : DateTime.now(),
     );
   }
 }

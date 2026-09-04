@@ -9,6 +9,7 @@ class InvoiceItemModel {
   final double totalPrice;
   final String productName;
   final String? productImageUrl;
+
   const InvoiceItemModel({
     this.id,
     this.invoiceId,
@@ -21,6 +22,8 @@ class InvoiceItemModel {
   });
 
   factory InvoiceItemModel.fromJson(Map<String, dynamic> json) {
+    // Backend REST shape: { id, invoice_id, product_id, quantity, unit_price, total_price, products: { name, image_url, price } }
+    final products = json['products'] as Map<String, dynamic>?;
     return InvoiceItemModel(
       id: json['id'] as String?,
       invoiceId: json['invoice_id'] as String?,
@@ -29,9 +32,9 @@ class InvoiceItemModel {
       unitPrice: (json['unit_price'] as num).toDouble(),
       totalPrice: (json['total_price'] as num).toDouble(),
       productName: (json['product_name'] as String?) ??
-          (json['products']?['name'] as String? ?? ''),
+          (products?['name'] as String? ?? ''),
       productImageUrl: (json['product_image_url'] as String?) ??
-          (json['products']?['image_url'] as String?),
+          (products?['image_url'] as String?),
     );
   }
 
@@ -44,6 +47,7 @@ class InvoiceItemModel {
       'unit_price': unitPrice,
       'total_price': totalPrice,
       'product_name': productName,
+      if (productImageUrl != null) 'product_image_url': productImageUrl,
     };
   }
 

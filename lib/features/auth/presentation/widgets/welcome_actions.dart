@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:makhzanflow/core/constants/app_colors.dart';
-import 'package:makhzanflow/core/constants/app_sizes.dart';
+import 'package:makhzanflow/core/theme/mf_tokens.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
 
 class WelcomeActions extends StatelessWidget {
@@ -16,69 +15,69 @@ class WelcomeActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: AppSizes.spacingLarge),
+      padding: const EdgeInsets.symmetric(horizontal: MFTokens.sp24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(
             width: double.infinity,
-            height: AppSizes.buttonMinHeight,
+            height: MFTokens.buttonHeightLG,
             child: ElevatedButton.icon(
               onPressed: onCreateBusiness,
-              icon: Icon(
+              icon: const Icon(
                 Icons.add_rounded,
-                size: AppSizes.iconMedium,
-                color: AppColors.white,
+                size: MFTokens.sp24,
+                color: MFTokens.textOnPrimary,
               ),
               label: Text(
                 AppStrings.createBusiness,
-                style: TextStyle(
+                style: const TextStyle(
                   fontFamily: 'Cairo',
-                  fontSize: AppSizes.fontLarge,
+                  fontSize: MFTokens.fontMD,
                   fontWeight: FontWeight.w500,
-                  color: AppColors.white,
+                  color: MFTokens.textOnPrimary,
                 ),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accent,
-                foregroundColor: AppColors.white,
-                shadowColor: AppColors.accent.withValues(alpha: 0.45),
+                backgroundColor: MFTokens.accent,
+                foregroundColor: MFTokens.textOnPrimary,
+                shadowColor: MFTokens.accent.withValues(alpha: 0.45),
                 elevation: 10,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
+                  borderRadius: BorderRadius.circular(MFTokens.radiusLG),
                 ),
               ),
             ),
           ),
-          SizedBox(height: AppSizes.spacingSmall),
+          const SizedBox(height: MFTokens.sp8),
           SizedBox(
             width: double.infinity,
-            height: AppSizes.buttonMinHeight,
+            height: MFTokens.buttonHeightLG,
             child: OutlinedButton.icon(
               onPressed: onJoinBusiness,
-              icon: Icon(
+              icon: const Icon(
                 Icons.group_add_outlined,
-                size: AppSizes.iconMedium,
-                color: AppColors.white,
+                size: MFTokens.sp24,
+                color: MFTokens.textOnPrimary,
               ),
               label: Text(
                 AppStrings.joinBusiness,
-                style: TextStyle(
+                style: const TextStyle(
                   fontFamily: 'Cairo',
-                  fontSize: AppSizes.fontLarge,
+                  fontSize: MFTokens.fontMD,
                   fontWeight: FontWeight.w500,
-                  color: AppColors.white,
+                  color: MFTokens.textOnPrimary,
                 ),
               ),
               style: OutlinedButton.styleFrom(
-                backgroundColor: AppColors.white.withValues(alpha: 0.12),
-                foregroundColor: AppColors.white,
+                backgroundColor: MFTokens.gradientOverlayLight,
+                foregroundColor: MFTokens.textOnPrimary,
                 side: BorderSide(
-                  color: AppColors.white.withValues(alpha: 0.2),
-                  width: AppSizes.borderWidthThin,
+                  color: MFTokens.gradientOverlayMedium,
+                  width: 0.8,
                 ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
+                  borderRadius: BorderRadius.circular(MFTokens.radiusLG),
                 ),
               ),
             ),
@@ -88,4 +87,3 @@ class WelcomeActions extends StatelessWidget {
     );
   }
 }
-

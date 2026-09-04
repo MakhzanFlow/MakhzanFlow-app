@@ -43,6 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/.kotlin/
 db_password.txt
 .env
 supabase
@@ -63,3 +64,4 @@ android/app/google-services.json
 
 sentry.properties
 sentry-wizard.exe
+docs/FLUTTER_FRONTEND_GUIDE.md

@@ -5,5 +5,9 @@ import 'package:makhzanflow/features/companies/domain/repositories/company_repos
 class GetMemberPermissionsUseCase {
   final CompanyRepository _repository;
   GetMemberPermissionsUseCase(this._repository);
-  Future<Either<Failure, Map<String, dynamic>>> call(String memberId) => _repository.getMemberPermissions(memberId);
+  Future<Either<Failure, Map<String, dynamic>>> call(
+    String companyId,
+    String userId,
+  ) =>
+      _repository.getMemberPermissions(companyId, userId);
 }

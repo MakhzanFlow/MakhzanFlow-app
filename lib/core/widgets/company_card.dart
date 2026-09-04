@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:makhzanflow/core/constants/app_colors.dart';
-import 'package:makhzanflow/core/constants/app_sizes.dart';
+import 'package:makhzanflow/core/theme/mf_tokens.dart';
 import 'package:makhzanflow/core/widgets/app_network_image.dart';
 import 'package:makhzanflow/features/companies/domain/entities/company.dart';
 
@@ -29,54 +27,53 @@ class CompanyCard extends StatelessWidget {
     return name.isNotEmpty ? name[0] : '?';
   }
 
-  Color _avatarBg() {
-    if (isSelected) return AppColors.primary;
-    return AppColors.chipBg;
-  }
-
-  Color _initialsColor() {
-    if (isSelected) return AppColors.white;
-    return AppColors.darkGrey;
-  }
-
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final borderColor = isSelected
-        ? AppColors.primary.withValues(alpha: 0.19)
-        : AppColors.chipBg;
+        ? MFTokens.primary.withValues(alpha: 0.19)
+        : (isDark ? MFTokens.borderDark : MFTokens.surfaceMutedLight);
+    final textPrimary = isDark ? MFTokens.textPrimaryDark : MFTokens.textPrimaryLight;
+    final textSecondary = isDark ? MFTokens.textSecondaryDark : MFTokens.textSecondaryLight;
+    final cardBg = isDark
+        ? (isSelected ? MFTokens.primaryDarkModeSubtle : MFTokens.surfaceDark)
+        : (isSelected ? MFTokens.primarySubtle : MFTokens.surfaceMutedLight);
+    final selectedBg = isDark ? MFTokens.primaryDarkMode : MFTokens.primary;
+    final avatarBg = isSelected ? selectedBg : (isDark ? MFTokens.surfaceMutedDark : MFTokens.surfaceMutedLight);
+    final initialsColor = isSelected ? Colors.white : const Color(0xFF404040);
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.all(12),
+        padding: const EdgeInsets.all(MFTokens.sp12),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.lightGreen : AppColors.unselectedCardBg,
+          color: cardBg,
           border: Border(
-            top: BorderSide(color: borderColor, width: AppSizes.borderWidthThin),
-            bottom: BorderSide(color: borderColor, width: AppSizes.borderWidthThin),
-            left: BorderSide(color: borderColor, width: AppSizes.borderWidthThin),
+            top: BorderSide(color: borderColor, width: 0.8),
+            bottom: BorderSide(color: borderColor, width: 0.8),
+            left: BorderSide(color: borderColor, width: 0.8),
             right: isSelected
-                ? BorderSide(color: borderColor, width: AppSizes.borderWidthThin * 3)
+                ? BorderSide(color: borderColor, width: 2.4)
                 : BorderSide.none,
           ),
-          borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
+          borderRadius: BorderRadius.circular(MFTokens.radiusLG),
         ),
         child: Row(
           children: [
             Container(
-              width: 44.w,
-              height: 44.w,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
-                color: _avatarBg(),
+                color: avatarBg,
                 shape: BoxShape.circle,
               ),
               child: company.logoUrl != null && company.logoUrl!.isNotEmpty
                   ? ClipRRect(
-                      borderRadius: BorderRadius.circular(44.w),
+                      borderRadius: BorderRadius.circular(44),
                       child: AppNetworkImage(
                         imageUrl: company.logoUrl!,
-                        width: 44.w,
-                        height: 44.w,
+                        width: 44,
+                        height: 44,
                         fit: BoxFit.cover,
                       ),
                     )
@@ -85,13 +82,13 @@ class CompanyCard extends StatelessWidget {
                         _initials(company.name),
                         style: TextStyle(
                           fontFamily: 'Cairo',
-                          fontSize: AppSizes.fontML,
-                          color: _initialsColor(),
+                          fontSize: MFTokens.fontBase,
+                          color: initialsColor,
                         ),
                       ),
                     ),
             ),
-            SizedBox(width: 12.w),
+            const SizedBox(width: MFTokens.sp12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -100,9 +97,9 @@ class CompanyCard extends StatelessWidget {
                     company.name,
                     style: TextStyle(
                       fontFamily: 'Cairo',
-                      fontSize: AppSizes.fontML,
+                      fontSize: MFTokens.fontBase,
                       fontWeight: FontWeight.w400,
-                      color: AppColors.textDark,
+                      color: textPrimary,
                     ),
                   ),
                   if (company.businessType != null)
@@ -110,23 +107,23 @@ class CompanyCard extends StatelessWidget {
                       company.businessType!,
                       style: TextStyle(
                         fontFamily: 'Cairo',
-                        fontSize: AppSizes.fontSmall,
-                        color: AppColors.textSecondary,
+                        fontSize: MFTokens.fontXS,
+                        color: textSecondary,
                       ),
                     ),
                 ],
               ),
             ),
             Container(
-              width: 28.w,
-              height: 28.w,
+              width: 28,
+              height: 28,
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.primary : Colors.transparent,
+                color: isSelected ? selectedBg : Colors.transparent,
                 shape: BoxShape.circle,
               ),
               child: isSelected
-                  ? Icon(Icons.check, size: 14.w, color: AppColors.white)
-                  : Icon(Icons.chevron_left, size: 16.w, color: AppColors.hintText),
+                  ? const Icon(Icons.check, size: 14, color: Colors.white)
+                  : Icon(Icons.chevron_left, size: 16, color: isDark ? MFTokens.textMutedDark : MFTokens.textMutedLight),
             ),
           ],
         ),

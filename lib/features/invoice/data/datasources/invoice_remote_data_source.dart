@@ -5,11 +5,11 @@ import 'package:makhzanflow/features/invoice/data/models/invoice_create_dto.dart
 import 'package:makhzanflow/features/invoice/data/models/invoice_model.dart';
 
 abstract class InvoiceRemoteDataSource {
-  Future<Either<Failure, String>> createInvoice(
+  Future<Either<Failure, InvoiceModel>> createInvoice(
     InvoiceCreateDto inputDto,
   );
 
-  Future<Either<Failure, String>> addPayment(
+  Future<Either<Failure, InvoiceModel>> addPayment(
     AddPaymentDto inputDto,
   );
 
@@ -24,5 +24,15 @@ abstract class InvoiceRemoteDataSource {
     String? customerId,
     int? limit,
     int? offset,
+    String? search,
+    String? sort,
+    String? order,
+    String? startDate,
+    String? endDate,
   });
+
+  Future<Either<Failure, InvoiceModel>> cancelInvoice(
+    String id,
+    String companyId,
+  );
 }

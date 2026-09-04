@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_sizes.dart';
+import '../../../../core/theme/mf_tokens.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/permissions/permission_constants.dart';
+import '../../../../core/permissions/permission_service.dart';
+import '../../../../core/di/service_locator.dart';
 import '../../domain/entities/product.dart';
 import 'dashed_border_painter.dart';
 
@@ -14,52 +15,56 @@ class ProductDetailsImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primary = isDark ? MFTokens.primaryDarkMode : MFTokens.primary;
+    final primarySubtle = isDark ? MFTokens.primaryDarkModeSubtle : const Color(0xFFE8F1EC);
+
     if (imageUrl != null && imageUrl!.isNotEmpty) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
+        borderRadius: BorderRadius.circular(MFTokens.radiusMD),
         child: CachedNetworkImage(
           imageUrl: imageUrl!,
-          height: 200.h,
+          height: 200,
           width: double.infinity,
           fit: BoxFit.cover,
-          placeholder: (_, __) => _placeholder(),
-          errorWidget: (_, __, ___) => _placeholder(),
+          placeholder: (_, __) => _placeholder(primary, primarySubtle),
+          errorWidget: (_, __, ___) => _placeholder(primary, primarySubtle),
         ),
       );
     }
-    return _placeholder();
+    return _placeholder(primary, primarySubtle);
   }
 
-  Widget _placeholder() {
+  Widget _placeholder(Color primary, Color bg) {
     return Container(
-      height: 200.h,
+      height: 200,
       decoration: BoxDecoration(
-        color: const Color(0xFFE8F1EC),
-        borderRadius: BorderRadius.circular(16.r),
+        color: bg,
+        borderRadius: BorderRadius.circular(MFTokens.radiusLG),
       ),
       child: CustomPaint(
-        painter: DashedBorderPainter(),
+        painter: DashedBorderPainter(color: primary),
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 26.w,
-                height: 26.h,
+                width: 26,
+                height: 26,
                 decoration: BoxDecoration(
                   color: Colors.transparent,
-                  borderRadius: BorderRadius.circular(4.r),
-                  border: Border.all(color: AppColors.primary, width: 2.17),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: primary, width: 2.17),
                 ),
-                child: const Icon(Icons.inventory_2_outlined, size: 14, color: AppColors.primary),
+                child: Icon(Icons.inventory_2_outlined, size: 14, color: primary),
               ),
-              SizedBox(height: 4.h),
+              const SizedBox(height: 4),
               Text(
                 AppStrings.productImagePicker,
                 style: TextStyle(
                   fontFamily: 'Cairo',
-                  fontSize: 10.sp,
-                  color: AppColors.primary,
+                  fontSize: MFTokens.fontXS,
+                  color: primary,
                 ),
               ),
             ],
@@ -77,6 +82,10 @@ class ProductInfoSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? MFTokens.textPrimaryDark : MFTokens.textPrimaryLight;
+    final textSecondary = isDark ? MFTokens.textSecondaryDark : MFTokens.textSecondaryLight;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -84,40 +93,46 @@ class ProductInfoSection extends StatelessWidget {
           product.name,
           style: TextStyle(
             fontFamily: 'Cairo',
-            fontSize: AppSizes.fontXXLarge,
+            fontSize: MFTokens.font2XL,
             fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
+            color: textPrimary,
           ),
         ),
-        SizedBox(height: AppSizes.spacingSmall),
+        const SizedBox(height: MFTokens.sp8),
         _infoRow(
           AppStrings.productPriceLabel,
           '${product.price.toStringAsFixed(2)} ${AppStrings.currencyEg}',
+          textPrimary: textPrimary,
+          textSecondary: textSecondary,
         ),
         _infoRow(
           AppStrings.productQuantityLabel,
           product.quantity.toString(),
+          textPrimary: textPrimary,
+          textSecondary: textSecondary,
         ),
         if (product.expirationDate != null)
           _infoRow(
             AppStrings.productExpirationDateLabel,
             '${product.expirationDate!.year}-${product.expirationDate!.month.toString().padLeft(2, '0')}-${product.expirationDate!.day.toString().padLeft(2, '0')}',
+            textPrimary: textPrimary,
+            textSecondary: textSecondary,
           ),
       ],
     );
   }
 
-  Widget _infoRow(String label, String value) {
+  Widget _infoRow(String label, String value, {required Color textPrimary, required Color textSecondary}) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 4.h),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
           Text(
             '$label: ',
             style: TextStyle(
               fontFamily: 'Cairo',
-              fontSize: AppSizes.fontMedium,
-              color: AppColors.textSecondary,
+              fontSize: MFTokens.fontSM,
+              color: textSecondary,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -125,8 +140,8 @@ class ProductInfoSection extends StatelessWidget {
             value,
             style: TextStyle(
               fontFamily: 'Cairo',
-              fontSize: AppSizes.fontMedium,
-              color: AppColors.textPrimary,
+              fontSize: MFTokens.fontSM,
+              color: textPrimary,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -150,8 +165,15 @@ class ProductActionButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final errorColor = isDark ? MFTokens.errorTextDark : MFTokens.errorText;
+    final ps = sl<PermissionService>();
+    final canEdit = ps.hasPermission(PermissionKeys.productsEdit);
+    final canDelete = ps.hasPermission(PermissionKeys.productsDelete);
+
+    final children = <Widget>[];
+    if (canEdit) {
+      children.add(
         Expanded(
           child: ElevatedButton.icon(
             onPressed: onEdit,
@@ -159,7 +181,13 @@ class ProductActionButtons extends StatelessWidget {
             label: Text(AppStrings.productEdit),
           ),
         ),
-        SizedBox(width: AppSizes.spacingMedium),
+      );
+    }
+    if (canEdit && canDelete) {
+      children.add(const SizedBox(width: MFTokens.sp16));
+    }
+    if (canDelete) {
+      children.add(
         Expanded(
           child: OutlinedButton.icon(
             onPressed: isDeleting ? null : onDelete,
@@ -168,17 +196,20 @@ class ProductActionButtons extends StatelessWidget {
                     width: 16, height: 16,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Icon(Icons.delete_outline, color: AppColors.error),
+                : Icon(Icons.delete_outline, color: errorColor),
             label: Text(
               AppStrings.productDelete,
-              style: TextStyle(color: isDeleting ? null : AppColors.error),
+              style: TextStyle(color: isDeleting ? null : errorColor),
             ),
             style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: AppColors.error),
+              side: BorderSide(color: errorColor),
             ),
           ),
         ),
-      ],
-    );
+      );
+    }
+
+    if (children.isEmpty) return const SizedBox.shrink();
+    return Row(children: children);
   }
 }

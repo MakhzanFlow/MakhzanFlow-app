@@ -38,6 +38,12 @@ class AppRoutes {
   static const String welcomeJoin = '/welcome/join';
   static const String welcomePending = '/welcome/pending';
 
+  // Auth routes
+  static const String emailVerification = '/email-verification';
+
+  // Onboarding
+  static const String onboardingLanguage = '/onboarding/language';
+
   static const List<String> shellRoutes = [
     dashboard,
     products,

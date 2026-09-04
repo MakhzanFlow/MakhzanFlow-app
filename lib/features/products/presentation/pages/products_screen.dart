@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:makhzanflow/core/company/company_aware_state.dart';
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/mf_tokens.dart';
 import '../../../../core/constants/app_routes.dart';
-import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_strings.dart';
-import '../../../../core/di/service_locator.dart';
 import '../../../../core/permissions/permission_constants.dart';
 import '../../../../core/permissions/permission_gate.dart';
 import '../../../../shared/widgets/makhzanflow_search_field.dart';
@@ -30,13 +27,17 @@ class _ProductsScreenState extends State<ProductsScreen>
   late final ProductsCubit _cubit;
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  bool _initialized = false;
 
   @override
-  void initState() {
-    super.initState();
-    _cubit = sl<ProductsCubit>();
-    _cubit.refresh(companyId: companyId);
-    _scrollController.addListener(_onScroll);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _cubit = context.read<ProductsCubit>();
+      _cubit.refresh(companyId: companyId);
+      _scrollController.addListener(_onScroll);
+      _initialized = true;
+    }
   }
 
   @override
@@ -56,127 +57,123 @@ class _ProductsScreenState extends State<ProductsScreen>
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _searchController.dispose();
-    _cubit.close();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider.value(
-      value: _cubit,
-      child: Scaffold(
-        backgroundColor: AppColors.appBackground,
-        body: SafeArea(
-          child: RefreshIndicator(
-            onRefresh: () => _cubit.refresh(companyId: companyId),
-            child: CustomScrollView(
-              controller: _scrollController,
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.only(top: AppSizes.spacingMedium),
-                    child: BlocBuilder<ProductsCubit, ProductsState>(
-                      builder: (context, state) {
-                        return ProductScreenHeader(
-                          totalCount: state.totalCount,
-                        );
-                      },
-                    ),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? MFTokens.backgroundDark : MFTokens.backgroundLight;
+    final accent = isDark ? MFTokens.primaryDarkMode : MFTokens.accent;
+
+    return Scaffold(
+      backgroundColor: bg,
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: () => _cubit.refresh(companyId: companyId),
+          child: CustomScrollView(
+            controller: _scrollController,
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: MFTokens.sp16),
+                  child: BlocBuilder<ProductsCubit, ProductsState>(
+                    builder: (context, state) {
+                      return ProductScreenHeader(totalCount: state.totalCount);
+                    },
                   ),
                 ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      vertical: AppSizes.spacingSmall,
-                      horizontal: AppSizes.spacingMedium,
-                    ),
-                    child: MakhzanFlowSearchField(
-                      controller: _searchController,
-                      hintText: AppStrings.productsSearchHint,
-                      onChanged: (query) =>
-                          _cubit.updateSearchQuery(query, companyId: companyId),
-                      onClear: () {
-                        _searchController.clear();
-                        _cubit.updateSearchQuery('', companyId: companyId);
-                      },
-                    ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: MFTokens.sp8,
+                    horizontal: MFTokens.sp16,
+                  ),
+                  child: MakhzanFlowSearchField(
+                    controller: _searchController,
+                    hintText: AppStrings.productsSearchHint,
+                    onChanged: (query) =>
+                        _cubit.updateSearchQuery(query, companyId: companyId),
+                    onClear: () {
+                      _searchController.clear();
+                      _cubit.updateSearchQuery('', companyId: companyId);
+                    },
                   ),
                 ),
-                BlocBuilder<ProductsCubit, ProductsState>(
-                  builder: (context, state) {
-                    return switch (state.status) {
-                      ProductsStatus.initial || ProductsStatus.loading =>
-                        const SliverFillRemaining(child: ProductLoadingView()),
-                      ProductsStatus.error => SliverFillRemaining(
-                        child: ProductErrorView(
-                          message:
-                              state.errorMessage ?? AppStrings.productLoadError,
-                          onRetry: () => _cubit.loadProducts(companyId: companyId),
-                        ),
+              ),
+              BlocBuilder<ProductsCubit, ProductsState>(
+                builder: (context, state) {
+                  return switch (state.status) {
+                    ProductsStatus.initial || ProductsStatus.loading =>
+                      const SliverFillRemaining(child: ProductLoadingView()),
+                    ProductsStatus.error => SliverFillRemaining(
+                      child: ProductErrorView(
+                        message:
+                            state.errorMessage ?? AppStrings.productLoadError,
+                        onRetry: () =>
+                            _cubit.loadProducts(companyId: companyId),
                       ),
-                      ProductsStatus.empty => SliverFillRemaining(
-                        child: ProductEmptyView(
-                          message: state.filter.hasQuery
-                              ? AppStrings.productEmptySearch
-                              : AppStrings.emptyProducts,
-                        ),
+                    ),
+                    ProductsStatus.empty => SliverFillRemaining(
+                      child: ProductEmptyView(
+                        message: state.filter.hasQuery
+                            ? AppStrings.productEmptySearch
+                            : AppStrings.emptyProducts,
                       ),
-                      ProductsStatus.success => SliverPadding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: AppSizes.spacingMedium,
-                        ),
-                        sliver: SliverGrid(
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                crossAxisSpacing: 10.w,
-                                mainAxisSpacing: 10.h,
-                                childAspectRatio: 0.75,
-                              ),
-                          delegate: SliverChildBuilderDelegate((
-                            context,
-                            index,
-                          ) {
-                            final product = state.products[index];
-                            return ProductCard(
-                              product: product,
-                              onTap: () => context.push(
-                                AppRoutes.productDetailsPath(product.id),
-                              ),
-                            );
-                          }, childCount: state.products.length),
-                        ),
+                    ),
+                    ProductsStatus.success => SliverPadding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: MFTokens.sp16,
                       ),
-                    };
-                  },
-                ),
-                BlocBuilder<ProductsCubit, ProductsState>(
-                  builder: (context, state) {
-                    if (!state.isLoadingMore) return const SliverToBoxAdapter();
-                    return SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.all(AppSizes.spacingMedium),
-                        child: const Center(child: CircularProgressIndicator()),
+                      sliver: SliverGrid(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                          childAspectRatio: 0.75,
+                        ),
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          final product = state.products[index];
+                          return ProductCard(
+                            product: product,
+                            onTap: () => context.push(
+                              AppRoutes.productDetailsPath(product.id),
+                            ),
+                          );
+                        }, childCount: state.products.length),
                       ),
-                    );
-                  },
-                ),
-              ],
-            ),
+                    ),
+                  };
+                },
+              ),
+              BlocBuilder<ProductsCubit, ProductsState>(
+                builder: (context, state) {
+                  if (!state.isLoadingMore) return const SliverToBoxAdapter();
+                  return SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(MFTokens.sp16),
+                      child: const Center(child: CircularProgressIndicator()),
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
         ),
-        floatingActionButton: PermissionGate(
-          permission: PermissionKeys.productsCreate,
-          child: FloatingActionButton(
-            heroTag: 'products_fab',
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(32.r),
-            ),
-            backgroundColor: AppColors.accent,
-            onPressed: () => context.push(AppRoutes.productNew),
-            child: const Icon(Icons.add, color: AppColors.white),
+      ),
+      floatingActionButton: PermissionGate(
+        permission: PermissionKeys.productsCreate,
+        child: FloatingActionButton(
+          heroTag: 'products_fab',
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(32),
           ),
+          backgroundColor: accent,
+          onPressed: () => context.push(AppRoutes.productNew),
+          child: const Icon(Icons.add, color: Colors.white),
         ),
       ),
     );

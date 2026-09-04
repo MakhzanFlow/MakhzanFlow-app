@@ -35,7 +35,7 @@ class InvoiceDetailsProductsTable extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(
-                    flex: 3,
+                    flex: 1,
                     child: Text(
                       item.productName,
                       style: TextStyle(
@@ -45,6 +45,7 @@ class InvoiceDetailsProductsTable extends StatelessWidget {
                     ),
                   ),
                   Expanded(
+                    flex: 1,
                     child: Text(
                       '${item.quantity}',
                       textAlign: TextAlign.center,
@@ -55,6 +56,7 @@ class InvoiceDetailsProductsTable extends StatelessWidget {
                     ),
                   ),
                   Expanded(
+                    flex: 2,
                     child: Text(
                       '${item.unitPrice.toInt()} ${AppStrings.currencyEg}',
                       textAlign: TextAlign.center,
@@ -65,6 +67,7 @@ class InvoiceDetailsProductsTable extends StatelessWidget {
                     ),
                   ),
                   Expanded(
+                    flex: 2,
                     child: Text(
                       '${item.total.toInt()} ${AppStrings.currencyEg}',
                       textAlign: TextAlign.center,

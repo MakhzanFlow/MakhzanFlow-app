@@ -5,6 +5,10 @@ import 'package:makhzanflow/features/companies/domain/repositories/company_repos
 class DemoteOwnerToMemberUseCase {
   final CompanyRepository _repository;
   DemoteOwnerToMemberUseCase(this._repository);
-  Future<Either<Failure, void>> call(String memberId, Map<String, dynamic> permissions) =>
-      _repository.demoteOwnerToMember(memberId, permissions);
+  Future<Either<Failure, void>> call(
+    String companyId,
+    String userId,
+    Map<String, dynamic> permissions,
+  ) =>
+      _repository.demoteOwnerToMember(companyId, userId, permissions);
 }

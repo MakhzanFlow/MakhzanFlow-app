@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:makhzanflow/core/constants/app_colors.dart';
-import 'package:makhzanflow/core/constants/app_sizes.dart';
+import 'package:makhzanflow/core/theme/mf_tokens.dart';
 
 class DecorativeCirclesPainter extends CustomPainter {
   const DecorativeCirclesPainter();
@@ -11,11 +10,11 @@ class DecorativeCirclesPainter extends CustomPainter {
     final h = size.height;
 
     final paintOrange = Paint()
-      ..color = AppColors.accent.withValues(alpha: 0.1)
+      ..color = MFTokens.accent.withValues(alpha: 0.1)
       ..style = PaintingStyle.fill;
 
     final paintWhite = Paint()
-      ..color = AppColors.white.withValues(alpha: 0.1)
+      ..color = MFTokens.gradientOverlaySubtle
       ..style = PaintingStyle.fill;
 
     canvas.drawCircle(Offset(w * 0.76, h * 0.16), w * 0.184, paintOrange);
@@ -33,9 +32,9 @@ class StockIconPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppColors.white
+      ..color = MFTokens.textOnPrimary
       ..style = PaintingStyle.stroke
-      ..strokeWidth = AppSizes.strokeWidthIcon
+      ..strokeWidth = 2.5
       ..strokeCap = StrokeCap.round;
 
     final l = size.width;
@@ -45,27 +44,10 @@ class StockIconPainter extends CustomPainter {
       Rect.fromLTRB(l * 0.083, t * 0.132, l * 0.917, t * 0.917),
       paint,
     );
-
-    canvas.drawLine(
-      Offset(l * 0.25, t * 0.75),
-      Offset(l * 0.75, t * 0.75),
-      paint,
-    );
-
-    canvas.drawLine(
-      Offset(l * 0.25, t * 0.583),
-      Offset(l * 0.75, t * 0.583),
-      paint,
-    );
-
-    canvas.drawLine(
-      Offset(l * 0.25, t * 0.417),
-      Offset(l * 0.75, t * 0.417),
-      paint,
-    );
+    canvas.drawLine(Offset(l * 0.083, t * 0.4), Offset(l * 0.917, t * 0.4), paint);
+    canvas.drawLine(Offset(l * 0.5, t * 0.132), Offset(l * 0.5, t * 0.4), paint);
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
-

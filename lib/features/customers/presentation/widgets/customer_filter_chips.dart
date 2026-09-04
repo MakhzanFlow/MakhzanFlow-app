@@ -1,19 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_sizes.dart';
+import '../../../../core/theme/mf_tokens.dart';
 import '../../../../core/constants/app_strings.dart';
 
 class FilterOption {
   final String key;
   final String label;
   final int count;
-
-  const FilterOption({
-    required this.key,
-    required this.label,
-    required this.count,
-  });
+  const FilterOption({required this.key, required this.label, required this.count});
 }
 
 class CustomerFilterChips extends StatelessWidget {
@@ -24,15 +17,7 @@ class CustomerFilterChips extends StatelessWidget {
   final int partialCount;
   final int deferredCount;
 
-  const CustomerFilterChips({
-    super.key,
-    required this.selectedFilter,
-    required this.onFilterChanged,
-    required this.totalCount,
-    required this.paidCount,
-    required this.partialCount,
-    required this.deferredCount,
-  });
+  const CustomerFilterChips({super.key, required this.selectedFilter, required this.onFilterChanged, required this.totalCount, required this.paidCount, required this.partialCount, required this.deferredCount});
 
   List<FilterOption> get _options => [
     FilterOption(key: 'all', label: AppStrings.customerAllFilter, count: totalCount),
@@ -44,27 +29,20 @@ class CustomerFilterChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: AppSizes.spacingMedium,
-        vertical: AppSizes.spacingSmall,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: MFTokens.sp16, vertical: MFTokens.sp8),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Directionality(
           textDirection: TextDirection.rtl,
           child: Row(
-          children: _options.map((opt) {
-            final isSelected = opt.key == selectedFilter;
-            return Padding(
-              padding: EdgeInsets.only(left: 8.w),
-              child: _FilterChipItem(
-                option: opt,
-                isSelected: isSelected,
-                onTap: () => onFilterChanged(opt.key),
-              ),
-            );
-          }          ).toList(),
-        ),
+            children: _options.map((opt) {
+              final isSelected = opt.key == selectedFilter;
+              return Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: _FilterChipItem(option: opt, isSelected: isSelected, onTap: () => onFilterChanged(opt.key)),
+              );
+            }).toList(),
+          ),
         ),
       ),
     );
@@ -76,58 +54,36 @@ class _FilterChipItem extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
 
-  const _FilterChipItem({
-    required this.option,
-    required this.isSelected,
-    required this.onTap,
-  });
+  const _FilterChipItem({required this.option, required this.isSelected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primary = isDark ? MFTokens.primaryDarkMode : MFTokens.primary;
+    final chipBg = isDark ? MFTokens.surfaceMutedDark : MFTokens.surfaceMutedLight;
+    final textSecondary = isDark ? MFTokens.textSecondaryDark : MFTokens.textSecondaryLight;
+    final border = isDark ? MFTokens.borderDark : MFTokens.borderLight;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: AppSizes.spacingMedium,
-          vertical: AppSizes.spacingSmall,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: MFTokens.sp16, vertical: MFTokens.sp8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : AppColors.chipBg,
-          borderRadius: BorderRadius.circular(AppSizes.radiusXLarge),
+          color: isSelected ? primary : chipBg,
+          borderRadius: BorderRadius.circular(MFTokens.radiusXL),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              option.label,
-              style: TextStyle(
-                fontFamily: 'Cairo',
-                fontSize: AppSizes.fontLarge,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                color: isSelected ? AppColors.white : AppColors.textSecondary,
-              ),
-            ),
-            SizedBox(width: 4.w),
+            Text(option.label, style: TextStyle(fontFamily: 'Cairo', fontSize: MFTokens.fontMD, fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal, color: isSelected ? Colors.white : textSecondary)),
+            const SizedBox(width: 4),
             Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: 6.w,
-                vertical: 2.h,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.white.withValues(alpha: 0.2)
-                    : AppColors.inputBorder,
-                borderRadius: BorderRadius.circular(12.r),
+                color: isSelected ? Colors.white.withValues(alpha: 0.2) : border,
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(
-                option.count.toString(),
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: AppSizes.fontSmall,
-                  fontWeight: FontWeight.w600,
-                  color: isSelected ? AppColors.white : AppColors.textSecondary,
-                ),
-              ),
+              child: Text(option.count.toString(), style: TextStyle(fontFamily: 'Cairo', fontSize: MFTokens.fontXS, fontWeight: FontWeight.w600, color: isSelected ? Colors.white : textSecondary)),
             ),
           ],
         ),

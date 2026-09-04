@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_sizes.dart';
+import '../../../../core/theme/mf_tokens.dart';
 import '../../../../core/constants/app_strings.dart';
 
 class CustomerDebtDisplay extends StatelessWidget {
@@ -13,28 +12,33 @@ class CustomerDebtDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? MFTokens.textPrimaryDark : MFTokens.textPrimaryLight;
+    final accent = isDark ? MFTokens.primaryDarkMode : MFTokens.accent;
+    final warningBg = isDark ? MFTokens.warningBgDark : MFTokens.warningBg;
+
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(AppSizes.spacingMedium),
+      padding: const EdgeInsets.all(MFTokens.sp16),
       decoration: BoxDecoration(
-        color: AppColors.debtAmberBg,
-        borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
+        color: warningBg,
+        borderRadius: BorderRadius.circular(MFTokens.radiusMD),
       ),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             Icons.lock_outline,
-            color: AppColors.accent,
+            color: accent,
           ),
-          SizedBox(width: AppSizes.spacingSmall),
+          SizedBox(width: MFTokens.sp8),
           Expanded(
             child: Text(
               '${AppStrings.customerDebtTotal}: $debtText ${AppStrings.currencyEg}'
               ' - ${AppStrings.customerDebtEditNote}',
               style: TextStyle(
                 fontFamily: 'Cairo',
-                fontSize: AppSizes.fontLarge,
-                color: AppColors.textPrimary,
+                fontSize: MFTokens.fontMD,
+                color: textPrimary,
               ),
             ),
           ),

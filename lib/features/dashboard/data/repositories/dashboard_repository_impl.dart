@@ -1,5 +1,4 @@
 import 'package:fpdart/fpdart.dart';
-import 'package:makhzanflow/core/error/exceptions.dart';
 import 'package:makhzanflow/core/error/failures.dart';
 import 'package:makhzanflow/features/dashboard/domain/entities/dashboard_stats.dart';
 import 'package:makhzanflow/features/dashboard/domain/repositories/dashboard_repository.dart';
@@ -13,13 +12,10 @@ class DashboardRepositoryImpl implements DashboardRepository {
   @override
   Future<Either<Failure, DashboardStats>> getDashboardStats(
       String companyId) async {
-    try {
-      final model = await _dataSource.getDashboardStats(companyId);
-      return Right(model);
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
+    final result = await _dataSource.getDashboardStats(companyId);
+    return result.fold(
+      (failure) => Left(failure),
+      (model) => Right(model),
+    );
   }
 }

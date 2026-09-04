@@ -1,241 +1,477 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:makhzanflow/core/error/exceptions.dart';
+import 'package:dio/dio.dart';
+import 'package:fpdart/fpdart.dart';
+
+import 'package:makhzanflow/core/api/api_client.dart';
+import 'package:makhzanflow/core/api/api_response.dart';
+import 'package:makhzanflow/core/constants/api_endpoints.dart';
+import 'package:makhzanflow/core/constants/error_messages.dart';
+import 'package:makhzanflow/core/error/failures.dart';
 import 'package:makhzanflow/features/companies/data/datasources/company_remote_data_source.dart';
+import 'package:makhzanflow/features/companies/data/models/add_member_request_dto.dart';
 import 'package:makhzanflow/features/companies/data/models/company_member_model.dart';
 import 'package:makhzanflow/features/companies/data/models/company_model.dart';
+import 'package:makhzanflow/features/companies/data/models/create_company_request_dto.dart';
+import 'package:makhzanflow/features/companies/data/models/join_company_request_dto.dart';
 import 'package:makhzanflow/features/companies/data/models/join_request_model.dart';
+import 'package:makhzanflow/features/companies/data/models/member_permissions_dto.dart';
+import 'package:makhzanflow/features/companies/data/models/update_company_request_dto.dart';
+import 'package:makhzanflow/features/companies/data/models/update_member_request_dto.dart';
 
+/// Full REST implementation of [CompanyRemoteDataSource] backed by Dio.
 class CompanyRemoteDataSourceImpl implements CompanyRemoteDataSource {
-  final SupabaseClient _client;
+  final ApiClient _apiClient;
 
-  CompanyRemoteDataSourceImpl(this._client);
+  CompanyRemoteDataSourceImpl({required ApiClient apiClient})
+    : _apiClient = apiClient;
 
-  Future<T> _rpc<T>(String name, {Map<String, dynamic>? params}) async {
+  // ======================= Company CRUD =======================
+
+  @override
+  Future<Either<Failure, List<CompanyModel>>> getUserCompanies() async {
     try {
-      return await _client.rpc(name, params: params) as T;
-    } on PostgrestException catch (e) {
-      throw ServerException(e.message);
+      final response = await _apiClient.dio.get(ApiEndpoints.companies);
+      final data = _dataList(response);
+      return Right(data.map(CompanyModel.fromJson).toList());
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
-  Future<List<CompanyModel>> getUserCompanies() async {
-    final response = await _rpc<List>('get_user_companies');
-    return response.map((e) => CompanyModel.fromJson(e as Map<String, dynamic>)).toList();
-  }
-
-  @override
-  Future<CompanyModel> createCompany(String name, {String? address, String? phone}) async {
-    final params = <String, dynamic>{'p_name': name};
-    if (address != null) params['p_address'] = address;
-    if (phone != null) params['p_phone'] = phone;
-    final companyId = await _rpc<dynamic>('create_company', params: params);
-    return getCompany(companyId.toString());
-  }
-
-  @override
-  Future<CompanyModel> getCompany(String companyId) async {
+  Future<Either<Failure, CompanyModel>> createCompany(
+    CreateCompanyRequestDto dto,
+  ) async {
     try {
-      final response = await _client
-          .from('companies')
-          .select()
-          .eq('id', companyId)
-          .maybeSingle();
-      if (response == null) {
-        throw ServerException('الشركة غير موجودة');
+      final response = await _apiClient.dio.post(
+        ApiEndpoints.companies,
+        data: dto.toJson(),
+        options: Options(headers: {'Content-Type': 'application/json'}),
+      );
+      return Right(CompanyModel.fromJson(_dataOrThrow(response)));
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, CompanyModel>> getCompany(String companyId) async {
+    try {
+      final response = await _apiClient.dio.get(
+        ApiEndpoints.companyById(companyId),
+      );
+      return Right(CompanyModel.fromJson(_dataOrThrow(response)));
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, CompanyModel>> updateCompany(
+    String companyId,
+    UpdateCompanyRequestDto dto,
+  ) async {
+    try {
+      final response = await _apiClient.dio.patch(
+        ApiEndpoints.companyById(companyId),
+        data: dto.toJson(),
+      );
+      return Right(CompanyModel.fromJson(_dataOrThrow(response)));
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteCompany(String companyId) async {
+    try {
+      await _apiClient.dio.delete(ApiEndpoints.companyById(companyId));
+      return const Right(null);
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, CompanyModel>> lookupCompanyByCode(String code) async {
+    try {
+      final response = await _apiClient.dio.get(
+        ApiEndpoints.companiesLookup,
+        queryParameters: {'code': code},
+      );
+      return Right(CompanyModel.fromJson(_dataOrThrow(response)));
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  // ======================= Members & permissions =======================
+
+  @override
+  Future<Either<Failure, List<CompanyMemberModel>>> getCompanyMembers(
+    String companyId,
+  ) async {
+    try {
+      final response = await _apiClient.dio.get(
+        ApiEndpoints.companyMembers(companyId),
+      );
+      final data = _dataList(response);
+      return Right(data.map(CompanyMemberModel.fromJson).toList());
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, CompanyMemberModel>> addMember(
+    String companyId,
+    AddMemberRequestDto dto,
+  ) async {
+    try {
+      final response = await _apiClient.dio.post(
+        ApiEndpoints.companyMembers(companyId),
+        data: dto.toJson(),
+      );
+      return Right(CompanyMemberModel.fromJson(_dataOrThrow(response)));
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, CompanyMemberModel>> updateMember(
+    String companyId,
+    String userId,
+    UpdateMemberRequestDto dto,
+  ) async {
+    try {
+      final response = await _apiClient.dio.patch(
+        ApiEndpoints.companyMember(companyId, userId),
+        data: dto.toJson(),
+      );
+      return Right(CompanyMemberModel.fromJson(_dataOrThrow(response)));
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> removeMember(
+    String companyId,
+    String userId,
+  ) async {
+    try {
+      await _apiClient.dio.delete(
+        ApiEndpoints.companyMember(companyId, userId),
+      );
+      return const Right(null);
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, MemberPermissionsDto>> getMemberPermissions(
+    String companyId,
+    String userId,
+  ) async {
+    try {
+      final response = await _apiClient.dio.get(
+        ApiEndpoints.companyMemberPermissions(companyId, userId),
+      );
+      return Right(MemberPermissionsDto.fromJson(_dataOrThrow(response)));
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  // ======================= Join flow =======================
+
+  @override
+  Future<Either<Failure, Map<String, dynamic>>> joinCompanyByCode(
+    JoinCompanyRequestDto dto,
+  ) async {
+    try {
+      final response = await _apiClient.dio.post(
+        ApiEndpoints.companiesJoin,
+        data: dto.toJson(),
+      );
+      final joined = _dataOrThrow(response);
+      final companyId = joined['company_id'] as String?;
+      if (companyId == null) {
+        return Left(ServerFailure(ErrorMessages.unexpectedError));
       }
-      return CompanyModel.fromJson(response);
-    } on PostgrestException catch (e) {
-      throw ServerException(e.message);
+      // The join endpoint does not return the request id — fetch it from the
+      // user's join requests so polling/cancelling can work.
+      final requests = await getMyJoinRequests();
+      return requests.fold((failure) => Left(failure), (list) {
+        for (final request in list) {
+          if (request.companyId == companyId) {
+            return Right({
+              'request_id': request.id,
+              'company_id': companyId,
+              'company_name': request.companyName,
+              'company_logo': request.companyLogo,
+              'status': request.status,
+            });
+          }
+        }
+        return Left(ServerFailure(ErrorMessages.unexpectedError));
+      });
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
-  Future<void> updateCompany(String companyId, {String? name, String? address, String? phone, String? logoUrl}) async {
-    await _rpc<void>('update_company_full', params: {
-      'p_company_id': companyId,
-      if (name != null) 'p_name': name,
-      if (address != null) 'p_address': address,
-      if (phone != null) 'p_phone': phone,
-      if (logoUrl != null) 'p_logo_url': logoUrl,
-    });
-  }
-
-  @override
-  Future<List<CompanyMemberModel>> getCompanyMembers(String companyId) async {
-    final response = await _rpc<List>('get_company_members', params: {
-      'p_company_id': companyId,
-    });
-    return response.map((e) => CompanyMemberModel.fromJson(e as Map<String, dynamic>)).toList();
-  }
-
-  @override
-  Future<CompanyMemberModel> inviteMember(String companyId, String userEmail) async {
-    final memberId = await _rpc<dynamic>('invite_company_member', params: {
-      'p_user_email': userEmail,
-    });
-    final members = await getCompanyMembers(companyId);
-    return members.firstWhere((m) => m.id == memberId.toString());
-  }
-
-  @override
-  Future<void> updateMemberPermissions(String companyId, String memberId, Map<String, dynamic> permissions) async {
-    await _rpc<void>('update_member_permissions', params: {
-      'p_member_id': memberId,
-      'p_permissions': permissions,
-    });
-  }
-
-  @override
-  Future<void> removeMember(String companyId, String memberId) async {
+  Future<Either<Failure, List<JoinRequestModel>>> getJoinRequests(
+    String companyId,
+  ) async {
     try {
-      await _client
-          .from('company_members')
-          .delete()
-          .eq('id', memberId)
-          .eq('company_id', companyId);
-    } on PostgrestException catch (e) {
-      throw ServerException(e.message);
+      final response = await _apiClient.dio.get(
+        ApiEndpoints.companyJoinRequests(companyId),
+      );
+      final data = _dataList(response);
+      return Right(data.map(JoinRequestModel.fromJson).toList());
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
-  Future<CompanyModel> createCompanyFull({
-    required String name,
-    String? businessType,
-    String? phone,
-    String? address,
-    String? logoUrl,
-  }) async {
-    final params = <String, dynamic>{'p_name': name};
-    if (businessType != null) params['p_business_type'] = businessType;
-    if (phone != null) params['p_phone'] = phone;
-    if (address != null) params['p_address'] = address;
-    if (logoUrl != null) params['p_logo_url'] = logoUrl;
-    final response = await _rpc<Map<String, dynamic>>('create_company_full', params: params);
-    return CompanyModel.fromJson(response);
-  }
-
-  @override
-  Future<Map<String, dynamic>> joinCompanyByCode(String inviteCode) async {
-    final response = await _rpc<Map<String, dynamic>>('join_company_by_code', params: {
-      'p_invite_code': inviteCode,
-    });
-    return response;
-  }
-
-  @override
-  Future<List<JoinRequestModel>> getJoinRequests(String companyId, {String status = 'pending'}) async {
-    final response = await _rpc<List>('get_join_requests', params: {
-      'p_company_id': companyId,
-      'p_status': status,
-    });
-    return response.map((e) {
-      final row = Map<String, dynamic>.from(e as Map);
-      row.putIfAbsent('company_id', () => companyId);
-      return JoinRequestModel.fromJson(row);
-    }).toList();
-  }
-
-  @override
-  Future<String> approveJoinRequest(String requestId) async {
-    final memberId = await _rpc<dynamic>('approve_join_request', params: {
-      'p_request_id': requestId,
-    });
-    return memberId.toString();
-  }
-
-  @override
-  Future<void> rejectJoinRequest(String requestId) async {
-    await _rpc<void>('reject_join_request', params: {
-      'p_request_id': requestId,
-    });
-  }
-
-  @override
-  Future<Map<String, dynamic>> getJoinRequestStatus(String requestId) async {
-    final response = await _rpc<dynamic>('get_join_request_status', params: {
-      'p_request_id': requestId,
-    });
-    if (response == null) {
-      throw const ServerException('Join request not found');
+  Future<Either<Failure, void>> approveJoinRequest(
+    String companyId,
+    String requestId,
+  ) async {
+    try {
+      await _apiClient.dio.post(
+        ApiEndpoints.companyJoinRequestAction(companyId, requestId, 'approve'),
+      );
+      return const Right(null);
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
     }
-    return Map<String, dynamic>.from(response as Map);
   }
 
   @override
-  Future<void> cancelJoinRequest(String requestId) async {
-    await _rpc<void>('cancel_join_request', params: {
-      'p_request_id': requestId,
-    });
+  Future<Either<Failure, void>> rejectJoinRequest(
+    String companyId,
+    String requestId,
+  ) async {
+    try {
+      await _apiClient.dio.post(
+        ApiEndpoints.companyJoinRequestAction(companyId, requestId, 'reject'),
+      );
+      return const Right(null);
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
   }
 
   @override
-  Future<String> getCompanyJoinCode() async {
-    final response = await _rpc<dynamic>('get_company_join_code');
-    return response as String;
+  Future<Either<Failure, Map<String, dynamic>>> getJoinRequestStatus(
+    String requestId,
+  ) async {
+    try {
+      final requests = await getMyJoinRequests();
+      return requests.fold((failure) => Left(failure), (list) {
+        for (final request in list) {
+          if (request.id == requestId) {
+            return Right({
+              'request_id': request.id,
+              'company_id': request.companyId,
+              'status': request.status,
+            });
+          }
+        }
+        return Left(NotFoundFailure(ErrorMessages.notFound));
+      });
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
   }
 
   @override
-  Future<String> regenerateCompanyJoinCode() async {
-    final response = await _rpc<dynamic>('regenerate_company_join_code');
-    return response as String;
+  Future<Either<Failure, List<JoinRequestModel>>> getMyJoinRequests() async {
+    try {
+      final response = await _apiClient.dio.get(
+        ApiEndpoints.companiesMyJoinRequests,
+      );
+      final data = _dataList(response);
+      return Right(data.map(JoinRequestModel.fromJson).toList());
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  // ======================= Invite code =======================
+
+  @override
+  Future<Either<Failure, String>> getCompanyJoinCode(String companyId) async {
+    try {
+      final response = await _apiClient.dio.get(
+        ApiEndpoints.companyById(companyId),
+      );
+      final data = _dataOrThrow(response);
+      final code = data['invite_code'] as String?;
+      if (code == null) {
+        return Left(ServerFailure(ErrorMessages.unexpectedError));
+      }
+      return Right(code);
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
   }
 
   @override
-  Future<void> deactivateMember(String memberId) async {
-    await _rpc<void>('deactivate_company_member', params: {
-      'p_member_id': memberId,
-    });
+  Future<Either<Failure, String>> regenerateCompanyJoinCode(
+    String companyId,
+  ) async {
+    try {
+      final response = await _apiClient.dio.post(
+        ApiEndpoints.companyInviteCodeRegenerate(companyId),
+      );
+      final data = _dataOrThrow(response);
+      final code = data['invite_code'] as String?;
+      if (code == null) {
+        return Left(ServerFailure(ErrorMessages.unexpectedError));
+      }
+      return Right(code);
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  // ========= Operations the REST backend does not expose yet =========
+
+  @override
+  Future<Either<Failure, void>> inviteMember(
+    String companyId,
+    String userEmail,
+  ) async {
+    return Left(ServerFailure(ErrorMessages.unsupportedOperation));
   }
 
   @override
-  Future<void> reactivateMember(String memberId) async {
-    await _rpc<void>('reactivate_company_member', params: {
-      'p_member_id': memberId,
-    });
+  Future<Either<Failure, void>> cancelJoinRequest(String requestId) async {
+    return Left(ServerFailure(ErrorMessages.unsupportedOperation));
   }
 
   @override
-  Future<void> removeCompanyMemberRpc(String memberId) async {
-    await _rpc<void>('remove_company_member', params: {
-      'p_member_id': memberId,
-    });
+  Future<Either<Failure, void>> deactivateMember(String memberId) async {
+    return Left(ServerFailure(ErrorMessages.unsupportedOperation));
   }
 
   @override
-  Future<void> promoteMemberToOwner(String memberId) async {
-    await _rpc<void>('promote_member_to_owner', params: {
-      'p_member_id': memberId,
-    });
+  Future<Either<Failure, void>> reactivateMember(String memberId) async {
+    return Left(ServerFailure(ErrorMessages.unsupportedOperation));
   }
 
   @override
-  Future<void> demoteOwnerToMember(String memberId, Map<String, dynamic> permissions) async {
-    await _rpc<void>('demote_owner_to_member', params: {
-      'p_member_id': memberId,
-      'p_permissions': permissions,
-    });
+  Future<Either<Failure, void>> removeCompanyMemberRpc(String memberId) async {
+    return Left(ServerFailure(ErrorMessages.unsupportedOperation));
   }
 
   @override
-  Future<Map<String, dynamic>> getMemberPermissions(String memberId) async {
-    final response = await _rpc<dynamic>('get_member_permissions', params: {
-      'p_member_id': memberId,
-    });
-    if (response == null) return {};
-    return Map<String, dynamic>.from(response as Map);
+  Future<Either<Failure, void>> promoteMemberToOwner(
+    String companyId,
+    String userId,
+  ) async {
+    return updateMember(
+      companyId,
+      userId,
+      const UpdateMemberRequestDto(role: 'owner'),
+    ).then(
+      // ignore: avoid_returning_null_for_void
+      (result) => result.map((_) => null),
+    );
   }
 
   @override
-  Future<void> leaveCompany() async {
-    await _rpc<void>('leave_company');
+  Future<Either<Failure, void>> demoteOwnerToMember(
+    String companyId,
+    String userId,
+    Map<String, dynamic> permissions,
+  ) async {
+    return updateMember(
+      companyId,
+      userId,
+      UpdateMemberRequestDto(role: 'member', permissions: permissions),
+    ).then(
+      // ignore: avoid_returning_null_for_void
+      (result) => result.map((_) => null),
+    );
   }
 
   @override
-  Future<void> deleteCompany(String companyId) async {
-    await _rpc<void>('delete_company', params: {
-      'p_company_id': companyId,
-    });
+  Future<Either<Failure, void>> leaveCompany() async {
+    return Left(ServerFailure(ErrorMessages.unsupportedOperation));
+  }
+
+  // ======================= Helpers =======================
+
+  Map<String, dynamic> _dataOrThrow(Response<dynamic> response) {
+    final data = _data(response);
+    if (data == null) {
+      throw StateError(ErrorMessages.unexpectedError);
+    }
+    return data;
+  }
+
+  Map<String, dynamic>? _data(Response<dynamic> response) {
+    final body = response.data;
+    if (body is Map<String, dynamic>) {
+      final data = body['data'];
+      if (data is Map<String, dynamic>) return data;
+    }
+    return null;
+  }
+
+  List<Map<String, dynamic>> _dataList(Response<dynamic> response) {
+    final body = response.data;
+    if (body is Map<String, dynamic>) {
+      final data = body['data'];
+      if (data is List) {
+        return data.whereType<Map<String, dynamic>>().toList();
+      }
+    }
+    throw StateError(ErrorMessages.unexpectedError);
   }
 }

@@ -7,7 +7,7 @@ class RejectJoinRequestUseCase {
 
   RejectJoinRequestUseCase(this._repository);
 
-  Future<Either<Failure, void>> call(String requestId) {
-    return _repository.rejectJoinRequest(requestId);
+  Future<Either<Failure, void>> call(String companyId, String requestId) {
+    return _repository.rejectJoinRequest(companyId, requestId);
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:makhzanflow/core/constants/app_colors.dart';
 import 'package:makhzanflow/core/constants/app_sizes.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
+import 'package:makhzanflow/features/invoice/domain/constants/invoice_constants.dart';
 import 'package:makhzanflow/features/invoice/presentation/cubit/create_invoice/create_invoice_cubit.dart';
 
 class DiscountSection extends StatefulWidget {
@@ -32,14 +33,20 @@ class _DiscountSectionState extends State<DiscountSection> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<CreateInvoiceCubit, CreateInvoiceState>(
-      buildWhen: (prev, next) => next is CreateInvoiceFormState,
-      builder: (context, state) {
-        if (state is! CreateInvoiceFormState) return const SizedBox.shrink();
-        final loaded = state;
-
-        final text = loaded.discountValue > 0
-            ? loaded.discountValue.toInt().toString()
+    return BlocSelector<CreateInvoiceCubit, CreateInvoiceState, _DiscountView>(
+      selector: (state) {
+        if (state is! CreateInvoiceFormState)
+          return const _DiscountView.empty();
+        return _DiscountView(
+          discountType: state.discountType,
+          discountValue: state.discountValue,
+          discountAmount: state.discountAmount,
+          subtotal: state.subtotal,
+        );
+      },
+      builder: (context, view) {
+        final text = view.discountValue > 0
+            ? view.discountValue.toInt().toString()
             : '';
         if (_controller.text != text) {
           _controller.value = TextEditingValue(
@@ -48,16 +55,19 @@ class _DiscountSectionState extends State<DiscountSection> {
           );
         }
 
-        final isPercentage = loaded.discountType == 'percentage';
+        final isPercentage =
+            view.discountType == InvoiceConstants.discountPercentage;
         final suffix = isPercentage
             ? AppStrings.discountPercentSuffix
             : AppStrings.discountValueSuffix;
 
         final discountError = isPercentage
-            ? (loaded.discountValue > 100 ? AppStrings.discountPercentError : null)
-            : (loaded.discountValue > loaded.subtotal && loaded.subtotal > 0
-                ? AppStrings.discountAmountError
-                : null);
+            ? (view.discountValue > 100
+                  ? AppStrings.discountPercentError
+                  : null)
+            : (view.discountValue > view.subtotal && view.subtotal > 0
+                  ? AppStrings.discountAmountError
+                  : null);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -71,18 +81,23 @@ class _DiscountSectionState extends State<DiscountSection> {
               ),
             ),
             SizedBox(height: AppSizes.spacingSmall),
-            Row(
+            Wrap(
+              spacing: AppSizes.spacingSmall,
+              runSpacing: AppSizes.spacingSmall,
               children: [
                 _DiscountChip(
                   label: AppStrings.byAmount,
                   selected: !isPercentage,
-                  onTap: () => widget.cubit.setDiscountType('fixed'),
+                  onTap: () => widget.cubit.setDiscountType(
+                    InvoiceConstants.discountFixed,
+                  ),
                 ),
-                SizedBox(width: AppSizes.spacingSmall),
                 _DiscountChip(
                   label: AppStrings.byPercentage,
                   selected: isPercentage,
-                  onTap: () => widget.cubit.setDiscountType('percentage'),
+                  onTap: () => widget.cubit.setDiscountType(
+                    InvoiceConstants.discountPercentage,
+                  ),
                 ),
               ],
             ),
@@ -101,7 +116,9 @@ class _DiscountSectionState extends State<DiscountSection> {
                       fillColor: AppColors.inputBackground,
                       errorText: discountError,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppSizes.radiusSmall),
+                        borderRadius: BorderRadius.circular(
+                          AppSizes.radiusSmall,
+                        ),
                         borderSide: BorderSide(
                           color: discountError != null
                               ? AppColors.error
@@ -113,12 +130,12 @@ class _DiscountSectionState extends State<DiscountSection> {
                         vertical: AppSizes.spacingSmall,
                       ),
                     ),
-                    onChanged: (value) {
-                      widget.cubit.setDiscountValue(double.tryParse(value) ?? 0);
-                    },
+                    onChanged: (value) => widget.cubit.setDiscountValue(
+                      double.tryParse(value) ?? 0,
+                    ),
                   ),
                 ),
-                if (loaded.discountValue > 0) ...[
+                if (view.discountValue > 0) ...[
                   SizedBox(width: AppSizes.spacingSmall),
                   Container(
                     padding: EdgeInsets.symmetric(
@@ -130,7 +147,7 @@ class _DiscountSectionState extends State<DiscountSection> {
                       borderRadius: BorderRadius.circular(AppSizes.radiusSmall),
                     ),
                     child: Text(
-                      '- ${loaded.discountAmount.toInt()} ${AppStrings.currencyEg}',
+                      '- ${view.discountAmount.toInt()} ${AppStrings.currencyEg}',
                       style: TextStyle(
                         color: AppColors.accent,
                         fontWeight: FontWeight.w600,
@@ -146,6 +163,36 @@ class _DiscountSectionState extends State<DiscountSection> {
       },
     );
   }
+}
+
+class _DiscountView {
+  final String discountType;
+  final double discountValue;
+  final double discountAmount;
+  final double subtotal;
+  const _DiscountView({
+    required this.discountType,
+    required this.discountValue,
+    required this.discountAmount,
+    required this.subtotal,
+  });
+  const _DiscountView.empty()
+    : discountType = InvoiceConstants.discountFixed,
+      discountValue = 0,
+      discountAmount = 0,
+      subtotal = 0;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is _DiscountView &&
+          discountType == other.discountType &&
+          discountValue == other.discountValue &&
+          discountAmount == other.discountAmount &&
+          subtotal == other.subtotal;
+  @override
+  int get hashCode =>
+      Object.hash(discountType, discountValue, discountAmount, subtotal);
 }
 
 class _DiscountChip extends StatelessWidget {

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_sizes.dart';
+import '../../../../core/theme/mf_tokens.dart';
 
 class CustomerProfileHeader extends StatelessWidget {
   final String name;
@@ -18,28 +16,34 @@ class CustomerProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? MFTokens.textPrimaryDark : MFTokens.textPrimaryLight;
+    final textSecondary = isDark ? MFTokens.textSecondaryDark : MFTokens.textSecondaryLight;
+    final primarySubtle = isDark ? MFTokens.primaryDarkModeSubtle : MFTokens.primarySubtle;
+    final primary = isDark ? MFTokens.primaryDarkMode : MFTokens.primary;
+
     return Column(
       children: [
-        _buildProfileImage(),
-        SizedBox(height: AppSizes.spacingLarge),
+        _buildProfileImage(primarySubtle, primary),
+        SizedBox(height: MFTokens.sp24),
         Text(
           name,
           style: TextStyle(
             fontFamily: 'Cairo',
-            fontSize: AppSizes.fontXXLarge,
+            fontSize: MFTokens.font2XL,
             fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
+            color: textPrimary,
           ),
         ),
         if (nameOfficial != null && nameOfficial!.isNotEmpty)
           Padding(
-            padding: EdgeInsets.only(top: 4.h),
+            padding: EdgeInsets.only(top: MFTokens.sp4),
             child: Text(
               nameOfficial!,
               style: TextStyle(
                 fontFamily: 'Cairo',
-                fontSize: AppSizes.fontLarge,
-                color: AppColors.textSecondary,
+                fontSize: MFTokens.fontMD,
+                color: textSecondary,
               ),
             ),
           ),
@@ -47,35 +51,35 @@ class CustomerProfileHeader extends StatelessWidget {
     );
   }
 
-  Widget _buildProfileImage() {
+  Widget _buildProfileImage(Color bg, Color primary) {
     if (imageUrl != null && imageUrl!.isNotEmpty) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(48.r),
+        borderRadius: BorderRadius.circular(MFTokens.radiusFull),
         child: CachedNetworkImage(
           imageUrl: imageUrl!,
-          width: 96.w,
-          height: 96.w,
+          width: MFTokens.sp64 * 1.5,
+          height: MFTokens.sp64 * 1.5,
           fit: BoxFit.cover,
-          placeholder: (_, __) => _buildImagePlaceholder(),
-          errorWidget: (_, __, ___) => _buildImagePlaceholder(),
+          placeholder: (_, __) => _buildImagePlaceholder(bg, primary),
+          errorWidget: (_, __, ___) => _buildImagePlaceholder(bg, primary),
         ),
       );
     }
-    return _buildImagePlaceholder();
+    return _buildImagePlaceholder(bg, primary);
   }
 
-  Widget _buildImagePlaceholder() {
+  Widget _buildImagePlaceholder(Color bg, Color primary) {
     return Container(
-      width: 96.w,
-      height: 96.w,
+      width: MFTokens.sp64 * 1.5,
+      height: MFTokens.sp64 * 1.5,
       decoration: BoxDecoration(
-        color: AppColors.lightPrimaryBg,
-        borderRadius: BorderRadius.circular(48.r),
+        color: bg,
+        borderRadius: BorderRadius.circular(MFTokens.radiusFull),
       ),
       child: Icon(
         Icons.store_outlined,
-        size: 48.w,
-        color: AppColors.primary,
+        size: MFTokens.sp48,
+        color: primary,
       ),
     );
   }

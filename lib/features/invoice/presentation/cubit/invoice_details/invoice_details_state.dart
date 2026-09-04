@@ -16,3 +16,13 @@ class InvoiceDetailsError extends InvoiceDetailsState {
   final Failure failure;
   InvoiceDetailsError({required this.failure});
 }
+
+class InvoiceDetailsCanceling extends InvoiceDetailsState {
+  final Invoice invoice;
+  InvoiceDetailsCanceling({required this.invoice});
+}
+
+class InvoiceDetailsCanceled extends InvoiceDetailsState {
+  final Invoice invoice;
+  InvoiceDetailsCanceled({required this.invoice});
+}

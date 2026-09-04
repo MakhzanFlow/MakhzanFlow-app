@@ -1,9 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_sizes.dart';
+import '../../../../core/theme/mf_tokens.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/widgets/app_network_image.dart';
 import 'dashed_border_painter.dart';
@@ -26,27 +24,30 @@ class ProductImagePickerField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primary = isDark ? MFTokens.primaryDarkMode : MFTokens.primary;
+    final primarySubtle = isDark ? MFTokens.primaryDarkModeSubtle : MFTokens.primarySubtle;
     final hasImage = imageLocalPath != null || imageUploadUrl != null;
 
     if (isUploading) {
       return Container(
-        height: 160.h,
+        height: 160,
         decoration: BoxDecoration(
           color: Colors.black26,
-          borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
+          borderRadius: BorderRadius.circular(MFTokens.radiusMD),
         ),
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const CircularProgressIndicator(color: AppColors.white),
-              SizedBox(height: AppSizes.spacingSmall),
+              const CircularProgressIndicator(color: Colors.white),
+              const SizedBox(height: MFTokens.sp8),
               Text(
                 AppStrings.productImageUploading,
-                style: TextStyle(
+                style: const TextStyle(
                   fontFamily: 'Cairo',
-                  fontSize: AppSizes.fontMedium,
-                  color: AppColors.white,
+                  fontSize: MFTokens.fontSM,
+                  color: Colors.white,
                 ),
               ),
             ],
@@ -57,9 +58,9 @@ class ProductImagePickerField extends StatelessWidget {
 
     if (hasImage) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
+        borderRadius: BorderRadius.circular(MFTokens.radiusMD),
         child: SizedBox(
-          height: 160.h,
+          height: 160,
           child: Stack(
             children: [
               if (imageLocalPath != null)
@@ -75,23 +76,23 @@ class ProductImagePickerField extends StatelessWidget {
                   fit: BoxFit.cover,
                   width: double.infinity,
                   height: double.infinity,
-                  errorBuilder: (_, __, ___) => _placeholder(),
+                  errorBuilder: (_, __, ___) => _placeholder(isDark, primary, primarySubtle),
                 ),
               Positioned(
-                top: 8.h,
-                right: 8.w,
+                top: 8,
+                right: 8,
                 child: GestureDetector(
                   onTap: onRemove,
                   child: Container(
-                    padding: EdgeInsets.all(4.w),
+                    padding: const EdgeInsets.all(4),
                     decoration: const BoxDecoration(
-                      color: AppColors.error,
+                      color: MFTokens.errorText,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
+                    child: const Icon(
                       Icons.close,
-                      size: 16.w,
-                      color: AppColors.white,
+                      size: 16,
+                      color: Colors.white,
                     ),
                   ),
                 ),
@@ -104,46 +105,46 @@ class ProductImagePickerField extends StatelessWidget {
 
     return GestureDetector(
       onTap: () => _pickImage(context),
-      child: _placeholder(),
+      child: _placeholder(isDark, primary, primarySubtle),
     );
   }
 
-  Widget _placeholder() {
+  Widget _placeholder(bool isDark, Color primary, Color primarySubtle) {
     return Center(
       child: Container(
-        width: 249.w,
-        height: 160.h,
+        width: 249,
+        height: 160,
         decoration: BoxDecoration(
-          color: const Color(0xFFE8F1EC),
-          borderRadius: BorderRadius.circular(16.r),
+          color: primarySubtle,
+          borderRadius: BorderRadius.circular(MFTokens.radiusLG),
         ),
         child: CustomPaint(
-          painter: DashedBorderPainter(),
+          painter: DashedBorderPainter(color: primary),
           child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 26.w,
-                  height: 26.h,
+                  width: 26,
+                  height: 26,
                   decoration: BoxDecoration(
                     color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(4.r),
-                    border: Border.all(color: AppColors.primary, width: 2.17),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: primary, width: 2.17),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.add,
                     size: 14,
-                    color: AppColors.primary,
+                    color: primary,
                   ),
                 ),
-                SizedBox(height: 4.h),
+                const SizedBox(height: 4),
                 Text(
                   AppStrings.productImagePicker,
                   style: TextStyle(
                     fontFamily: 'Cairo',
-                    fontSize: 10.sp,
-                    color: AppColors.primary,
+                    fontSize: MFTokens.fontXS,
+                    color: primary,
                   ),
                 ),
               ],
@@ -155,71 +156,73 @@ class ProductImagePickerField extends StatelessWidget {
   }
 
   Future<void> _pickImage(BuildContext context) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textSecondary = isDark ? MFTokens.textSecondaryDark : MFTokens.textSecondaryLight;
+    final primarySubtle = isDark ? MFTokens.primaryDarkModeSubtle : MFTokens.primarySubtle;
+    final primary = isDark ? MFTokens.primaryDarkMode : MFTokens.primary;
+
     final picker = ImagePicker();
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20.w)),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(MFTokens.radiusXL)),
       ),
       builder: (ctx) => SafeArea(
         child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 24.h),
+          padding: const EdgeInsets.symmetric(vertical: MFTokens.sp24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 40.w,
-                height: 4.h,
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.textSecondary.withValues(alpha: 0.3),
+                  color: textSecondary.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              SizedBox(height: 20.h),
+              const SizedBox(height: MFTokens.sp20),
               Text(
                 AppStrings.productImagePicker,
-                style: TextStyle(
+                style: const TextStyle(
                   fontFamily: 'Cairo',
-                  fontSize: AppSizes.fontLarge,
+                  fontSize: MFTokens.fontMD,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              SizedBox(height: 16.h),
+              const SizedBox(height: MFTokens.sp16),
               ListTile(
                 leading: Container(
-                  padding: EdgeInsets.all(10.w),
-                  decoration: const BoxDecoration(
-                    color: AppColors.lightGreen,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: primarySubtle,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.photo_library,
-                    color: AppColors.primary,
-                  ),
+                  child: Icon(Icons.photo_library, color: primary),
                 ),
                 title: Text(
                   AppStrings.productImageGallery,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontFamily: 'Cairo',
-                    fontSize: AppSizes.fontMedium,
+                    fontSize: MFTokens.fontSM,
                   ),
                 ),
                 onTap: () => Navigator.pop(ctx, ImageSource.gallery),
               ),
               ListTile(
                 leading: Container(
-                  padding: EdgeInsets.all(10.w),
-                  decoration: const BoxDecoration(
-                    color: AppColors.lightGreen,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: primarySubtle,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.camera_alt, color: AppColors.primary),
+                  child: Icon(Icons.camera_alt, color: primary),
                 ),
                 title: Text(
                   AppStrings.productImageCamera,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontFamily: 'Cairo',
-                    fontSize: AppSizes.fontMedium,
+                    fontSize: MFTokens.fontSM,
                   ),
                 ),
                 onTap: () => Navigator.pop(ctx, ImageSource.camera),
@@ -231,7 +234,6 @@ class ProductImagePickerField extends StatelessWidget {
     );
     if (source == null) return;
     final pickedFile = await picker.pickImage(
-      // need image from gallery and camera, but image_picker doesn't support multiple sources in one call, so we will show a dialog to let user choose source
       source: source,
       maxWidth: 1024,
       maxHeight: 1024,
@@ -241,4 +243,3 @@ class ProductImagePickerField extends StatelessWidget {
     }
   }
 }
-

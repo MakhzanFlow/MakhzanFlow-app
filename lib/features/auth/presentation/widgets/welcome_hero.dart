@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:makhzanflow/core/constants/app_colors.dart';
-import 'package:makhzanflow/core/constants/app_sizes.dart';
+import 'package:makhzanflow/core/theme/mf_tokens.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
 
 class WelcomeHero extends StatelessWidget {
@@ -14,28 +13,27 @@ class WelcomeHero extends StatelessWidget {
         Text(
           AppStrings.welcomeTitle,
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: const TextStyle(
             fontFamily: 'Cairo',
-            color: AppColors.white,
-            fontSize: AppSizes.fontXXXLarge,
+            color: MFTokens.textOnPrimary,
+            fontSize: MFTokens.fontDisplay,
             fontWeight: FontWeight.w400,
-            height: AppSizes.welcomeLineHeight,
+            height: 1.38,
           ),
         ),
-        SizedBox(height: AppSizes.spacingSmall),
+        const SizedBox(height: MFTokens.sp8),
         Text(
           AppStrings.welcomeSubtitle,
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: const TextStyle(
             fontFamily: 'Cairo',
-            color: AppColors.white.withValues(alpha: 0.6),
-            fontSize: AppSizes.fontMedium,
+            color: MFTokens.gradientOverlayMuted,
+            fontSize: MFTokens.fontSM,
             fontWeight: FontWeight.w400,
-            height: AppSizes.welcomeSubtitleLineHeight,
+            height: 1.62,
           ),
         ),
       ],
     );
   }
 }
-

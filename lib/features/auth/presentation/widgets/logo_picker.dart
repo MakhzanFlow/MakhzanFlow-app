@@ -1,50 +1,97 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:makhzanflow/core/constants/app_colors.dart';
-import 'package:makhzanflow/core/constants/app_sizes.dart';
-import 'package:makhzanflow/core/constants/app_strings.dart';
-import 'package:makhzanflow/core/widgets/app_network_image.dart';
+import '../../../../core/constants/app_strings.dart';
+import '../../../../core/theme/mf_tokens.dart';
+import '../../../../core/widgets/app_network_image.dart';
+import '../../../products/presentation/widgets/dashed_border_painter.dart';
 
 class LogoPicker extends StatelessWidget {
   final String? imagePath;
   final String? logoUrl;
-  final VoidCallback onPickFromGallery;
-  final VoidCallback onPickFromCamera;
-  final VoidCallback onClear;
+  final VoidCallback? onPickFromGallery;
+  final VoidCallback? onPickFromCamera;
+  final VoidCallback? onClear;
 
   const LogoPicker({
     super.key,
     this.imagePath,
     this.logoUrl,
-    required this.onPickFromGallery,
-    required this.onPickFromCamera,
-    required this.onClear,
+    this.onPickFromGallery,
+    this.onPickFromCamera,
+    this.onClear,
   });
+
+  void _showPickerOptions(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(MFTokens.radiusXL),
+        ),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(MFTokens.sp16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(
+                  Icons.photo_library,
+                  color: isDark ? MFTokens.primaryDarkMode : MFTokens.primary,
+                ),
+                title: Text(AppStrings.pickFromGallery),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  onPickFromGallery?.call();
+                },
+              ),
+              ListTile(
+                leading: Icon(
+                  Icons.camera_alt,
+                  color: isDark ? MFTokens.primaryDarkMode : MFTokens.primary,
+                ),
+                title: Text(AppStrings.pickFromCamera),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  onPickFromCamera?.call();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primary = isDark ? MFTokens.primaryDarkMode : MFTokens.primary;
+    final subtleBg = isDark
+        ? MFTokens.primaryDarkModeSubtle
+        : MFTokens.primarySubtle;
+
     return GestureDetector(
       onTap: () => _showPickerOptions(context),
       child: Container(
-        width: AppSizes.logoPickerSize,
-        height: AppSizes.logoPickerSize,
+        width: 120,
+        height: 120,
         decoration: BoxDecoration(
-          color: AppColors.lightGreen,
-          borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
+          color: subtleBg,
+          borderRadius: BorderRadius.circular(MFTokens.radiusLG),
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
+          borderRadius: BorderRadius.circular(MFTokens.radiusLG),
           child: CustomPaint(
-            painter: _DashedBorderPainter(
-              color: AppColors.primary,
-              strokeWidth: 1.6,
-              radiusValue: AppSizes.radiusLarge,
-            ),
+            painter: DashedBorderPainter(color: primary, strokeWidth: 1.6),
             child: imagePath != null
                 ? _buildImageContent()
                 : logoUrl != null
-                    ? _buildNetworkContent()
-                    : _buildPlaceholderContent(),
+                ? _buildNetworkContent()
+                : _buildPlaceholderContent(primary),
           ),
         ),
       ),
@@ -56,8 +103,8 @@ class LogoPicker extends StatelessWidget {
       children: [
         Image.file(
           File(imagePath!),
-          width: AppSizes.logoPickerSize,
-          height: AppSizes.logoPickerSize,
+          width: 120,
+          height: 120,
           fit: BoxFit.cover,
         ),
         _buildClearButton(),
@@ -70,10 +117,11 @@ class LogoPicker extends StatelessWidget {
       children: [
         AppNetworkImage(
           imageUrl: logoUrl!,
-          width: AppSizes.logoPickerSize,
-          height: AppSizes.logoPickerSize,
+          width: 120,
+          height: 120,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _buildPlaceholderContent(),
+          errorBuilder: (_, __, ___) =>
+              _buildPlaceholderContent(MFTokens.primary),
         ),
         _buildClearButton(),
       ],
@@ -82,131 +130,37 @@ class LogoPicker extends StatelessWidget {
 
   Widget _buildClearButton() {
     return Positioned(
-      top: AppSizes.spacingTiny,
-      right: AppSizes.spacingTiny,
+      top: 4,
+      right: 4,
       child: GestureDetector(
         onTap: onClear,
         child: Container(
-          padding: EdgeInsets.all(AppSizes.spacingTiny),
-          decoration: const BoxDecoration(
-            color: Colors.black54,
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: MFTokens.overlayDark,
             shape: BoxShape.circle,
           ),
-          child: Icon(
-            Icons.close,
-            size: AppSizes.iconSmall,
-            color: AppColors.white,
-          ),
+          child: const Icon(Icons.close, size: 14, color: MFTokens.textOnPrimary),
         ),
       ),
     );
   }
 
-  Widget _buildPlaceholderContent() {
+  Widget _buildPlaceholderContent(Color primary) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(
-          Icons.add_photo_alternate_outlined,
-          size: AppSizes.iconMedium,
-          color: AppColors.primary,
-        ),
-        SizedBox(height: AppSizes.spacingTiny),
+        Icon(Icons.add_photo_alternate_outlined, size: 32, color: primary),
+        const SizedBox(height: 4),
         Text(
           AppStrings.logoPickerLabel,
           style: TextStyle(
             fontFamily: 'Cairo',
-            fontSize: AppSizes.fontSmall,
-            color: AppColors.primary,
+            fontSize: MFTokens.fontXS,
+            color: primary,
           ),
         ),
       ],
     );
   }
-
-  void _showPickerOptions(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(AppSizes.spacingMedium),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.photo_library_outlined),
-                title: Text(
-                  AppStrings.pickFromGallery,
-                  style: const TextStyle(fontFamily: 'Cairo'),
-                ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  onPickFromGallery();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.camera_alt_outlined),
-                title: Text(
-                  AppStrings.pickFromCamera,
-                  style: const TextStyle(fontFamily: 'Cairo'),
-                ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  onPickFromCamera();
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DashedBorderPainter extends CustomPainter {
-  final Color color;
-  final double strokeWidth;
-  final double radiusValue;
-
-  _DashedBorderPainter({
-    required this.color,
-    required this.strokeWidth,
-    required this.radiusValue,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth;
-
-    const dashWidth = 6.0;
-    const dashGap = 4.0;
-
-    final path = Path()..addRRect(RRect.fromRectAndRadius(
-      Offset.zero & size,
-      Radius.circular(radiusValue),
-    ));
-
-    final metrics = path.computeMetrics();
-    for (final metric in metrics) {
-      double distance = 0;
-      while (distance < metric.length) {
-        final end = (distance + dashWidth).clamp(0.0, metric.length).toDouble();
-        final extractPath = metric.extractPath(distance, end);
-        canvas.drawPath(extractPath, paint);
-        distance += dashWidth + dashGap;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _DashedBorderPainter oldDelegate) =>
-      oldDelegate.color != color ||
-      oldDelegate.strokeWidth != strokeWidth ||
-      oldDelegate.radiusValue != radiusValue;
 }

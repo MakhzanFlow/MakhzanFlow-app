@@ -1,15 +1,12 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:intl/intl.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_sizes.dart';
+import 'package:intl/intl.dart' hide TextDirection;
+import 'package:makhzanflow/core/theme/mf_tokens.dart';
 import '../../domain/entities/weekly_sales_point.dart';
 
-/// Premium weekly sales bar chart built with fl_chart.
+/// Chart — uses [MFTokens] only (no hardcoded AppColors/AppSizes)
 class WeeklySalesChart extends StatefulWidget {
   const WeeklySalesChart({super.key, required this.points});
-
   final List<WeeklySalesPoint> points;
 
   @override
@@ -42,99 +39,75 @@ class _WeeklySalesChartState extends State<WeeklySalesChart>
   @override
   Widget build(BuildContext context) {
     if (widget.points.isEmpty) return const SizedBox.shrink();
-
-    final maxY = widget.points
-        .map((p) => p.amount)
-        .reduce((a, b) => a > b ? a : b);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final maxY = widget.points.map((p) => p.amount).reduce((a, b) => a > b ? a : b);
     final effectiveMax = maxY <= 0 ? 1000.0 : maxY * 1.25;
 
+    final primary = isDark ? MFTokens.primaryDarkMode : MFTokens.primary;
+    final mutedGrid = isDark ? MFTokens.borderDark : MFTokens.borderLight;
+    final tooltipBg = isDark ? MFTokens.surfaceDark : MFTokens.primaryDark;
+    final cardBg = isDark ? MFTokens.cardDark : MFTokens.cardLight;
+
     return Container(
-      padding: EdgeInsets.fromLTRB(
-        AppSizes.spacingSmall,
-        AppSizes.spacingMedium,
-        AppSizes.spacingSmall,
-        AppSizes.spacingSmall,
-      ),
+      padding: const EdgeInsets.fromLTRB(MFTokens.sp8, MFTokens.sp16, MFTokens.sp8, MFTokens.sp8),
       decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.textPrimary.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: cardBg,
+        borderRadius: BorderRadius.circular(MFTokens.radiusLG),
+        border: Border.all(color: isDark ? MFTokens.borderDark : MFTokens.borderLight),
+        boxShadow: MFTokens.shadowSM,
       ),
       child: AnimatedBuilder(
         animation: _anim,
         builder: (_, __) => SizedBox(
-          height: 160.h,
+          height: 160,
           child: BarChart(
             BarChartData(
               maxY: effectiveMax,
               minY: 0,
               barTouchData: BarTouchData(
                 touchTooltipData: BarTouchTooltipData(
-                  getTooltipColor: (_) =>
-                      AppColors.secondary.withValues(alpha: 0.9),
-                  tooltipBorderRadius: BorderRadius.circular(8),
+                  getTooltipColor: (_) => tooltipBg.withValues(alpha: 0.9),
+                  tooltipBorderRadius: BorderRadius.circular(MFTokens.radiusSM),
                   getTooltipItem: (group, groupIndex, rod, rodIndex) {
                     final point = widget.points[group.x];
-                    final formatted =
-                        NumberFormat('#,##0', 'ar').format(point.amount);
+                    final formatted = NumberFormat('#,##0', 'ar').format(point.amount);
                     return BarTooltipItem(
                       '$formatted ج.م',
-                      TextStyle(
+                      const TextStyle(
                         fontFamily: 'Cairo',
-                        color: AppColors.white,
-                        fontSize: AppSizes.fontSmall,
+                        color: Colors.white,
+                        fontSize: MFTokens.fontSM,
                         fontWeight: FontWeight.w700,
                       ),
                     );
                   },
                 ),
                 touchCallback: (event, response) {
-                  setState(() {
-                    _touchedIndex =
-                        response?.spot?.touchedBarGroupIndex ?? -1;
-                  });
+                  setState(() => _touchedIndex = response?.spot?.touchedBarGroupIndex ?? -1);
                 },
               ),
               titlesData: FlTitlesData(
                 show: true,
-                topTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
-                rightTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
-                leftTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
+                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 bottomTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
                     reservedSize: 28,
                     getTitlesWidget: (value, meta) {
                       final i = value.toInt();
-                      if (i < 0 || i >= widget.points.length) {
-                        return const SizedBox.shrink();
-                      }
+                      if (i < 0 || i >= widget.points.length) return const SizedBox.shrink();
                       final isToday = i == widget.points.length - 1;
                       return Padding(
-                        padding: EdgeInsets.only(top: 4.h),
+                        padding: const EdgeInsets.only(top: MFTokens.sp4),
                         child: Text(
                           widget.points[i].label,
                           style: TextStyle(
                             fontFamily: 'Cairo',
-                            fontSize: AppSizes.fontSmall,
-                            fontWeight: isToday
-                                ? FontWeight.w700
-                                : FontWeight.w400,
-                            color: isToday
-                                ? AppColors.accent
-                                : AppColors.textSecondary,
+                            fontSize: MFTokens.fontSM,
+                            fontWeight: isToday ? FontWeight.w700 : FontWeight.w400,
+                            color: isToday ? MFTokens.accent : MFTokens.textSecondaryLight,
                           ),
                         ),
                       );
@@ -148,7 +121,7 @@ class _WeeklySalesChartState extends State<WeeklySalesChart>
                 drawVerticalLine: false,
                 horizontalInterval: effectiveMax / 4,
                 getDrawingHorizontalLine: (_) => FlLine(
-                  color: AppColors.inputBorder.withValues(alpha: 0.5),
+                  color: mutedGrid.withValues(alpha: 0.5),
                   strokeWidth: 0.8,
                   dashArray: [4, 4],
                 ),
@@ -157,34 +130,24 @@ class _WeeklySalesChartState extends State<WeeklySalesChart>
                 final point = widget.points[i];
                 final isToday = i == widget.points.length - 1;
                 final isTouched = i == _touchedIndex;
-
                 return BarChartGroupData(
                   x: i,
                   barRods: [
                     BarChartRodData(
                       toY: (point.amount * _anim.value).clamp(0, effectiveMax),
-                      width: 18.w,
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(6.r),
-                      ),
+                      width: 18,
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(MFTokens.radiusSM)),
                       gradient: LinearGradient(
                         begin: Alignment.bottomCenter,
                         end: Alignment.topCenter,
                         colors: isToday || isTouched
-                            ? [
-                                AppColors.accent.withValues(alpha: 0.7),
-                                AppColors.accent,
-                              ]
-                            : [
-                                AppColors.primary.withValues(alpha: 0.4),
-                                AppColors.primary.withValues(alpha: 0.85),
-                              ],
+                            ? [MFTokens.accent.withValues(alpha: 0.7), MFTokens.accent]
+                            : [primary.withValues(alpha: 0.4), primary.withValues(alpha: 0.85)],
                       ),
                       backDrawRodData: BackgroundBarChartRodData(
                         show: true,
                         toY: effectiveMax,
-                        color:
-                            AppColors.appBackground.withValues(alpha: 0.6),
+                        color: (isDark ? MFTokens.backgroundDark : MFTokens.backgroundLight).withValues(alpha: 0.5),
                       ),
                     ),
                   ],

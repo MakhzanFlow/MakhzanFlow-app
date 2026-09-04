@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_sizes.dart';
+import '../../core/theme/mf_tokens.dart';
 
 class MakhzanFlowEmptyState extends StatelessWidget {
   final IconData icon;
@@ -19,25 +17,29 @@ class MakhzanFlowEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textSecondary = isDark ? MFTokens.textSecondaryDark : MFTokens.textSecondaryLight;
+    final muted = isDark ? MFTokens.textMutedDark : MFTokens.textMutedLight;
+
     return Center(
       child: Padding(
-        padding: EdgeInsets.all(AppSizes.spacingLarge),
+        padding: const EdgeInsets.all(MFTokens.sp24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 64.w, color: AppColors.grey),
-            SizedBox(height: AppSizes.spacingMedium),
+            Icon(icon, size: 64, color: muted),
+            const SizedBox(height: MFTokens.sp16),
             Text(
               message,
               style: TextStyle(
                 fontFamily: 'Cairo',
-                fontSize: AppSizes.fontLarge,
-                color: AppColors.textSecondary,
+                fontSize: MFTokens.fontMD,
+                color: textSecondary,
               ),
               textAlign: TextAlign.center,
             ),
             if (actionLabel != null && onAction != null) ...[
-              SizedBox(height: AppSizes.spacingMedium),
+              const SizedBox(height: MFTokens.sp16),
               ElevatedButton(
                 onPressed: onAction,
                 child: Text(actionLabel!),

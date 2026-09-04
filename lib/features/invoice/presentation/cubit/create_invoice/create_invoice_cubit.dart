@@ -1,6 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:makhzanflow/core/constants/error_messages.dart';
 import 'package:makhzanflow/core/error/failures.dart';
 import 'package:makhzanflow/features/customers/domain/entities/customer.dart';
+import 'package:makhzanflow/features/invoice/domain/constants/invoice_constants.dart';
 import 'package:makhzanflow/features/invoice/domain/usecases/create_invoice_usecase.dart';
 import 'create_invoice_state.dart';
 
@@ -84,7 +86,7 @@ class CreateInvoiceCubit extends Cubit<CreateInvoiceState> {
   void setPaymentMethod(String method) {
     final current = state;
     if (current is! CreateInvoiceFormState) return;
-    final paidNow = method == 'partial' ? 0.0 : current.paidNow;
+    final paidNow = method == InvoiceConstants.paymentPartial ? 0.0 : current.paidNow;
     emit(_loadedCopyWith(current, paymentMethod: method, paidNow: paidNow));
   }
 
@@ -100,7 +102,7 @@ class CreateInvoiceCubit extends Cubit<CreateInvoiceState> {
 
     if (current.selectedCustomer == null) {
       emit(CreateInvoiceError(
-        failure: const ServerFailure('الرجاء اختيار عميل'),
+        failure: ValidationFailure(ErrorMessages.selectCustomer),
         selectedCustomer: current.selectedCustomer,
         products: current.products,
         discountType: current.discountType,
@@ -112,7 +114,7 @@ class CreateInvoiceCubit extends Cubit<CreateInvoiceState> {
     }
     if (current.products.isEmpty) {
       emit(CreateInvoiceError(
-        failure: const ServerFailure('الرجاء إضافة منتج واحد على الأقل'),
+        failure: ValidationFailure(ErrorMessages.addAtLeastOneProduct),
         selectedCustomer: current.selectedCustomer,
         products: current.products,
         discountType: current.discountType,
@@ -145,15 +147,15 @@ class CreateInvoiceCubit extends Cubit<CreateInvoiceState> {
         .toList();
 
     final effectivePaidNow = switch (current.paymentMethod) {
-      'full' => current.totalAfterDiscount,
-      'deferred' => 0.0,
+      InvoiceConstants.paymentFull => current.totalAfterDiscount,
+      InvoiceConstants.paymentDeferred => 0.0,
       _ => current.paidNow,
     };
     final result = await _createInvoiceUseCase(
       customerId: current.selectedCustomer!.id,
       items: items,
       paidNow: effectivePaidNow,
-      discountType: current.discountValue > 0 ? current.discountType : 'fixed',
+      discountType: current.discountValue > 0 ? current.discountType : InvoiceConstants.discountFixed,
       discountValue: current.discountValue,
     );
 

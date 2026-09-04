@@ -1,10 +1,9 @@
-import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:makhzanflow/core/company/company_cubit.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
+import 'package:makhzanflow/core/storage/file_upload_service.dart';
 import 'package:makhzanflow/features/companies/domain/usecases/create_company_full_usecase.dart';
 
 enum CreateCompanyStatus { initial, loading, success, error }
@@ -20,15 +19,17 @@ class CreateCompanyState extends Equatable {
     this.errorMessage,
   });
 
+  static const _sentinel = Object();
+
   CreateCompanyState copyWith({
     CreateCompanyStatus? status,
-    String? imagePath,
-    String? errorMessage,
+    Object? imagePath = _sentinel,
+    Object? errorMessage = _sentinel,
   }) {
     return CreateCompanyState(
       status: status ?? this.status,
-      imagePath: imagePath ?? this.imagePath,
-      errorMessage: errorMessage ?? this.errorMessage,
+      imagePath: imagePath == _sentinel ? this.imagePath : imagePath as String?,
+      errorMessage: errorMessage == _sentinel ? this.errorMessage : errorMessage as String?,
     );
   }
 
@@ -40,17 +41,17 @@ class CreateCompanyCubit extends Cubit<CreateCompanyState> {
   final CreateCompanyFullUseCase _createCompanyFullUseCase;
   final CompanyCubit _companyCubit;
   final ImagePicker _picker;
-  final SupabaseClient _supabase;
+  final FileUploadService _fileUploadService;
 
   CreateCompanyCubit({
     required CreateCompanyFullUseCase createCompanyFullUseCase,
     required CompanyCubit companyCubit,
     required ImagePicker picker,
-    required SupabaseClient supabase,
+    FileUploadService? fileUploadService,
   })  : _createCompanyFullUseCase = createCompanyFullUseCase,
         _companyCubit = companyCubit,
         _picker = picker,
-        _supabase = supabase,
+        _fileUploadService = fileUploadService ?? const FileUploadService(),
         super(const CreateCompanyState());
 
   Future<void> pickImageFromGallery() async {
@@ -98,27 +99,21 @@ class CreateCompanyCubit extends Cubit<CreateCompanyState> {
 
     String? logoUrl;
     if (state.imagePath != null) {
-      try {
-        final fileName =
-            '${DateTime.now().millisecondsSinceEpoch}_logo.jpg';
-        final file = File(state.imagePath!);
-        await _supabase.storage.from('company-logos').upload(
-              fileName,
-              file,
-              fileOptions: const FileOptions(
-                contentType: 'image/jpeg',
-                upsert: true,
-              ),
-            );
-        logoUrl =
-            _supabase.storage.from('company-logos').getPublicUrl(fileName);
-      } on Exception {
-        emit(state.copyWith(
-          status: CreateCompanyStatus.error,
-          errorMessage: AppStrings.uploadLogoError,
-        ));
-        return false;
-      }
+      final uploadResult = await _fileUploadService.toDataUri(state.imagePath!);
+      final shouldAbort = uploadResult.fold(
+        (failure) {
+          emit(state.copyWith(
+            status: CreateCompanyStatus.error,
+            errorMessage: failure.message,
+          ));
+          return true;
+        },
+        (uri) {
+          logoUrl = uri;
+          return false;
+        },
+      );
+      if (shouldAbort) return false;
     }
 
     final result = await _createCompanyFullUseCase.call(

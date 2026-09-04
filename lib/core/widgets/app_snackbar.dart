@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:makhzanflow/core/constants/app_colors.dart';
+import '../theme/mf_tokens.dart';
 
 class AppSnackbar {
   static void success(
@@ -7,7 +7,7 @@ class AppSnackbar {
     String message, {
     Duration duration = const Duration(seconds: 3),
   }) {
-    _show(context, message, AppColors.primary, duration);
+    _show(context, message, MFTokens.primary, duration);
   }
 
   static void error(
@@ -15,7 +15,7 @@ class AppSnackbar {
     String message, {
     Duration duration = const Duration(seconds: 4),
   }) {
-    _show(context, message, AppColors.redDark, duration);
+    _show(context, message, MFTokens.errorText, duration);
   }
 
   static void info(
@@ -23,7 +23,7 @@ class AppSnackbar {
     String message, {
     Duration duration = const Duration(seconds: 3),
   }) {
-    _show(context, message, AppColors.trendUp, duration);
+    _show(context, message, MFTokens.successText, duration);
   }
 
   static void _show(

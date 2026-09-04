@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:makhzanflow/core/constants/app_colors.dart';
 import 'package:makhzanflow/core/constants/app_sizes.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
+import 'package:makhzanflow/features/invoice/domain/constants/invoice_constants.dart';
 import 'package:makhzanflow/features/invoice/presentation/cubit/create_invoice/create_invoice_cubit.dart';
 
 class PaidNowInput extends StatefulWidget {
@@ -32,15 +33,23 @@ class _PaidNowInputState extends State<PaidNowInput> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<CreateInvoiceCubit, CreateInvoiceState>(
-      buildWhen: (prev, next) => next is CreateInvoiceFormState,
-      builder: (context, state) {
-        if (state is! CreateInvoiceFormState) return const SizedBox.shrink();
-        final loaded = state;
+    return BlocSelector<CreateInvoiceCubit, CreateInvoiceState, _PaidView>(
+      selector: (state) {
+        if (state is! CreateInvoiceFormState) return const _PaidView.hidden();
+        return _PaidView(
+          paymentMethod: state.paymentMethod,
+          paidNow: state.paidNow,
+          totalAfterDiscount: state.totalAfterDiscount,
+        );
+      },
+      builder: (context, view) {
+        if (view.paymentMethod != InvoiceConstants.paymentPartial) {
+          // Ensure controller cleared when hidden to avoid stale value on re-show
+          if (_controller.text.isNotEmpty) _controller.clear();
+          return const SizedBox.shrink();
+        }
 
-        final text = loaded.paidNow > 0
-            ? loaded.paidNow.toInt().toString()
-            : '';
+        final text = view.paidNow > 0 ? view.paidNow.toInt().toString() : '';
         if (_controller.text != text) {
           _controller.value = TextEditingValue(
             text: text,
@@ -48,12 +57,8 @@ class _PaidNowInputState extends State<PaidNowInput> {
           );
         }
 
-        if (loaded.paymentMethod != 'partial') {
-          return const SizedBox.shrink();
-        }
-
-        final remaining = loaded.totalAfterDiscount - loaded.paidNow;
-        final paidError = loaded.paidNow > loaded.totalAfterDiscount
+        final remaining = view.totalAfterDiscount - view.paidNow;
+        final paidError = view.paidNow > view.totalAfterDiscount
             ? AppStrings.paidNowExceedError
             : null;
 
@@ -97,9 +102,8 @@ class _PaidNowInputState extends State<PaidNowInput> {
                         vertical: AppSizes.spacingSmall,
                       ),
                     ),
-                    onChanged: (value) {
-                      widget.cubit.setPaidNow(double.tryParse(value) ?? 0);
-                    },
+                    onChanged: (value) =>
+                        widget.cubit.setPaidNow(double.tryParse(value) ?? 0),
                   ),
                 ),
                 if (remaining > 0 && paidError == null) ...[
@@ -130,4 +134,28 @@ class _PaidNowInputState extends State<PaidNowInput> {
       },
     );
   }
+}
+
+class _PaidView {
+  final String paymentMethod;
+  final double paidNow;
+  final double totalAfterDiscount;
+  const _PaidView({
+    required this.paymentMethod,
+    required this.paidNow,
+    required this.totalAfterDiscount,
+  });
+  const _PaidView.hidden()
+    : paymentMethod = InvoiceConstants.paymentFull,
+      paidNow = 0,
+      totalAfterDiscount = 0;
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is _PaidView &&
+          paymentMethod == other.paymentMethod &&
+          paidNow == other.paidNow &&
+          totalAfterDiscount == other.totalAfterDiscount;
+  @override
+  int get hashCode => Object.hash(paymentMethod, paidNow, totalAfterDiscount);
 }

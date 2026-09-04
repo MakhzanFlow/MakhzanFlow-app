@@ -1,10 +1,10 @@
-import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:makhzanflow/core/company/company_state.dart';
 import 'package:makhzanflow/core/di/service_locator.dart';
 import 'package:makhzanflow/core/permissions/permission_service.dart';
+import 'package:makhzanflow/features/auth/presentation/cubit/auth_cubit.dart';
+import 'package:makhzanflow/features/auth/presentation/cubit/auth_state.dart';
 import 'package:makhzanflow/features/companies/domain/entities/company.dart';
 import 'package:makhzanflow/features/companies/domain/entities/company_member.dart';
 import 'package:makhzanflow/features/companies/domain/usecases/get_company_members_usecase.dart';
@@ -49,32 +49,17 @@ class CompanyCubit extends Cubit<CompanyState> {
     CompanyMember? membership,
     List<Company>? allCompanies,
   }) async {
-    debugPrint(
-      '[CompanyCubit] switchCompany — id=${company.id}, name=${company.name}',
-    );
     await _secureStorage.write(key: _lastCompanyKey, value: company.id);
     sl<PermissionService>().clear();
 
     final m = membership ?? await _fetchMyMembership(company.id);
-    debugPrint('[CompanyCubit] membership=$m');
     if (m != null) {
-      debugPrint('[CompanyCubit] loading permissions for memberId=${m.id}');
       await sl<PermissionService>().loadPermissions(
         company.id,
         m.id,
         Map<String, dynamic>.from(m.permissions),
         isOwner: m.isOwner,
       );
-      debugPrint('[CompanyCubit] permissions loaded successfully');
-    }
-
-    try {
-      await Supabase.instance.client.rpc(
-        'set_current_company',
-        params: {'p_company_id': company.id},
-      );
-    } catch (_) {
-      // Non-critical — company context on server will sync on next call
     }
 
     final allCompaniesList = allCompanies ?? switch (state) {
@@ -94,8 +79,11 @@ class CompanyCubit extends Cubit<CompanyState> {
 
   Future<CompanyMember?> _fetchMyMembership(String companyId) async {
     try {
-      final userId = Supabase.instance.client.auth.currentUser?.id;
-      if (userId == null) return null;
+      final authState = sl<AuthCubit>().state;
+      final userId = authState is Authenticated ? authState.user.id : null;
+      if (userId == null) {
+        return null;
+      }
       final useCase = sl<GetCompanyMembersUseCase>();
       final result = await useCase(companyId);
       return result.fold((_) => null, (members) {

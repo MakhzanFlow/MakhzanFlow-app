@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_sizes.dart';
+import '../../../../core/theme/mf_tokens.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../domain/entities/inventory_movement.dart';
 
@@ -13,6 +12,9 @@ class InventoryMovementList extends StatelessWidget {
   Widget build(BuildContext context) {
     if (movements.isEmpty) return const SizedBox.shrink();
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? MFTokens.textPrimaryDark : MFTokens.textPrimaryLight;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -20,36 +22,38 @@ class InventoryMovementList extends StatelessWidget {
           AppStrings.productMovementHistory,
           style: TextStyle(
             fontFamily: 'Cairo',
-            fontSize: AppSizes.fontXLarge,
+            fontSize: MFTokens.fontLG,
             fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
+            color: textPrimary,
           ),
         ),
-        SizedBox(height: AppSizes.spacingSmall),
+        const SizedBox(height: MFTokens.sp8),
         ...movements.take(10).map((movement) {
           return Card(
-            margin: EdgeInsets.only(bottom: AppSizes.spacingTiny),
+            margin: const EdgeInsets.only(bottom: MFTokens.sp4),
             child: ListTile(
               dense: true,
               leading: Icon(
                 movement.isIn
                     ? Icons.add_circle_outline
                     : Icons.remove_circle_outline,
-                color: movement.isIn ? AppColors.trendUp : AppColors.trendDown,
+                color: movement.isIn
+                    ? MFTokens.successText
+                    : (isDark ? MFTokens.errorTextDark : MFTokens.errorText),
               ),
               title: Text(
                 '${movement.isIn ? AppStrings.productQuantityIn : AppStrings.productQuantityOut}: ${movement.quantity}',
-                style: TextStyle(
+                style: const TextStyle(
                   fontFamily: 'Cairo',
-                  fontSize: AppSizes.fontMedium,
+                  fontSize: MFTokens.fontSM,
                 ),
               ),
               subtitle: movement.note != null
                   ? Text(
                       movement.note!,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontFamily: 'Cairo',
-                        fontSize: AppSizes.fontSmall,
+                        fontSize: MFTokens.fontXS,
                       ),
                     )
                   : null,

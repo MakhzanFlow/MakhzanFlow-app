@@ -6,6 +6,9 @@ class Product extends Equatable {
   final String? imageUrl;
   final int quantity;
   final double price;
+  final String sku;
+  final String? barcode;
+  final int minStock;
   final String createdBy;
   final DateTime? expirationDate;
   final DateTime? createdAt;
@@ -17,6 +20,9 @@ class Product extends Equatable {
     this.imageUrl,
     required this.quantity,
     required this.price,
+    required this.sku,
+    this.barcode,
+    required this.minStock,
     required this.createdBy,
     this.expirationDate,
     this.createdAt,
@@ -29,6 +35,9 @@ class Product extends Equatable {
     String? imageUrl,
     int? quantity,
     double? price,
+    String? sku,
+    String? barcode,
+    int? minStock,
     String? createdBy,
     DateTime? expirationDate,
     DateTime? createdAt,
@@ -40,6 +49,9 @@ class Product extends Equatable {
       imageUrl: imageUrl ?? this.imageUrl,
       quantity: quantity ?? this.quantity,
       price: price ?? this.price,
+      sku: sku ?? this.sku,
+      barcode: barcode ?? this.barcode,
+      minStock: minStock ?? this.minStock,
       createdBy: createdBy ?? this.createdBy,
       expirationDate: expirationDate ?? this.expirationDate,
       createdAt: createdAt ?? this.createdAt,
@@ -54,6 +66,9 @@ class Product extends Equatable {
     imageUrl,
     quantity,
     price,
+    sku,
+    barcode,
+    minStock,
     createdBy,
     expirationDate,
     createdAt,

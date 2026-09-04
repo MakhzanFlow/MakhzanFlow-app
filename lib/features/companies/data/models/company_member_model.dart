@@ -18,17 +18,22 @@ class CompanyMemberModel extends CompanyMember {
   });
 
   factory CompanyMemberModel.fromJson(Map<String, dynamic> json) {
+    final users = json['users'] as Map<String, dynamic>?;
+    final role = json['role'] as String?;
+    final joinedAt = json['joined_at'] as String? ?? json['created_at'] as String?;
     return CompanyMemberModel(
       id: json['id'] as String,
       companyId: json['company_id'] as String,
       userId: json['user_id'] as String,
-      isOwner: json['is_owner'] as bool? ?? false,
+      isOwner: json['is_owner'] as bool? ?? role == 'owner',
       permissions: json['permissions'] != null
           ? Map<String, dynamic>.from(json['permissions'] as Map)
           : const {},
-      joinedAt: DateTime.parse(json['joined_at'] as String),
-      userName: json['user_name'] as String?,
-      userEmail: json['user_email'] as String?,
+      joinedAt: joinedAt != null
+          ? DateTime.parse(joinedAt)
+          : DateTime.now(),
+      userName: json['user_name'] as String? ?? users?['name'] as String?,
+      userEmail: json['user_email'] as String? ?? users?['email'] as String?,
       status: json['status'] as String? ?? 'active',
       deactivatedAt: json['deactivated_at'] != null
           ? DateTime.parse(json['deactivated_at'] as String)

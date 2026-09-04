@@ -1,9 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_sizes.dart';
+import '../../../../core/theme/mf_tokens.dart';
 import '../../../../core/constants/app_strings.dart';
 
 class CustomerImageUploader extends StatelessWidget {
@@ -22,53 +20,60 @@ class CustomerImageUploader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primary = isDark ? MFTokens.primaryDarkMode : MFTokens.primary;
+    final primarySubtle = isDark ? MFTokens.primaryDarkModeSubtle : MFTokens.primarySubtle;
+    final textSecondary = isDark ? MFTokens.textSecondaryDark : MFTokens.textSecondaryLight;
+    final semiTransparent = Color(0x42000000);
+    final accent = isDark ? MFTokens.primaryDarkMode : MFTokens.accent;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 96.w,
-        height: 96.w,
+        width: MFTokens.sp64 * 1.5,
+        height: MFTokens.sp64 * 1.5,
         decoration: BoxDecoration(
-          color: AppColors.lightPrimaryBg,
-          borderRadius: BorderRadius.circular(48.r),
+          color: primarySubtle,
+          borderRadius: BorderRadius.circular(MFTokens.radiusFull),
           border: Border.all(
-            color: AppColors.primary,
-            width: 1.6,
+            color: primary,
+            width: MFTokens.sp2,
             strokeAlign: BorderSide.strokeAlignInside,
           ),
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(48.r),
+          borderRadius: BorderRadius.circular(MFTokens.radiusFull),
           child: Stack(
             children: [
               if (localPath != null)
                 Image.file(
                   File(localPath!),
-                  width: 96.w,
-                  height: 96.w,
+                  width: MFTokens.sp64 * 1.5,
+                  height: MFTokens.sp64 * 1.5,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _buildPlaceholder(),
+                  errorBuilder: (_, __, ___) => _buildPlaceholder(primarySubtle, primary, textSecondary),
                 )
               else if (imageUrl != null && imageUrl!.isNotEmpty)
                 CachedNetworkImage(
                   imageUrl: imageUrl!,
-                  width: 96.w,
-                  height: 96.w,
+                  width: MFTokens.sp64 * 1.5,
+                  height: MFTokens.sp64 * 1.5,
                   fit: BoxFit.cover,
-                  placeholder: (_, __) => _buildPlaceholder(),
-                  errorWidget: (_, __, ___) => _buildPlaceholder(),
+                  placeholder: (_, __) => _buildPlaceholder(primarySubtle, primary, textSecondary),
+                  errorWidget: (_, __, ___) => _buildPlaceholder(primarySubtle, primary, textSecondary),
                 )
               else
-                _buildPlaceholder(),
+                _buildPlaceholder(primarySubtle, primary, textSecondary),
               if (isUploading)
                 Positioned.fill(
                   child: Container(
-                    color: AppColors.semiTransparent,
+                    color: semiTransparent,
                     child: Center(
                       child: SizedBox(
-                        width: 24.w,
-                        height: 24.w,
+                        width: MFTokens.sp24,
+                        height: MFTokens.sp24,
                         child: const CircularProgressIndicator(
-                          color: AppColors.white,
+                          color: Colors.white,
                           strokeWidth: 2,
                         ),
                       ),
@@ -80,16 +85,16 @@ class CustomerImageUploader extends StatelessWidget {
                   bottom: 0,
                   right: 0,
                   child: Container(
-                    width: 28.w,
-                    height: 28.w,
-                    decoration: const BoxDecoration(
-                      color: AppColors.accent,
+                    width: MFTokens.sp24 + MFTokens.sp4,
+                    height: MFTokens.sp24 + MFTokens.sp4,
+                    decoration: BoxDecoration(
+                      color: accent,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       Icons.edit,
-                      size: 16.w,
-                      color: AppColors.white,
+                      size: MFTokens.sp16,
+                      color: Colors.white,
                     ),
                   ),
                 ),
@@ -100,23 +105,23 @@ class CustomerImageUploader extends StatelessWidget {
     );
   }
 
-  Widget _buildPlaceholder() {
+  Widget _buildPlaceholder(Color bg, Color primary, Color textSecondary) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
             Icons.camera_alt_outlined,
-            size: 24.w,
-            color: AppColors.primary,
+            size: MFTokens.sp24,
+            color: primary,
           ),
-          SizedBox(height: 2.h),
+          SizedBox(height: MFTokens.sp2),
           Text(
             AppStrings.customerAddImage,
             style: TextStyle(
               fontFamily: 'Cairo',
-              fontSize: AppSizes.fontSmall,
-              color: AppColors.textSecondary,
+              fontSize: MFTokens.fontSM,
+              color: textSecondary,
             ),
           ),
         ],

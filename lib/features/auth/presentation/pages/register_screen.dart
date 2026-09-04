@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_sizes.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/theme/mf_tokens.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/constants/app_routes.dart';
 import '../../../../core/company/company_cubit.dart';
@@ -51,12 +51,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? MFTokens.backgroundDark : MFTokens.backgroundLight;
+    final cardBg = isDark ? MFTokens.cardDark : MFTokens.surfaceLight;
+
     return Scaffold(
-      backgroundColor: AppColors.appBackground,
+      backgroundColor: bg,
       body: BlocConsumer<AuthCubit, AuthState>(
         listener: (context, state) {
           if (state is Authenticated) {
             context.read<CompanyCubit>().loadCompanies();
+          } else if (state is EmailVerificationPending) {
+            context.push(AppRoutes.emailVerification, extra: state.email);
           } else if (state is AuthError) {
             AppSnackbar.error(context, state.message);
           }
@@ -70,15 +76,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 Expanded(
                   child: Container(
                     width: double.infinity,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppSizes.spacingLarge,
-                      vertical: AppSizes.spacingXLarge,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: MFTokens.sp24,
+                      vertical: MFTokens.sp32,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.white,
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(AppSizes.radiusXXLarge),
-                        topRight: Radius.circular(AppSizes.radiusXXLarge),
+                      color: cardBg,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(MFTokens.radiusXXL),
+                        topRight: Radius.circular(MFTokens.radiusXXL),
                       ),
                     ),
                     child: SingleChildScrollView(
@@ -91,7 +97,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               title: AppStrings.registerWelcome,
                               subtitle: AppStrings.registerToContinue,
                             ),
-                            SizedBox(height: AppSizes.spacingXLarge),
+                            const SizedBox(height: MFTokens.sp32),
                             AuthTextField(
                               controller: _nameController,
                               label: AppStrings.nameLabel,
@@ -105,7 +111,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 return null;
                               },
                             ),
-                            SizedBox(height: AppSizes.spacingMedium),
+                            const SizedBox(height: MFTokens.sp16),
                             AuthTextField(
                               controller: _emailController,
                               label: AppStrings.emailLabel,
@@ -123,7 +129,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 return null;
                               },
                             ),
-                            SizedBox(height: AppSizes.spacingMedium),
+                            const SizedBox(height: MFTokens.sp16),
                             AuthTextField(
                               controller: _passwordController,
                               label: AppStrings.passwordLabel,
@@ -136,7 +142,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   _obscurePassword
                                       ? Icons.visibility_off
                                       : Icons.visibility,
-                                  color: AppColors.grey,
+                                  color: isDark ? MFTokens.textMutedDark : MFTokens.textMutedLight,
                                 ),
                                 onPressed: () {
                                   setState(() {
@@ -154,7 +160,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 return null;
                               },
                             ),
-                            SizedBox(height: AppSizes.spacingMedium),
+                            const SizedBox(height: MFTokens.sp16),
                             AuthTextField(
                               controller: _confirmPasswordController,
                               label: AppStrings.confirmPasswordLabel,
@@ -167,7 +173,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   _obscureConfirmPassword
                                       ? Icons.visibility_off
                                       : Icons.visibility,
-                                  color: AppColors.grey,
+                                  color: isDark ? MFTokens.textMutedDark : MFTokens.textMutedLight,
                                 ),
                                 onPressed: () {
                                   setState(() {
@@ -186,13 +192,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 return null;
                               },
                             ),
-                            SizedBox(height: AppSizes.spacingXLarge),
+                            const SizedBox(height: MFTokens.sp32),
                             AuthButton(
                               label: AppStrings.registerButton,
                               isLoading: isLoading,
                               onPressed: _onRegister,
                             ),
-                            SizedBox(height: AppSizes.spacingLarge),
+                            const SizedBox(height: MFTokens.sp24),
                             GoogleAuthSection(
                               label: AppStrings.signUpWithGoogle,
                               isLoading: isLoading,
@@ -200,7 +206,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 context.read<AuthCubit>().signInWithGoogle();
                               },
                             ),
-                            SizedBox(height: AppSizes.spacingLarge),
+                            const SizedBox(height: MFTokens.sp24),
                             AuthBottomLink(
                               label: AppStrings.alreadyHaveAccount,
                               actionLabel: AppStrings.loginNow,

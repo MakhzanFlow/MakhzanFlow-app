@@ -36,7 +36,7 @@ abstract class ProductRepository {
     String companyId,
   );
 
-  TaskEither<String, String> uploadProductImage(String filePath);
+  TaskEither<String, String> uploadProductImage(String filePath, String productId);
 
   TaskEither<String, Product> updateQuantity({
     required String productId,

@@ -97,16 +97,16 @@ class CompanyMembersCubit extends Cubit<CompanyMembersState> {
     );
   }
 
-  Future<void> updateMemberPermissions(String companyId, String memberId, Map<String, dynamic> permissions) async {
-    final result = await _updateMemberPermissionsUseCase.call(companyId, memberId, permissions);
+  Future<void> updateMemberPermissions(String companyId, String userId, Map<String, dynamic> permissions) async {
+    final result = await _updateMemberPermissionsUseCase.call(companyId, userId, permissions);
     result.fold(
       (failure) => emit(CompanyMembersError(failure.message)),
       (_) => loadMembers(companyId),
     );
   }
 
-  Future<void> removeMember(String companyId, String memberId) async {
-    final result = await _removeMemberUseCase.call(companyId, memberId);
+  Future<void> removeMember(String companyId, String userId) async {
+    final result = await _removeMemberUseCase.call(companyId, userId);
     result.fold(
       (failure) => emit(CompanyMembersError(failure.message)),
       (_) => loadMembers(companyId),
@@ -137,24 +137,24 @@ class CompanyMembersCubit extends Cubit<CompanyMembersState> {
     );
   }
 
-  Future<void> promoteToOwner(String companyId, String memberId) async {
-    final result = await _promoteMemberToOwnerUseCase.call(memberId);
+  Future<void> promoteToOwner(String companyId, String userId) async {
+    final result = await _promoteMemberToOwnerUseCase.call(companyId, userId);
     result.fold(
       (failure) => emit(CompanyMembersError(failure.message)),
       (_) => loadMembers(companyId),
     );
   }
 
-  Future<void> demoteToMember(String companyId, String memberId, Map<String, dynamic> permissions) async {
-    final result = await _demoteOwnerToMemberUseCase.call(memberId, permissions);
+  Future<void> demoteToMember(String companyId, String userId, Map<String, dynamic> permissions) async {
+    final result = await _demoteOwnerToMemberUseCase.call(companyId, userId, permissions);
     result.fold(
       (failure) => emit(CompanyMembersError(failure.message)),
       (_) => loadMembers(companyId),
     );
   }
 
-  Future<Map<String, dynamic>?> getMemberPermissions(String memberId) async {
-    final result = await _getMemberPermissionsUseCase.call(memberId);
+  Future<Map<String, dynamic>?> getMemberPermissions(String companyId, String userId) async {
+    final result = await _getMemberPermissionsUseCase.call(companyId, userId);
     return result.fold(
       (failure) => null,
       (permissions) => permissions,

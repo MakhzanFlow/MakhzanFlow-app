@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_sizes.dart';
+import '../../../../core/theme/mf_tokens.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../domain/entities/product.dart';
 import 'dashed_border_painter.dart';
@@ -29,42 +27,44 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? MFTokens.cardDark : MFTokens.cardLight;
+    final textPrimary = isDark ? MFTokens.textPrimaryDark : MFTokens.textPrimaryLight;
+    final textSecondary = isDark ? MFTokens.textSecondaryDark : MFTokens.textSecondaryLight;
+    final accent = isDark ? MFTokens.primaryDarkMode : MFTokens.accent;
+    final errorColor = isDark ? MFTokens.errorTextDark : MFTokens.errorText;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.textPrimary.withValues(alpha: 0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          color: cardBg,
+          borderRadius: BorderRadius.circular(MFTokens.radiusMD),
+          border: isDark ? Border.all(color: MFTokens.borderDark, width: 1) : null,
+          boxShadow: isDark ? null : MFTokens.shadowSM,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(flex: 3, child: Stack(
               children: [
-                _buildImage(),
+                _buildImage(isDark),
                 if (_isOutOfStock) _buildBadge(
-                  AppStrings.productOutOfStock, AppColors.error,
+                  AppStrings.productOutOfStock, errorColor,
                 ),
                 if (_isLowStock) _buildBadge(
-                  AppStrings.productLowStock, AppColors.accent,
+                  AppStrings.productLowStock, accent,
                 ),
                 if (_isExpired) Positioned(
                   top: 4, right: 4,
                   child: _buildSmallBadge(
-                    AppStrings.productExpired, AppColors.error,
+                    AppStrings.productExpired, errorColor,
                   ),
                 ),
                 if (_isExpiringSoon) Positioned(
                   top: 4, right: 4,
                   child: _buildSmallBadge(
-                    AppStrings.productExpiringSoon, AppColors.accent,
+                    AppStrings.productExpiringSoon, accent,
                   ),
                 ),
               ],
@@ -72,7 +72,7 @@ class ProductCard extends StatelessWidget {
             Expanded(
               flex: 3,
               child: Padding(
-                padding: EdgeInsets.all(AppSizes.spacingSmall),
+                padding: const EdgeInsets.all(MFTokens.sp8),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,24 +81,24 @@ class ProductCard extends StatelessWidget {
                       product.name,
                       style: TextStyle(
                         fontFamily: 'Cairo',
-                        fontSize: AppSizes.fontMedium,
+                        fontSize: MFTokens.fontSM,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
+                        color: textPrimary,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    SizedBox(height: 2.h),
+                    const SizedBox(height: 2),
                     Text(
                       '${product.price.toStringAsFixed(2)} ${AppStrings.currencyEg}',
                       style: TextStyle(
                         fontFamily: 'Cairo',
-                        fontSize: AppSizes.fontSmall,
-                        color: AppColors.accent,
+                        fontSize: MFTokens.fontXS,
+                        color: accent,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Spacer(flex: 1),
+                    const Spacer(flex: 1),
                     Row(
                       children: [
                         Flexible(
@@ -106,8 +106,8 @@ class ProductCard extends StatelessWidget {
                             '${AppStrings.productQuantityLabel}: ${product.quantity}',
                             style: TextStyle(
                               fontFamily: 'Cairo',
-                              fontSize: AppSizes.fontSmall,
-                              color: AppColors.textSecondary,
+                              fontSize: MFTokens.fontXS,
+                              color: textSecondary,
                             ),
                           ),
                         ),
@@ -127,15 +127,15 @@ class ProductCard extends StatelessWidget {
     return Positioned(
       top: 0, left: 0, right: 0,
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: 2.h, horizontal: 6.w),
+        padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 6),
         color: color.withValues(alpha: 0.85),
         alignment: Alignment.center,
         child: Text(
           text,
-          style: TextStyle(
+          style: const TextStyle(
             fontFamily: 'Cairo',
-            fontSize: AppSizes.fontSmall,
-            color: AppColors.white,
+            fontSize: MFTokens.fontXS,
+            color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -145,36 +145,38 @@ class ProductCard extends StatelessWidget {
 
   Widget _buildSmallBadge(String text, Color color) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.85),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
         text,
-        style: TextStyle(
+        style: const TextStyle(
           fontFamily: 'Cairo',
-          fontSize: 8.sp,
-          color: AppColors.white,
+          fontSize: 8,
+          color: Colors.white,
           fontWeight: FontWeight.bold,
         ),
       ),
     );
   }
 
-  Widget _buildImage() {
+  Widget _buildImage(bool isDark) {
     final placeholder = Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFE8F1EC),
-        borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
+        color: isDark ? MFTokens.primaryDarkModeSubtle : const Color(0xFFE8F1EC),
+        borderRadius: BorderRadius.circular(MFTokens.radiusMD),
       ),
       child: CustomPaint(
-        painter: DashedBorderPainter(),
+        painter: DashedBorderPainter(
+          color: isDark ? MFTokens.primaryDarkMode : MFTokens.primary,
+        ),
         child: Center(
           child: Icon(
             Icons.inventory_2_outlined,
-            size: 24.w,
-            color: AppColors.primary,
+            size: 24,
+            color: isDark ? MFTokens.primaryDarkMode : MFTokens.primary,
           ),
         ),
       ),
@@ -182,7 +184,7 @@ class ProductCard extends StatelessWidget {
 
     if (product.imageUrl != null && product.imageUrl!.isNotEmpty) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
+        borderRadius: BorderRadius.circular(MFTokens.radiusMD),
         child: CachedNetworkImage(
           imageUrl: product.imageUrl!,
           width: double.infinity,
@@ -194,9 +196,8 @@ class ProductCard extends StatelessWidget {
       );
     }
     return ClipRRect(
-      borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
+      borderRadius: BorderRadius.circular(MFTokens.radiusMD),
       child: placeholder,
     );
   }
 }
-

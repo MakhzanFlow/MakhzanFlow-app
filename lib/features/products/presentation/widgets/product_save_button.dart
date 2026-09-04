@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_sizes.dart';
+import '../../../../core/theme/mf_tokens.dart';
 import '../../../../core/constants/app_strings.dart';
 
 class ProductSaveButton extends StatelessWidget {
@@ -19,7 +18,7 @@ class ProductSaveButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: AppSizes.buttonHeight,
+      height: MFTokens.buttonHeightMD,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         child: isLoading
@@ -27,15 +26,15 @@ class ProductSaveButton extends StatelessWidget {
                 width: 20,
                 height: 20,
                 child: CircularProgressIndicator(
-                  color: AppColors.white,
+                  color: Colors.white,
                   strokeWidth: 2,
                 ),
               )
             : Text(
                 isEditMode ? AppStrings.productSave : AppStrings.productsAdd,
-                style: TextStyle(
+                style: const TextStyle(
                   fontFamily: 'Cairo',
-                  fontSize: AppSizes.fontLarge,
+                  fontSize: MFTokens.fontMD,
                 ),
               ),
       ),

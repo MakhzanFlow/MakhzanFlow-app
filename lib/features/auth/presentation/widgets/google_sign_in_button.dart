@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_sizes.dart';
+import '../../../../core/theme/mf_tokens.dart';
+import '../../../../core/constants/app_strings.dart';
 
 class GoogleSignInButton extends StatelessWidget {
   final String label;
@@ -16,34 +16,37 @@ class GoogleSignInButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? MFTokens.textPrimaryDark : MFTokens.textPrimaryLight;
+
     return SizedBox(
       width: double.infinity,
-      height: AppSizes.buttonHeight,
+      height: MFTokens.buttonHeightMD,
       child: OutlinedButton.icon(
         onPressed: isLoading ? null : onPressed,
         style: OutlinedButton.styleFrom(
-          backgroundColor: AppColors.white,
-          foregroundColor: AppColors.textPrimary,
-          side: const BorderSide(color: AppColors.inputBorder),
+          backgroundColor: isDark ? MFTokens.surfaceDark : MFTokens.surfaceLight,
+          foregroundColor: textPrimary,
+          side: BorderSide(color: isDark ? MFTokens.borderDark : MFTokens.borderLight),
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
+            borderRadius: BorderRadius.circular(MFTokens.radiusMD),
           ),
         ),
         icon: isLoading
             ? SizedBox(
-                width: AppSizes.iconMedium,
-                height: AppSizes.iconMedium,
+                width: MFTokens.sp24,
+                height: MFTokens.sp24,
                 child: const CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: AppColors.textSecondary,
+                  color: MFTokens.textSecondaryLight,
                 ),
               )
             : _GoogleG(),
         label: Text(
           label,
-          style: TextStyle(
-            fontSize: AppSizes.fontLarge,
+          style: const TextStyle(
+            fontSize: MFTokens.fontMD,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -56,15 +59,15 @@ class _GoogleG extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: AppSizes.iconMedium,
-      height: AppSizes.iconMedium,
+      width: MFTokens.sp24,
+      height: MFTokens.sp24,
       alignment: Alignment.center,
       child: Text(
-        'G',
-        style: TextStyle(
-          fontSize: AppSizes.fontXLarge,
+        AppStrings.googleLogoLetter,
+        style: const TextStyle(
+          fontSize: MFTokens.fontLG,
           fontWeight: FontWeight.bold,
-          color: const Color(0xFF4285F4),
+          color: Color(0xFF4285F4),
           letterSpacing: 0,
         ),
       ),

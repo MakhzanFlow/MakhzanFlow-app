@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_sizes.dart';
+import '../../../../core/theme/mf_tokens.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/constants/app_routes.dart';
 import '../../../../core/company/company_cubit.dart';
@@ -46,8 +45,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? MFTokens.backgroundDark : MFTokens.backgroundLight;
+    final cardBg = isDark ? MFTokens.cardDark : MFTokens.surfaceLight;
+    final textPrimary = isDark ? MFTokens.textPrimaryDark : MFTokens.textPrimaryLight;
+
     return Scaffold(
-      backgroundColor: AppColors.appBackground,
+      backgroundColor: bg,
       body: BlocConsumer<AuthCubit, AuthState>(
         listener: (context, state) {
           if (state is Authenticated) {
@@ -65,15 +69,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 Expanded(
                   child: Container(
                     width: double.infinity,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppSizes.spacingLarge,
-                      vertical: AppSizes.spacingXLarge,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: MFTokens.sp24,
+                      vertical: MFTokens.sp32,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.white,
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(AppSizes.radiusXXLarge),
-                        topRight: Radius.circular(AppSizes.radiusXXLarge),
+                      color: cardBg,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(MFTokens.radiusXXL),
+                        topRight: Radius.circular(MFTokens.radiusXXL),
                       ),
                     ),
                     child: SingleChildScrollView(
@@ -86,7 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               title: AppStrings.welcomeBack,
                               subtitle: AppStrings.loginToContinue,
                             ),
-                            SizedBox(height: AppSizes.spacingXLarge),
+                            const SizedBox(height: MFTokens.sp32),
                             AuthTextField(
                               controller: _emailController,
                               label: AppStrings.emailLabel,
@@ -104,7 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 return null;
                               },
                             ),
-                            SizedBox(height: AppSizes.spacingMedium),
+                            const SizedBox(height: MFTokens.sp16),
                             AuthTextField(
                               controller: _passwordController,
                               label: AppStrings.passwordLabel,
@@ -117,7 +121,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   _obscurePassword
                                       ? Icons.visibility_off
                                       : Icons.visibility,
-                                  color: AppColors.grey,
+                                  color: isDark ? MFTokens.textMutedDark : MFTokens.textMutedLight,
                                 ),
                                 onPressed: () {
                                   setState(() {
@@ -135,18 +139,18 @@ class _LoginScreenState extends State<LoginScreen> {
                                 return null;
                               },
                             ),
-                            SizedBox(height: AppSizes.spacingMedium),
+                            const SizedBox(height: MFTokens.sp16),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Row(
                                   children: [
                                     SizedBox(
-                                      width: AppSizes.iconMedium,
-                                      height: AppSizes.iconMedium,
+                                      width: MFTokens.sp24,
+                                      height: MFTokens.sp24,
                                       child: Checkbox(
                                         value: _rememberMe,
-                                        activeColor: AppColors.primary,
+                                        activeColor: isDark ? MFTokens.primaryDarkMode : MFTokens.primary,
                                         onChanged: isLoading
                                             ? null
                                             : (value) {
@@ -156,14 +160,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                               },
                                       ),
                                     ),
-                                    SizedBox(width: AppSizes.spacingSmall),
+                                    const SizedBox(width: MFTokens.sp8),
                                     Text(
                                       AppStrings.rememberMe,
                                       style: TextStyle(
                                         fontFamily: 'Cairo',
-                                        fontSize: AppSizes.fontLarge,
+                                        fontSize: MFTokens.fontMD,
                                         fontWeight: FontWeight.w500,
-                                        color: AppColors.textPrimary,
+                                        color: textPrimary,
                                       ),
                                     ),
                                   ],
@@ -174,20 +178,20 @@ class _LoginScreenState extends State<LoginScreen> {
                                     AppStrings.forgotPassword,
                                     style: TextStyle(
                                       fontFamily: 'Cairo',
-                                      fontSize: AppSizes.fontMedium,
-                                      color: AppColors.accent,
+                                      fontSize: MFTokens.fontSM,
+                                      color: isDark ? MFTokens.primaryDarkMode : MFTokens.accent,
                                     ),
                                   ),
                                 ),
                               ],
                             ),
-                            SizedBox(height: AppSizes.spacingXLarge),
+                            const SizedBox(height: MFTokens.sp32),
                             AuthButton(
                               label: AppStrings.loginButton,
                               isLoading: isLoading,
                               onPressed: _onLogin,
                             ),
-                            SizedBox(height: AppSizes.spacingLarge),
+                            const SizedBox(height: MFTokens.sp24),
                             GoogleAuthSection(
                               label: AppStrings.signInWithGoogle,
                               isLoading: isLoading,
@@ -195,7 +199,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 context.read<AuthCubit>().signInWithGoogle();
                               },
                             ),
-                            SizedBox(height: AppSizes.spacingLarge),
+                            const SizedBox(height: MFTokens.sp24),
                             AuthBottomLink(
                               label: AppStrings.dontHaveAccount,
                               actionLabel: AppStrings.registerNow,

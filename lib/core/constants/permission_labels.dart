@@ -1,7 +1,7 @@
 import 'package:makhzanflow/core/constants/app_strings.dart';
 
 /// Maps permission dotted-path keys to their Arabic display labels.
-const Map<String, String> permissionLabels = {
+final Map<String, String> permissionLabels = {
   // Dashboard
   'dashboard': AppStrings.permDashboardView,
   // Products
@@ -28,7 +28,7 @@ const Map<String, String> permissionLabels = {
 };
 
 /// Groups permission keys by section for display in the permission editor.
-const Map<String, List<String>> permissionSections = {
+final Map<String, List<String>> permissionSections = {
   AppStrings.sectionDashboard: [
     'dashboard',
   ],

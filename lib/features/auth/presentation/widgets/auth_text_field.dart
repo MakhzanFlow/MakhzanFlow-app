@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_sizes.dart';
+import '../../../../core/theme/mf_tokens.dart';
 
 class AuthTextField extends StatelessWidget {
   final TextEditingController controller;
@@ -28,6 +27,9 @@ class AuthTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? MFTokens.textPrimaryDark : MFTokens.textPrimaryLight;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -35,12 +37,12 @@ class AuthTextField extends StatelessWidget {
           label,
           style: TextStyle(
             fontFamily: 'Cairo',
-            fontSize: AppSizes.fontMedium,
+            fontSize: MFTokens.fontSM,
             fontWeight: FontWeight.w500,
-            color: AppColors.textPrimary,
+            color: textPrimary,
           ),
         ),
-        SizedBox(height: AppSizes.spacingSmall),
+        const SizedBox(height: MFTokens.sp8),
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
@@ -48,7 +50,7 @@ class AuthTextField extends StatelessWidget {
           enabled: enabled,
           decoration: InputDecoration(
             hintText: hintText,
-            prefixIcon: Icon(prefixIcon, color: AppColors.grey),
+            prefixIcon: Icon(prefixIcon, color: isDark ? MFTokens.textMutedDark : MFTokens.textMutedLight),
             suffixIcon: suffixIcon,
           ),
           validator: validator,

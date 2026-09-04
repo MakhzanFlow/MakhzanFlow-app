@@ -5,7 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:makhzanflow/core/company/company_aware_state.dart';
 import 'package:makhzanflow/core/company/company_cubit.dart';
 import 'package:makhzanflow/core/company/company_state.dart';
-import 'package:makhzanflow/core/di/service_locator.dart';
 import 'package:makhzanflow/core/widgets/app_snackbar.dart';
 import 'package:makhzanflow/features/auth/presentation/cubit/auth_cubit.dart';
 import 'package:makhzanflow/features/auth/presentation/cubit/auth_state.dart';
@@ -40,7 +39,7 @@ class _DashboardViewState extends State<DashboardView>
   @override
   void onCompanyChanged(String companyId) {
     setState(() {
-      final companyState = sl<CompanyCubit>().state;
+      final companyState = context.read<CompanyCubit>().state;
       if (companyState is CompanySelected) {
         _company = companyState.company;
       }
@@ -59,7 +58,7 @@ class _DashboardViewState extends State<DashboardView>
     _userName = authCubit.state is Authenticated
         ? (authCubit.state as Authenticated).user.name
         : '';
-    final companyState = sl<CompanyCubit>().state;
+    final companyState = context.read<CompanyCubit>().state;
     if (companyState is CompanySelected) {
       _company = companyState.company;
     }
@@ -74,7 +73,7 @@ class _DashboardViewState extends State<DashboardView>
   }
 
   void _triggerLoad() {
-    final companyState = sl<CompanyCubit>().state;
+    final companyState = context.read<CompanyCubit>().state;
     if (companyState is CompanySelected) {
       context.read<DashboardCubit>().loadDashboard(companyState.company.id);
     }

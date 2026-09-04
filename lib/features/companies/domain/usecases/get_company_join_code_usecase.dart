@@ -5,5 +5,6 @@ import 'package:makhzanflow/features/companies/domain/repositories/company_repos
 class GetCompanyJoinCodeUseCase {
   final CompanyRepository _repository;
   GetCompanyJoinCodeUseCase(this._repository);
-  Future<Either<Failure, String>> call() => _repository.getCompanyJoinCode();
+  Future<Either<Failure, String>> call(String companyId) =>
+      _repository.getCompanyJoinCode(companyId);
 }

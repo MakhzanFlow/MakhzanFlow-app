@@ -1,9 +1,8 @@
-import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
+import 'package:makhzanflow/core/storage/file_upload_service.dart';
 import 'package:makhzanflow/features/companies/domain/entities/company.dart';
 import 'package:makhzanflow/features/companies/domain/usecases/update_company_usecase.dart';
 import 'package:makhzanflow/features/companies/domain/usecases/get_company_join_code_usecase.dart';
@@ -69,7 +68,7 @@ class CompanySettingsCubit extends Cubit<CompanySettingsState> {
   final LeaveCompanyUseCase _leaveCompanyUseCase;
   final DeleteCompanyUseCase _deleteCompanyUseCase;
   final ImagePicker _picker;
-  final SupabaseClient _supabase;
+  final FileUploadService _fileUploadService;
 
   CompanySettingsCubit({
     required UpdateCompanyUseCase updateCompanyUseCase,
@@ -78,14 +77,14 @@ class CompanySettingsCubit extends Cubit<CompanySettingsState> {
     required LeaveCompanyUseCase leaveCompanyUseCase,
     required DeleteCompanyUseCase deleteCompanyUseCase,
     ImagePicker? picker,
-    SupabaseClient? supabase,
+    FileUploadService? fileUploadService,
   })  : _updateCompanyUseCase = updateCompanyUseCase,
         _getCompanyJoinCodeUseCase = getCompanyJoinCodeUseCase,
         _regenerateCompanyJoinCodeUseCase = regenerateCompanyJoinCodeUseCase,
         _leaveCompanyUseCase = leaveCompanyUseCase,
         _deleteCompanyUseCase = deleteCompanyUseCase,
         _picker = picker ?? ImagePicker(),
-        _supabase = supabase ?? Supabase.instance.client,
+        _fileUploadService = fileUploadService ?? const FileUploadService(),
         super(const CompanySettingsInitial());
 
   void loadFromCompany(Company company) {
@@ -121,16 +120,16 @@ class CompanySettingsCubit extends Cubit<CompanySettingsState> {
     }
   }
 
-  Future<String?> getJoinCode() async {
-    final result = await _getCompanyJoinCodeUseCase.call();
+  Future<String?> getJoinCode(String companyId) async {
+    final result = await _getCompanyJoinCodeUseCase.call(companyId);
     return result.fold(
       (failure) => null,
       (code) => code,
     );
   }
 
-  Future<String?> regenerateJoinCode() async {
-    final result = await _regenerateCompanyJoinCodeUseCase.call();
+  Future<String?> regenerateJoinCode(String companyId) async {
+    final result = await _regenerateCompanyJoinCodeUseCase.call(companyId);
     return result.fold(
       (failure) => null,
       (code) => code,
@@ -143,7 +142,7 @@ class CompanySettingsCubit extends Cubit<CompanySettingsState> {
       (failure) => false,
       (_) => true,
     );
-    if (success) emit(const CompanySettingsSuccess(AppStrings.companyLeft));
+    if (success) emit(CompanySettingsSuccess(AppStrings.companyLeft));
     return success;
   }
 
@@ -153,7 +152,7 @@ class CompanySettingsCubit extends Cubit<CompanySettingsState> {
       (failure) => false,
       (_) => true,
     );
-    if (success) emit(const CompanySettingsSuccess(AppStrings.companyDeleted));
+    if (success) emit(CompanySettingsSuccess(AppStrings.companyDeleted));
     return success;
   }
 
@@ -173,26 +172,18 @@ class CompanySettingsCubit extends Cubit<CompanySettingsState> {
 
     String? logoUrl;
     if (imagePath != null) {
-      try {
-        final fileName =
-            '${DateTime.now().millisecondsSinceEpoch}_logo.jpg';
-        final file = File(imagePath);
-        await _supabase.storage.from('company-logos').upload(
-              fileName,
-              file,
-              fileOptions: const FileOptions(
-                contentType: 'image/jpeg',
-                upsert: true,
-              ),
-            );
-        logoUrl =
-            _supabase.storage.from('company-logos').getPublicUrl(fileName);
-      } on Exception {
-        emit(CompanySettingsError(
-          '${AppStrings.uploadLogoError}: تعذر رفع الشعار',
-        ));
-        return;
-      }
+      final uploadResult = await _fileUploadService.toDataUri(imagePath);
+      final shouldAbort = uploadResult.fold(
+        (failure) {
+          emit(CompanySettingsError(failure.message));
+          return true;
+        },
+        (uri) {
+          logoUrl = uri;
+          return false;
+        },
+      );
+      if (shouldAbort) return;
     }
 
     final result = await _updateCompanyUseCase.call(
@@ -205,7 +196,7 @@ class CompanySettingsCubit extends Cubit<CompanySettingsState> {
 
     result.fold(
       (failure) => emit(CompanySettingsError(failure.message)),
-      (_) => emit(const CompanySettingsSuccess(AppStrings.companyUpdated)),
+      (_) => emit(CompanySettingsSuccess(AppStrings.companyUpdated)),
     );
   }
 }

@@ -5,7 +5,6 @@ import 'package:makhzanflow/core/constants/app_colors.dart';
 import 'package:makhzanflow/core/constants/app_routes.dart';
 import 'package:makhzanflow/core/constants/app_sizes.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
-import 'package:makhzanflow/core/di/service_locator.dart';
 import 'package:makhzanflow/core/widgets/app_snackbar.dart';
 import 'package:makhzanflow/features/customers/domain/entities/customer.dart';
 import 'package:makhzanflow/features/invoice/presentation/cubit/create_invoice/create_invoice_cubit.dart';
@@ -30,72 +29,67 @@ class CreateInvoiceScreen extends StatefulWidget {
 
 class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   late final CreateInvoiceCubit _cubit;
+  bool _initialized = false;
 
   @override
-  void initState() {
-    super.initState();
-    _cubit = sl<CreateInvoiceCubit>();
-    if (widget.preselectedCustomerId != null &&
-        widget.preselectedCustomerName != null) {
-      _cubit.selectCustomer(
-        Customer(
-          id: widget.preselectedCustomerId!,
-          name: widget.preselectedCustomerName!,
-        ),
-      );
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _cubit = context.read<CreateInvoiceCubit>();
+      if (widget.preselectedCustomerId != null &&
+          widget.preselectedCustomerName != null) {
+        _cubit.selectCustomer(
+          Customer(
+            id: widget.preselectedCustomerId!,
+            name: widget.preselectedCustomerName!,
+          ),
+        );
+      }
+      _initialized = true;
     }
   }
 
   @override
-  void dispose() {
-    _cubit.close();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return BlocProvider.value(
-      value: _cubit,
-      child: BlocListener<CreateInvoiceCubit, CreateInvoiceState>(
-        listener: (context, state) {
-          if (state is CreateInvoiceSuccess) {
-            AppSnackbar.success(context, AppStrings.invoiceCreated);
-            // Navigate to the invoice details screen or show a success message
-            context.go(AppRoutes.invoiceDetailsPath(state.invoiceId));
-          }
-          if (state is CreateInvoiceError) {
-            AppSnackbar.error(context, state.failure.message);
-          }
-        },
-        child: BlocBuilder<CreateInvoiceCubit, CreateInvoiceState>(
-          builder: (context, state) {
-            return Scaffold(
-              backgroundColor: AppColors.appBackground,
-              appBar: AppBar(
-                backgroundColor: AppColors.appBackground,
-                elevation: 0,
-                leading: IconButton(
-                  icon: Icon(
-                    Icons.arrow_back_ios,
-                    color: AppColors.textDark,
-                    size: AppSizes.iconMedium,
-                  ),
-                  onPressed: () => context.pop(),
-                ),
-                title: Text(
-                  AppStrings.invoiceCreateSale,
-                  style: TextStyle(
-                    fontSize: AppSizes.fontXLarge,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textDark,
-                  ),
-                ),
-              ),
-              body: state is CreateInvoiceLoading
-                  ? const CreateInvoiceLoadingState()
-                  : CreateInvoiceForm(lockCustomer: widget.lockCustomer),
-            );
-          },
+    return BlocListener<CreateInvoiceCubit, CreateInvoiceState>(
+      listenWhen: (prev, curr) =>
+          curr is CreateInvoiceSuccess || curr is CreateInvoiceError,
+      listener: (context, state) {
+        if (state is CreateInvoiceSuccess) {
+          AppSnackbar.success(context, AppStrings.invoiceCreated);
+          context.go(AppRoutes.invoiceDetailsPath(state.invoiceId));
+        }
+        if (state is CreateInvoiceError) {
+          AppSnackbar.error(context, state.failure.message);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.appBackground,
+        appBar: AppBar(
+          backgroundColor: AppColors.appBackground,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(
+              Icons.arrow_back_ios,
+              color: AppColors.textDark,
+              size: AppSizes.iconMedium,
+            ),
+            onPressed: () => context.pop(),
+          ),
+          title: Text(
+            AppStrings.invoiceCreateSale,
+            style: TextStyle(
+              fontSize: AppSizes.fontXLarge,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textDark,
+            ),
+          ),
+        ),
+        body: BlocSelector<CreateInvoiceCubit, CreateInvoiceState, bool>(
+          selector: (s) => s is CreateInvoiceLoading,
+          builder: (context, isLoading) => isLoading
+              ? const CreateInvoiceLoadingState()
+              : CreateInvoiceForm(lockCustomer: widget.lockCustomer),
         ),
       ),
     );

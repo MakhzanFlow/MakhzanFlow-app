@@ -124,7 +124,7 @@ class MakhzanFlowTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: mainGreen,
           foregroundColor: Colors.white,
-          minimumSize: const Size.fromHeight(56),
+          minimumSize: const Size(0, 56),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(rControl),
           ),
@@ -137,7 +137,7 @@ class MakhzanFlowTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: mainGreen,
-          minimumSize: const Size.fromHeight(56),
+          minimumSize: const Size(0, 56),
           side: const BorderSide(color: mainGreen),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(rControl),

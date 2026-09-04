@@ -5,7 +5,7 @@ import 'package:makhzanflow/features/invoice/domain/entities/payment.dart';
 
 class Invoice extends Equatable {
   final String id;
-  final String customerId;
+  final String customerId; // nullable for walk-in (no customer) invoices
   final String? customerName;
   final String? createdBy;
   final String? createdByName;

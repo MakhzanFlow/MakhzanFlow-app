@@ -1,16 +1,20 @@
 import 'package:makhzanflow/features/auth/domain/entities/user.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
 class UserModel extends UserEntity {
-  const UserModel({required super.id, required super.email, super.name});
+  const UserModel({
+    required super.id,
+    required super.email,
+    super.name,
+    super.isVerified,
+  });
 
-  factory UserModel.fromSupabaseUser(supabase.User user) {
-    final meta = user.userMetadata;
-    final name =
-        meta?['name'] as String? ??
-        meta?['full_name'] as String? ??
-        user.email?.split('@').first ??
-        'UserName';
-    return UserModel(id: user.id, email: user.email ?? '', name: name);
+  factory UserModel.fromJson(Map<String, dynamic> json) {
+    final email = json['email'] as String? ?? '';
+    return UserModel(
+      id: json['id'] as String? ?? '',
+      email: email,
+      name: json['name'] as String? ?? email.split('@').first,
+      isVerified: json['is_verified'] as bool? ?? false,
+    );
   }
 }

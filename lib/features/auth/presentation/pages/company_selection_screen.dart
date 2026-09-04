@@ -3,8 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:makhzanflow/core/company/company_cubit.dart';
 import 'package:makhzanflow/core/company/company_state.dart';
-import 'package:makhzanflow/core/constants/app_colors.dart';
-import 'package:makhzanflow/core/constants/app_sizes.dart';
+import 'package:makhzanflow/core/theme/mf_tokens.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
 import 'package:makhzanflow/core/constants/app_routes.dart';
 import 'package:makhzanflow/core/widgets/app_snackbar.dart';
@@ -21,12 +20,10 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
   @override
   void initState() {
     super.initState();
-    debugPrint('[CompanySelectionScreen] initState — calling loadCompanies');
     context.read<CompanyCubit>().loadCompanies();
   }
 
   Future<void> _selectCompany(Company company) async {
-    debugPrint('[CompanySelectionScreen] _selectCompany — id=${company.id}, name=${company.name}, businessType=${company.businessType}, logoUrl=${company.logoUrl}, inviteCode=${company.inviteCode}');
     await context.read<CompanyCubit>().switchCompany(company);
     if (!mounted) return;
     context.go(AppRoutes.dashboard);
@@ -34,18 +31,18 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? MFTokens.backgroundDark : MFTokens.backgroundLight;
+    final textPrimary = isDark ? MFTokens.textPrimaryDark : MFTokens.textPrimaryLight;
+    final textSecondary = isDark ? MFTokens.textSecondaryDark : MFTokens.textSecondaryLight;
+    final cardBg = isDark ? MFTokens.cardDark : MFTokens.cardLight;
+
     return Scaffold(
-      backgroundColor: AppColors.appBackground,
-        body: BlocConsumer<CompanyCubit, CompanyState>(
-          listener: (context, state) {
-          debugPrint('[CompanySelectionScreen] listener — state=$state');
+      backgroundColor: bg,
+      body: BlocConsumer<CompanyCubit, CompanyState>(
+        listener: (context, state) {
           if (state is CompaniesLoaded) {
-            debugPrint('[CompanySelectionScreen] CompaniesLoaded — count=${state.companies.length}');
-            for (final c in state.companies) {
-              debugPrint('  company: id=${c.id}, name=${c.name}, status=${c.status}');
-            }
             if (state.companies.isEmpty) {
-              debugPrint('[CompanySelectionScreen] no companies — redirecting to /welcome');
               context.go(AppRoutes.welcome);
             }
           } else if (state is CompanyError) {
@@ -60,61 +57,59 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
           if (state is CompaniesLoaded && state.companies.isNotEmpty) {
             return SafeArea(
               child: Padding(
-                padding: EdgeInsets.all(AppSizes.spacingLarge),
+                padding: const EdgeInsets.all(MFTokens.sp24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(height: AppSizes.spacingXLarge * 2),
+                    const SizedBox(height: 64),
                     Text(
                       AppStrings.selectCompany,
                       style: TextStyle(
-                        fontSize: AppSizes.fontXXLarge,
+                        fontSize: MFTokens.font2XL,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
+                        color: textPrimary,
                       ),
                     ),
-                    SizedBox(height: AppSizes.spacingSmall),
+                    const SizedBox(height: MFTokens.sp8),
                     Text(
                       AppStrings.selectCompanySubtitle,
                       style: TextStyle(
-                        fontSize: AppSizes.fontLarge,
-                        color: AppColors.textSecondary,
+                        fontSize: MFTokens.fontMD,
+                        color: textSecondary,
                       ),
                     ),
-                    SizedBox(height: AppSizes.spacingXLarge),
+                    const SizedBox(height: MFTokens.sp32),
                     Expanded(
                       child: ListView.separated(
                         itemCount: state.companies.length,
                         separatorBuilder: (_, _) =>
-                            SizedBox(height: AppSizes.spacingMedium),
+                            const SizedBox(height: MFTokens.sp16),
                         itemBuilder: (context, index) {
                           final company = state.companies[index];
                           return Card(
-                            color: AppColors.white,
+                            color: cardBg,
                             child: ListTile(
-                              contentPadding: EdgeInsets.all(
-                                AppSizes.spacingMedium,
-                              ),
+                              contentPadding: const EdgeInsets.all(MFTokens.sp16),
                               title: Text(
                                 company.name,
                                 style: TextStyle(
-                                  fontSize: AppSizes.fontXLarge,
+                                  fontSize: MFTokens.fontLG,
                                   fontWeight: FontWeight.w600,
-                                  color: AppColors.textPrimary,
+                                  color: textPrimary,
                                 ),
                               ),
                               subtitle: company.address != null
                                   ? Text(
                                       company.address!,
                                       style: TextStyle(
-                                        fontSize: AppSizes.fontMedium,
-                                        color: AppColors.textSecondary,
+                                        fontSize: MFTokens.fontSM,
+                                        color: textSecondary,
                                       ),
                                     )
                                   : null,
                               trailing: Icon(
                                 Icons.arrow_forward_ios,
-                                color: AppColors.primary,
+                                color: isDark ? MFTokens.primaryDarkMode : MFTokens.primary,
                               ),
                               onTap: () => _selectCompany(company),
                             ),
@@ -122,41 +117,41 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
                         },
                       ),
                     ),
-                    SizedBox(height: AppSizes.spacingMedium),
+                    const SizedBox(height: MFTokens.sp16),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         onPressed: () => context.go(AppRoutes.welcomeCreate),
-                        icon: Icon(Icons.business_outlined, color: AppColors.white),
+                        icon: const Icon(Icons.business_outlined, color: MFTokens.textOnPrimary),
                         label: Text(
                           AppStrings.createCompany,
-                          style: TextStyle(
-                            fontSize: AppSizes.fontLarge,
-                            color: AppColors.white,
+                          style: const TextStyle(
+                            fontSize: MFTokens.fontMD,
+                            color: MFTokens.textOnPrimary,
                           ),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          padding: EdgeInsets.all(AppSizes.spacingMedium),
+                          backgroundColor: isDark ? MFTokens.primaryDarkMode : MFTokens.primary,
+                          padding: const EdgeInsets.all(MFTokens.sp16),
                         ),
                       ),
                     ),
-                    SizedBox(height: AppSizes.spacingSmall),
+                    const SizedBox(height: MFTokens.sp8),
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
                         onPressed: () => context.go(AppRoutes.welcomeJoin),
-                        icon: Icon(Icons.group_add_outlined, color: AppColors.primary),
+                        icon: Icon(Icons.group_add_outlined, color: isDark ? MFTokens.primaryDarkMode : MFTokens.primary),
                         label: Text(
                           AppStrings.joinCompany,
                           style: TextStyle(
-                            fontSize: AppSizes.fontLarge,
-                            color: AppColors.primary,
+                            fontSize: MFTokens.fontMD,
+                            color: isDark ? MFTokens.primaryDarkMode : MFTokens.primary,
                           ),
                         ),
                         style: OutlinedButton.styleFrom(
-                          padding: EdgeInsets.all(AppSizes.spacingMedium),
-                          side: BorderSide(color: AppColors.primary),
+                          padding: const EdgeInsets.all(MFTokens.sp16),
+                          side: BorderSide(color: isDark ? MFTokens.primaryDarkMode : MFTokens.primary),
                         ),
                       ),
                     ),
@@ -174,15 +169,15 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
                   Text(
                     state.message,
                     style: TextStyle(
-                      fontSize: AppSizes.fontLarge,
-                      color: AppColors.error,
+                      fontSize: MFTokens.fontMD,
+                      color: isDark ? MFTokens.errorTextDark : MFTokens.errorText,
                     ),
                   ),
-                  SizedBox(height: AppSizes.spacingMedium),
+                  const SizedBox(height: MFTokens.sp16),
                   ElevatedButton(
                     onPressed: () =>
                         context.read<CompanyCubit>().loadCompanies(),
-                    child: Text(AppStrings.retry, style: TextStyle()),
+                    child: Text(AppStrings.retry),
                   ),
                 ],
               ),

@@ -7,7 +7,7 @@ import '../../domain/entities/activity_entry.dart';
 import 'activity_item_card.dart';
 
 /// Real-data activity list.
-/// Shows up to 5 recent entries from Supabase [get_activity_log] RPC.
+/// Shows up to 5 recent entries from `[get_activity_log]`.
 class ActivityList extends StatelessWidget {
   const ActivityList({super.key, required this.entries, this.onItemTap});
 

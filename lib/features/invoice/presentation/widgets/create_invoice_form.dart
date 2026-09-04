@@ -4,6 +4,7 @@ import 'package:makhzanflow/core/constants/app_sizes.dart';
 import 'package:makhzanflow/core/company/company_cubit.dart';
 import 'package:makhzanflow/core/company/company_state.dart';
 import 'package:makhzanflow/core/di/service_locator.dart';
+import 'package:makhzanflow/features/customers/domain/entities/customer.dart';
 import 'package:makhzanflow/features/invoice/presentation/cubit/create_invoice/create_invoice_cubit.dart';
 import 'package:makhzanflow/features/invoice/presentation/cubit/customer_picker/customer_picker_cubit.dart';
 import 'package:makhzanflow/features/invoice/presentation/cubit/product_picker/product_picker_cubit.dart';
@@ -27,11 +28,6 @@ class CreateInvoiceForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cubit = context.read<CreateInvoiceCubit>();
-    final state = cubit.state;
-    final loaded = state is CreateInvoiceFormState
-        ? state
-        : CreateInvoiceLoaded();
-
     return Column(
       children: [
         Expanded(
@@ -40,37 +36,62 @@ class CreateInvoiceForm extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CustomerSelectionCard(
-                  customer: loaded.selectedCustomer,
-                  onTap: lockCustomer
-                      ? null
-                      : () => _openCustomerPicker(context, cubit),
+                // Customer — rebuilds only when customer changes
+                BlocSelector<CreateInvoiceCubit, CreateInvoiceState, Customer?>(
+                  selector: (s) =>
+                      s is CreateInvoiceFormState ? s.selectedCustomer : null,
+                  builder: (context, customer) => CustomerSelectionCard(
+                    customer: customer,
+                    onTap: lockCustomer
+                        ? null
+                        : () => _openCustomerPicker(context, cubit),
+                  ),
                 ),
                 SizedBox(height: AppSizes.spacingMedium),
-                ProductsSectionHeader(
-                  productCount: loaded.products.length,
-                  onAddProduct: () => _openProductPicker(context),
+                // Products header — rebuilds only when product count changes
+                BlocSelector<CreateInvoiceCubit, CreateInvoiceState, int>(
+                  selector: (s) =>
+                      s is CreateInvoiceFormState ? s.products.length : 0,
+                  builder: (context, count) => ProductsSectionHeader(
+                    productCount: count,
+                    onAddProduct: () => _openProductPicker(context),
+                  ),
                 ),
                 SizedBox(height: AppSizes.spacingSmall),
-                if (loaded.products.isEmpty)
-                  EmptyProductsPlaceholder(
-                    onTap: () => _openProductPicker(context),
-                  )
-                else
-                  ...loaded.products.map(
-                    (p) => Padding(
-                      padding: EdgeInsets.only(
-                        bottom: AppSizes.spacingSmall,
-                      ),
-                      child: ProductItemRow(
-                        cubit: cubit,
-                        productId: p.productId,
-                        productName: p.productName,
-                        unitPrice: p.unitPrice,
-                        quantity: p.quantity,
-                      ),
-                    ),
-                  ),
+                // Products list — rebuilds only when products list identity changes
+                BlocSelector<
+                  CreateInvoiceCubit,
+                  CreateInvoiceState,
+                  List<SelectedProduct>
+                >(
+                  selector: (s) =>
+                      s is CreateInvoiceFormState ? s.products : const [],
+                  builder: (context, products) {
+                    if (products.isEmpty) {
+                      return EmptyProductsPlaceholder(
+                        onTap: () => _openProductPicker(context),
+                      );
+                    }
+                    return Column(
+                      children: products
+                          .map(
+                            (p) => Padding(
+                              padding: EdgeInsets.only(
+                                bottom: AppSizes.spacingSmall,
+                              ),
+                              child: ProductItemRow(
+                                cubit: cubit,
+                                productId: p.productId,
+                                productName: p.productName,
+                                unitPrice: p.unitPrice,
+                                quantity: p.quantity,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    );
+                  },
+                ),
                 SizedBox(height: AppSizes.spacingMedium),
                 DiscountSection(cubit: cubit),
                 SizedBox(height: AppSizes.spacingMedium),
@@ -83,9 +104,7 @@ class CreateInvoiceForm extends StatelessWidget {
             ),
           ),
         ),
-        InvoiceBottomBar(
-          onConfirm: () => cubit.submit(),
-        ),
+        InvoiceBottomBar(onConfirm: () => cubit.submit()),
       ],
     );
   }
@@ -114,10 +133,8 @@ void _openProductPicker(BuildContext context) {
   Navigator.of(context).push(
     MaterialPageRoute(
       builder: (_) => BlocProvider(
-        create: (ctx) => ProductPickerCubit(
-          getProductsUseCase: sl(),
-          companyId: companyId,
-        ),
+        create: (ctx) =>
+            ProductPickerCubit(getProductsUseCase: sl(), companyId: companyId),
         child: ProductPickerScreen(createCubit: createCubit),
       ),
     ),

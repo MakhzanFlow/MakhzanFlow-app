@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:makhzanflow/core/company/company_cubit.dart';
 import 'package:makhzanflow/core/company/company_state.dart';
+import 'package:makhzanflow/core/di/service_locator.dart';
+import 'package:makhzanflow/core/permissions/permission_service.dart';
 import 'package:makhzanflow/features/auth/presentation/cubit/auth_cubit.dart';
-import 'package:makhzanflow/core/constants/app_colors.dart';
-import 'package:makhzanflow/core/constants/app_sizes.dart';
+import 'package:makhzanflow/core/theme/mf_tokens.dart';
 import 'package:makhzanflow/core/constants/app_routes.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
 import 'package:makhzanflow/core/widgets/action_row.dart';
@@ -22,6 +22,8 @@ class CompanySwitcher extends StatefulWidget {
 }
 
 class _CompanySwitcherState extends State<CompanySwitcher> {
+  bool _isLoggingOut = false;
+
   @override
   void initState() {
     super.initState();
@@ -31,8 +33,37 @@ class _CompanySwitcherState extends State<CompanySwitcher> {
     }
   }
 
+  Future<void> _handleLogout(BuildContext sheetContext, void Function(void Function()) setSheetState) async {
+    if (_isLoggingOut) return;
+    setSheetState(() => _isLoggingOut = true);
+    setState(() => _isLoggingOut = true);
+    final companyCubit = context.read<CompanyCubit>();
+    final authCubit = context.read<AuthCubit>();
+    final router = GoRouter.of(context);
+    try {
+      await companyCubit.clearCompany();
+      sl<PermissionService>().clear();
+      await authCubit.signOut();
+      if (sheetContext.mounted && Navigator.canPop(sheetContext)) {
+        Navigator.pop(sheetContext);
+      }
+      if (mounted) router.go(AppRoutes.login);
+    } catch (_) {
+      if (sheetContext.mounted && Navigator.canPop(sheetContext)) {
+        Navigator.pop(sheetContext);
+      }
+      if (mounted) router.go(AppRoutes.login);
+    } finally {
+      if (mounted) setState(() => _isLoggingOut = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? MFTokens.cardDark : MFTokens.cardLight;
+    final textPrimary = isDark ? MFTokens.textPrimaryDark : MFTokens.textPrimaryLight;
+
     return BlocBuilder<CompanyCubit, CompanyState>(
       builder: (context, state) {
         Company? selectedCompany;
@@ -46,30 +77,30 @@ class _CompanySwitcherState extends State<CompanySwitcher> {
         return GestureDetector(
           onTap: _showCompanySwitcherSheet,
           child: Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: AppSizes.spacingMedium,
-              vertical: AppSizes.spacingSmall,
+            padding: const EdgeInsets.symmetric(
+              horizontal: MFTokens.sp16,
+              vertical: MFTokens.sp8,
             ),
             decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
+              color: cardBg,
+              borderRadius: BorderRadius.circular(MFTokens.radiusMD),
             ),
             child: Row(
               children: [
                 AppNetworkImage(
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppSizes.radiusSmall),
+                    borderRadius: BorderRadius.circular(MFTokens.radiusSM),
                   ),
                   imageUrl: selectedCompany?.logoUrl ?? '',
-                  width: AppSizes.iconMedium,
-                  height: AppSizes.iconMedium,
+                  width: MFTokens.sp24,
+                  height: MFTokens.sp24,
                   errorBuilder: (context, error, stackTrace) => Icon(
                     Icons.business,
-                    color: AppColors.primary,
-                    size: AppSizes.iconMedium,
+                    color: MFTokens.primary,
+                    size: MFTokens.sp24,
                   ),
                 ),
-                SizedBox(width: AppSizes.spacingSmall),
+                const SizedBox(width: MFTokens.sp8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -77,15 +108,15 @@ class _CompanySwitcherState extends State<CompanySwitcher> {
                       Text(
                         selectedCompany?.name ?? AppStrings.selectCompany,
                         style: TextStyle(
-                          fontSize: AppSizes.fontMedium,
+                          fontSize: MFTokens.fontMD,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
+                          color: textPrimary,
                         ),
                       ),
                     ],
                   ),
                 ),
-                Icon(Icons.swap_horiz, color: AppColors.grey),
+                Icon(Icons.swap_horiz, color: isDark ? MFTokens.textMutedDark : MFTokens.textMutedLight),
               ],
             ),
           ),
@@ -96,6 +127,7 @@ class _CompanySwitcherState extends State<CompanySwitcher> {
 
   void _showCompanySwitcherSheet() {
     final state = context.read<CompanyCubit>().state;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final companies = switch (state) {
       CompaniesLoaded(:final companies) => companies,
       CompanySelected(:final allCompanies) =>
@@ -106,47 +138,51 @@ class _CompanySwitcherState extends State<CompanySwitcher> {
       CompanySelected(:final company) => company,
       _ => null,
     };
+    final textPrimary = isDark ? MFTokens.textPrimaryDark : MFTokens.textPrimaryLight;
+    final textSecondary = isDark ? MFTokens.textSecondaryDark : MFTokens.textSecondaryLight;
+
     showModalBottomSheet(
       context: context,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppSizes.radiusXLarge),
+          top: Radius.circular(MFTokens.radiusXL),
         ),
       ),
-      builder: (_) => SafeArea(
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) => SafeArea(
         child: SizedBox(
-          height: 510.h,
+          height: 510,
           child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              AppSizes.spacingMedium,
+            padding: const EdgeInsets.fromLTRB(
+              MFTokens.sp16,
               0,
-              AppSizes.spacingMedium,
-              AppSizes.spacingMedium,
+              MFTokens.sp16,
+              MFTokens.sp16,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   alignment: Alignment.center,
-                  padding: EdgeInsets.only(top: 12.h, bottom: 4.h),
+                  padding: const EdgeInsets.only(top: 12, bottom: 4),
                   child: Container(
-                    width: 40.w,
-                    height: 4.h,
+                    width: 40,
+                    height: 4,
                     decoration: BoxDecoration(
-                      color: AppColors.gripColor,
+                      color: isDark ? MFTokens.borderDark : const Color(0xFFD4D4D4),
                       borderRadius: BorderRadius.circular(9999),
                     ),
                   ),
                 ),
                 Padding(
-                  padding: EdgeInsets.only(top: 4.h),
+                  padding: const EdgeInsets.only(top: MFTokens.sp4),
                   child: Text(
                     AppStrings.selectBusiness,
                     style: TextStyle(
                       fontFamily: 'Cairo',
-                      fontSize: AppSizes.fontLarge,
+                      fontSize: MFTokens.fontMD,
                       fontWeight: FontWeight.w400,
-                      color: AppColors.secondary,
+                      color: textPrimary,
                     ),
                   ),
                 ),
@@ -154,10 +190,10 @@ class _CompanySwitcherState extends State<CompanySwitcher> {
                   child: companies.isEmpty && state is! CompanyLoading
                       ? Center(
                           child: Text(
-                            'لا توجد شركات',
+                            AppStrings.noCompanies,
                             style: TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: AppSizes.fontMedium,
+                              color: textSecondary,
+                              fontSize: MFTokens.fontMD,
                             ),
                           ),
                         )
@@ -169,7 +205,7 @@ class _CompanySwitcherState extends State<CompanySwitcher> {
                               final isSelected = selected?.id == company.id;
                               return Padding(
                                 padding: EdgeInsets.only(
-                                  top: i == 0 ? 0 : 10.h,
+                                  top: i == 0 ? 0 : MFTokens.sp10,
                                 ),
                                 child: CompanyCard(
                                   company: company,
@@ -188,25 +224,25 @@ class _CompanySwitcherState extends State<CompanySwitcher> {
                               );
                             }),
                             Padding(
-                              padding: EdgeInsets.only(
-                                top: AppSizes.spacingMedium,
+                              padding: const EdgeInsets.only(
+                                top: MFTokens.sp16,
                               ),
                               child: Divider(
-                                color: AppColors.searchBg,
+                                color: isDark ? MFTokens.borderDark : MFTokens.surfaceMutedLight,
                                 height: 1,
                                 thickness: 1,
                               ),
                             ),
                             Padding(
-                              padding: EdgeInsets.only(
-                                top: AppSizes.spacingMedium,
+                              padding: const EdgeInsets.only(
+                                top: MFTokens.sp16,
                               ),
                               child: ActionRow(
                                 icon: Icons.add,
                                 label: AppStrings.createNewBusiness,
-                                iconBg: AppColors.lightGreen,
-                                iconColor: AppColors.primary,
-                                labelColor: AppColors.primary,
+                                iconBg: isDark ? MFTokens.primaryDarkModeSubtle : MFTokens.primarySubtle,
+                                iconColor: isDark ? MFTokens.primaryDarkMode : MFTokens.primary,
+                                labelColor: isDark ? MFTokens.primaryDarkMode : MFTokens.primary,
                                 onTap: () {
                                   final router = GoRouter.of(context);
                                   Navigator.pop(context);
@@ -217,9 +253,9 @@ class _CompanySwitcherState extends State<CompanySwitcher> {
                             ActionRow(
                               icon: Icons.person_add_alt_1,
                               label: AppStrings.joinByCode,
-                              iconBg: AppColors.blueLight,
-                              iconColor: AppColors.bluePrimary,
-                              labelColor: AppColors.bluePrimary,
+                              iconBg: isDark ? MFTokens.infoBgDark : MFTokens.infoSubtle,
+                              iconColor: MFTokens.info,
+                              labelColor: MFTokens.info,
                               onTap: () {
                                 final router = GoRouter.of(context);
                                 Navigator.pop(context);
@@ -230,14 +266,11 @@ class _CompanySwitcherState extends State<CompanySwitcher> {
                             ActionRow(
                               icon: Icons.logout_rounded,
                               label: AppStrings.signOut,
-                              iconBg: AppColors.lightRed,
-                              iconColor: AppColors.redDark,
-                              labelColor: AppColors.redDark,
-                              onTap: () {
-                                Navigator.pop(context);
-                                context.read<CompanyCubit>().clearCompany();
-                                context.read<AuthCubit>().signOut();
-                              },
+                              iconBg: isDark ? MFTokens.errorBgDark : MFTokens.errorBg,
+                              iconColor: isDark ? MFTokens.errorTextDark : MFTokens.errorText,
+                              labelColor: isDark ? MFTokens.errorTextDark : MFTokens.errorText,
+                              isLoading: _isLoggingOut,
+                              onTap: () => _handleLogout(sheetContext, setSheetState),
                               showTopPadding: true,
                             ),
                           ],
@@ -246,6 +279,7 @@ class _CompanySwitcherState extends State<CompanySwitcher> {
               ],
             ),
           ),
+        ),
         ),
       ),
     );

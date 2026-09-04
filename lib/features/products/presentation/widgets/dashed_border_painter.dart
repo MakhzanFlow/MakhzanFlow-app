@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class DashedBorderPainter extends CustomPainter {
   final Color color;
@@ -14,14 +13,14 @@ class DashedBorderPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = color
-      ..strokeWidth = strokeWidth.w
+      ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke;
 
     const dashWidth = 6.0;
     const dashSpace = 4.0;
     final rrect = RRect.fromRectAndRadius(
       Offset.zero & size,
-      Radius.circular(16.0),
+      const Radius.circular(16.0),
     );
 
     final path = Path()..addRRect(rrect);

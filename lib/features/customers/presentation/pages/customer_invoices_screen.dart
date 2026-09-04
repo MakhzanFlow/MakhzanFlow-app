@@ -1,27 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:makhzanflow/core/company/company_aware_state.dart';
-import 'package:makhzanflow/core/constants/app_colors.dart';
+import 'package:makhzanflow/core/theme/mf_tokens.dart';
 import 'package:makhzanflow/core/constants/app_routes.dart';
-import 'package:makhzanflow/core/constants/app_sizes.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
-import 'package:makhzanflow/core/di/service_locator.dart';
-import 'package:makhzanflow/features/invoice/domain/entities/invoice.dart';
 import 'package:makhzanflow/features/invoice/domain/entities/invoice_status.dart';
-import 'package:makhzanflow/features/invoice/domain/usecases/get_invoices_usecase.dart';
 import '../cubit/customer_invoices/customer_invoices_cubit.dart';
 
 class CustomerInvoicesScreen extends StatefulWidget {
   final String customerId;
   final String customerName;
 
-  const CustomerInvoicesScreen({
-    super.key,
-    required this.customerId,
-    required this.customerName,
-  });
+  const CustomerInvoicesScreen({super.key, required this.customerId, required this.customerName});
 
   @override
   State<CustomerInvoicesScreen> createState() => _CustomerInvoicesScreenState();
@@ -29,38 +20,26 @@ class CustomerInvoicesScreen extends StatefulWidget {
 
 class _CustomerInvoicesScreenState extends State<CustomerInvoicesScreen>
     with CompanyAwareState<CustomerInvoicesScreen> {
-  late CustomerInvoicesCubit _cubit;
+  late final CustomerInvoicesCubit _cubit;
   final ScrollController _scrollController = ScrollController();
+  bool _initialized = false;
 
   @override
-  void initState() {
-    super.initState();
-    _cubit = CustomerInvoicesCubit(
-      getInvoicesUseCase: sl<GetInvoicesUseCase>(),
-      customerId: widget.customerId,
-      companyId: companyId,
-      customerName: widget.customerName,
-    );
-    _cubit.loadInvoices();
-    _scrollController.addListener(_onScroll);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _cubit = context.read<CustomerInvoicesCubit>();
+      _cubit.loadInvoices();
+      _scrollController.addListener(_onScroll);
+      _initialized = true;
+    }
   }
 
   @override
-  void onCompanyChanged(String companyId) {
-    _cubit.close();
-    _cubit = CustomerInvoicesCubit(
-      getInvoicesUseCase: sl<GetInvoicesUseCase>(),
-      customerId: widget.customerId,
-      companyId: companyId,
-      customerName: widget.customerName,
-    );
-    setState(() {});
-    _cubit.loadInvoices();
-  }
+  void onCompanyChanged(String companyId) {}
 
   void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
       _cubit.loadMore();
     }
   }
@@ -69,241 +48,143 @@ class _CustomerInvoicesScreenState extends State<CustomerInvoicesScreen>
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
-    _cubit.close();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? MFTokens.backgroundDark : MFTokens.backgroundLight;
+    final textPrimary = isDark ? MFTokens.textPrimaryDark : MFTokens.textPrimaryLight;
+    final textSecondary = isDark ? MFTokens.textSecondaryDark : MFTokens.textSecondaryLight;
+
     return Scaffold(
-      backgroundColor: AppColors.appBackground,
+      backgroundColor: bg,
       appBar: AppBar(
-        backgroundColor: AppColors.appBackground,
+        backgroundColor: bg,
         elevation: 0,
         title: Text(
           '${AppStrings.customerInvoicesTab} - ${widget.customerName}',
-          style: TextStyle(
-            fontFamily: 'Cairo',
-            fontSize: AppSizes.fontLarge,
-            color: AppColors.textDark,
-          ),
+          style: TextStyle(fontFamily: 'Cairo', fontSize: MFTokens.fontMD, color: textPrimary),
         ),
       ),
-      body: BlocProvider.value(
-        value: _cubit,
-        child: BlocBuilder<CustomerInvoicesCubit, CustomerInvoicesState>(
-          builder: (context, state) {
-            return switch (state.status) {
-              CustomerInvoicesStatus.initial ||
-              CustomerInvoicesStatus.loading => const Center(
-                child: CircularProgressIndicator(),
+      body: BlocBuilder<CustomerInvoicesCubit, CustomerInvoicesState>(
+        builder: (context, state) {
+          return switch (state.status) {
+            CustomerInvoicesStatus.initial || CustomerInvoicesStatus.loading =>
+              const Center(child: CircularProgressIndicator()),
+            CustomerInvoicesStatus.error => Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(state.failure?.message ?? AppStrings.unexpectedError, style: const TextStyle(fontFamily: 'Cairo')),
+                  const SizedBox(height: MFTokens.sp16),
+                  TextButton(onPressed: () => _cubit.loadInvoices(), child: Text(AppStrings.productRetry, style: const TextStyle(fontFamily: 'Cairo'))),
+                ],
               ),
-              CustomerInvoicesStatus.error => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      state.failure?.message ?? AppStrings.unexpectedError,
-                      style: const TextStyle(fontFamily: 'Cairo'),
-                    ),
-                    SizedBox(height: AppSizes.spacingMedium),
-                    TextButton(
-                      onPressed: () => _cubit.loadInvoices(),
-                      child: Text(
-                        AppStrings.productRetry,
-                        style: const TextStyle(fontFamily: 'Cairo'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              CustomerInvoicesStatus.loadingMore ||
-              CustomerInvoicesStatus.success => _buildList(state),
-              CustomerInvoicesStatus.empty => Center(
-                child: Text(
-                  AppStrings.emptyInvoices,
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: AppSizes.fontMedium,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ),
-            };
-          },
-        ),
+            ),
+            CustomerInvoicesStatus.loadingMore || CustomerInvoicesStatus.success => _buildList(state, isDark),
+            CustomerInvoicesStatus.empty => Center(
+              child: Text(AppStrings.emptyInvoices, style: TextStyle(fontFamily: 'Cairo', fontSize: MFTokens.fontSM, color: textSecondary)),
+            ),
+          };
+        },
       ),
     );
   }
 
-  Widget _buildList(CustomerInvoicesState state) {
+  Widget _buildList(CustomerInvoicesState state, bool isDark) {
+    final textPrimary = isDark ? MFTokens.textPrimaryDark : MFTokens.textPrimaryLight;
+    final textSecondary = isDark ? MFTokens.textSecondaryDark : MFTokens.textSecondaryLight;
+    final primary = isDark ? MFTokens.primaryDarkMode : MFTokens.primary;
+    final primaryDark = isDark ? MFTokens.primaryDarkMode : MFTokens.primaryDark;
+    final primarySubtle = isDark ? MFTokens.primaryDarkModeSubtle : MFTokens.primarySubtle;
+    final warningBg = isDark ? MFTokens.warningBgDark : MFTokens.warningBg;
+    final accent = isDark ? MFTokens.primaryDarkMode : MFTokens.accent;
+    final errorBg = isDark ? MFTokens.errorBgDark : MFTokens.errorBg;
+    final errorColor = isDark ? MFTokens.errorTextDark : MFTokens.errorText;
+    final muted = isDark ? MFTokens.textMutedDark : MFTokens.textMutedLight;
+    final cardBg = isDark ? MFTokens.cardDark : MFTokens.cardLight;
+
     if (state.invoices.isEmpty) {
-      return Center(
-        child: Text(
-          AppStrings.emptyInvoices,
-          style: TextStyle(
-            fontFamily: 'Cairo',
-            fontSize: AppSizes.fontMedium,
-            color: AppColors.textSecondary,
-          ),
-        ),
-      );
+      return Center(child: Text(AppStrings.emptyInvoices, style: TextStyle(fontFamily: 'Cairo', fontSize: MFTokens.fontSM, color: textSecondary)));
     }
 
     return ListView.builder(
       controller: _scrollController,
-      padding: EdgeInsets.symmetric(
-        horizontal: AppSizes.spacingMedium,
-        vertical: AppSizes.spacingSmall,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: MFTokens.sp16, vertical: MFTokens.sp8),
       itemCount: state.invoices.length + (state.hasMore ? 1 : 0),
       itemBuilder: (context, index) {
-        if (index == state.invoices.length) {
-          return const Padding(
-            padding: EdgeInsets.all(16),
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
+        if (index == state.invoices.length) return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
         final invoice = state.invoices[index];
-        return _invoiceItem(invoice);
+        final amountColor = invoice.paymentStatus == InvoiceStatus.debt ? primaryDark : primary;
+        final truncatedId = invoice.id.substring(0, invoice.id.length > 8 ? 8 : invoice.id.length);
+
+        return GestureDetector(
+          onTap: () => context.push(AppRoutes.invoiceDetailsPath(invoice.id)),
+          child: Container(
+            margin: const EdgeInsets.only(bottom: MFTokens.sp8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: cardBg,
+              borderRadius: BorderRadius.circular(MFTokens.radiusLG),
+              boxShadow: MFTokens.shadowSM,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40, height: 40,
+                  decoration: BoxDecoration(color: primarySubtle, borderRadius: BorderRadius.circular(MFTokens.radiusMD)),
+                  child: Icon(Icons.receipt, size: 16, color: primary),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(child: Text('${AppStrings.invoiceNo} #$truncatedId', overflow: TextOverflow.ellipsis, style: TextStyle(fontFamily: 'Cairo', fontSize: MFTokens.fontSM, color: textPrimary))),
+                          const SizedBox(width: MFTokens.sp8),
+                          _statusChip(invoice.paymentStatus, isDark, primarySubtle, primary, warningBg, accent, errorBg, errorColor),
+                        ],
+                      ),
+                      const SizedBox(height: MFTokens.sp4),
+                      Text(invoice.createdAt != null ? _formatDate(invoice.createdAt!) : '', style: TextStyle(fontFamily: 'Cairo', fontSize: MFTokens.fontXS, color: textSecondary)),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(invoice.totalAmount.toInt().toString(), style: TextStyle(fontFamily: 'Cairo', fontSize: MFTokens.fontBase, color: amountColor)),
+                    Text(AppStrings.currencyEg, style: TextStyle(fontFamily: 'Cairo', fontSize: MFTokens.fontXS, color: muted)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
       },
     );
   }
 
-  Widget _invoiceItem(Invoice invoice) {
-    final amountColor = invoice.paymentStatus == InvoiceStatus.debt
-        ? AppColors.secondary
-        : AppColors.primary;
-
-    return GestureDetector(
-      onTap: () => context.push(AppRoutes.invoiceDetailsPath(invoice.id)),
-      child: Container(
-        margin: EdgeInsets.only(bottom: AppSizes.spacingSmall),
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.06),
-              blurRadius: 10.r,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40.w,
-              height: 40.w,
-              decoration: BoxDecoration(
-                color: AppColors.lightPrimaryBg,
-                borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
-              ),
-              child: Icon(Icons.receipt, size: 16.w, color: AppColors.primary),
-            ),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          '${AppStrings.invoiceNo} #${invoice.id.substring(0, invoice.id.length > 8 ? 8 : invoice.id.length)}',
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: 'Cairo',
-                            fontSize: AppSizes.fontMedium,
-                            color: AppColors.textDark,
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: AppSizes.spacingSmall),
-                      _statusChip(invoice.paymentStatus),
-                    ],
-                  ),
-                  SizedBox(height: AppSizes.spacingTiny),
-                  Text(
-                    invoice.createdAt != null
-                        ? _formatDate(invoice.createdAt!)
-                        : '',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: AppSizes.fontSmall,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(width: 12.w),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  invoice.totalAmount.toInt().toString(),
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: 13.sp,
-                    color: amountColor,
-                  ),
-                ),
-                Text(
-                  AppStrings.currencyEg,
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: 9.sp,
-                    color: AppColors.hintText,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _statusChip(InvoiceStatus status) {
+  Widget _statusChip(InvoiceStatus status, bool isDark, Color primarySubtle, Color primary, Color warningBg, Color accent, Color errorBg, Color errorColor) {
     final isDebt = status == InvoiceStatus.debt;
     final isPartial = status == InvoiceStatus.partial;
     String label;
     Color textColor;
     Color bgColor;
 
-    if (isDebt) {
-      label = AppStrings.customerDeferred;
-      textColor = AppColors.redDark;
-      bgColor = AppColors.lightRed;
-    } else if (isPartial) {
-      label = AppStrings.addPaymentStatusPartial;
-      textColor = AppColors.accent;
-      bgColor = AppColors.lightOrange;
-    } else {
-      label = AppStrings.customerPaidFilter;
-      textColor = AppColors.primary;
-      bgColor = AppColors.lightPrimaryBg;
-    }
+    if (isDebt) { label = AppStrings.customerDeferred; textColor = errorColor; bgColor = errorBg; }
+    else if (isPartial) { label = AppStrings.addPaymentStatusPartial; textColor = accent; bgColor = warningBg; }
+    else { label = AppStrings.customerPaidFilter; textColor = primary; bgColor = primarySubtle; }
 
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: AppSizes.spacingSmall,
-        vertical: 2.h,
-      ),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(AppSizes.radiusXLarge),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontFamily: 'Cairo',
-          fontSize: AppSizes.fontSmall,
-          color: textColor,
-        ),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: MFTokens.sp8, vertical: 2),
+      decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(MFTokens.radiusXL)),
+      child: Text(label, style: TextStyle(fontFamily: 'Cairo', fontSize: MFTokens.fontXS, color: textColor)),
     );
   }
 

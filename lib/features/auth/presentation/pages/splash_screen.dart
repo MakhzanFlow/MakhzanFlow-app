@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:makhzanflow/features/auth/presentation/cubit/auth_cubit.dart';
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/mf_tokens.dart';
 import '../../../../core/constants/app_strings.dart';
-import '../../../../core/constants/app_sizes.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -29,32 +28,32 @@ class _SplashScreenState extends State<SplashScreen> {
           gradient: RadialGradient(
             center: Alignment(-0.4, -0.6),
             radius: 1.5,
-            colors: [AppColors.primary, AppColors.secondary],
+            colors: [MFTokens.primary, MFTokens.primaryDarker],
           ),
         ),
         child: Stack(
           children: [
-            // Orange decorative shapes (simplified)
+            // Decorative shapes
             Positioned(
-              left: -AppSizes.splashCircleDecorationOffset,
-              top: -AppSizes.splashCircleDecorationOffset,
+              left: -80,
+              top: -80,
               child: Container(
-                width: AppSizes.splashCircleDecorationSmall,
-                height: AppSizes.splashCircleDecorationSmall,
+                width: 240,
+                height: 240,
                 decoration: BoxDecoration(
-                  color: AppColors.accent.withValues(alpha: 0.18),
+                  color: MFTokens.accent.withValues(alpha: 0.18),
                   shape: BoxShape.circle,
                 ),
               ),
             ),
             Positioned(
-              left: AppSizes.splashCircleDecorationOffset,
-              top: AppSizes.splashCircleDecorationLarge * 1.5,
+              left: 80,
+              top: 288 * 1.5,
               child: Container(
-                width: AppSizes.splashCircleDecorationLarge,
-                height: AppSizes.splashCircleDecorationLarge,
+                width: 288,
+                height: 288,
                 decoration: BoxDecoration(
-                  color: AppColors.white.withValues(alpha: 0.05),
+                  color: MFTokens.gradientOverlaySubtle,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -66,25 +65,23 @@ class _SplashScreenState extends State<SplashScreen> {
                 const Spacer(flex: 3),
                 // Logo Placeholder
                 Container(
-                  width: AppSizes.splashLogoBoxOuter,
-                  height: AppSizes.splashLogoBoxOuter,
+                  width: 112,
+                  height: 112,
                   decoration: BoxDecoration(
-                    color: AppColors.white.withValues(alpha: 0.12),
+                    color: MFTokens.gradientOverlayLight,
                     border: Border.all(
-                      color: AppColors.white.withValues(alpha: 0.2),
-                      width: AppSizes.strokeWidthThin,
+                      color: MFTokens.gradientOverlayMedium,
+                      width: 0.83,
                     ),
-                    borderRadius: BorderRadius.circular(AppSizes.radiusXLarge),
+                    borderRadius: BorderRadius.circular(MFTokens.radiusXL),
                   ),
                   child: Center(
                     child: Container(
-                      width: AppSizes.splashLogoBoxInner,
-                      height: AppSizes.splashLogoBoxInner,
+                      width: 80,
+                      height: 80,
                       decoration: BoxDecoration(
-                        color: AppColors.white,
-                        borderRadius: BorderRadius.circular(
-                          AppSizes.radiusLarge,
-                        ),
+                        color: MFTokens.textOnPrimary,
+                        borderRadius: BorderRadius.circular(MFTokens.radiusLG),
                       ),
                       child: Image.asset(
                         'assets/images/logo.png',
@@ -95,61 +92,61 @@ class _SplashScreenState extends State<SplashScreen> {
                     ),
                   ),
                 ),
-                SizedBox(height: AppSizes.spacingLarge),
+                const SizedBox(height: MFTokens.sp24),
                 Text(
                   AppStrings.appName,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontFamily: 'Cairo',
-                    color: AppColors.white,
-                    fontSize: AppSizes.fontXXXLarge,
+                    color: MFTokens.textOnPrimary,
+                    fontSize: MFTokens.fontDisplay,
                     fontWeight: FontWeight.w400,
                     letterSpacing: -0.75,
                   ),
                 ),
-                SizedBox(height: AppSizes.spacingTiny),
+                const SizedBox(height: MFTokens.sp4),
                 Text(
                   AppStrings.appNameArabic,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontFamily: 'Cairo',
-                    color: AppColors.white.withValues(alpha: 0.8),
-                    fontSize: AppSizes.fontXLarge,
+                    color: MFTokens.gradientOverlayText,
+                    fontSize: MFTokens.fontLG,
                   ),
                 ),
-                SizedBox(height: AppSizes.spacingSmall),
+                const SizedBox(height: MFTokens.sp8),
                 Text(
                   AppStrings.appSubtitle,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontFamily: 'Cairo',
-                    color: AppColors.white.withValues(alpha: 0.6),
-                    fontSize: AppSizes.fontMedium,
+                    color: MFTokens.gradientOverlayMuted,
+                    fontSize: MFTokens.fontSM,
                   ),
                 ),
                 const Spacer(flex: 2),
                 // Loading Indicator
                 SpinKitRing(
-                  color: AppColors.white.withValues(alpha: 0.8),
-                  size: AppSizes.iconMedium,
-                  lineWidth: AppSizes.strokeWidthMedium,
+                  color: MFTokens.gradientOverlayText,
+                  size: MFTokens.sp24,
+                  lineWidth: 2,
                 ),
-                SizedBox(height: AppSizes.spacingMedium),
+                const SizedBox(height: MFTokens.sp16),
                 Text(
                   AppStrings.loading,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontFamily: 'Cairo',
-                    color: AppColors.white.withValues(alpha: 0.6),
-                    fontSize: AppSizes.fontMedium,
+                    color: MFTokens.gradientOverlayMuted,
+                    fontSize: MFTokens.fontSM,
                   ),
                 ),
                 const Spacer(),
                 Text(
                   AppStrings.appVersion,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontFamily: 'Cairo',
-                    color: AppColors.white.withValues(alpha: 0.4),
-                    fontSize: AppSizes.fontSmall,
+                    color: MFTokens.gradientOverlayFaint,
+                    fontSize: MFTokens.fontXS,
                   ),
                 ),
-                SizedBox(height: AppSizes.spacingLarge),
+                const SizedBox(height: MFTokens.sp24),
               ],
             ),
           ],
@@ -158,4 +155,3 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 }
-

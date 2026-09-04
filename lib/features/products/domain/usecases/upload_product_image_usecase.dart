@@ -6,7 +6,7 @@ class UploadProductImageUseCase {
 
   UploadProductImageUseCase(this.repository);
 
-  TaskEither<String, String> call(String filePath) {
-    return repository.uploadProductImage(filePath);
+  TaskEither<String, String> call(String filePath, String productId) {
+    return repository.uploadProductImage(filePath, productId);
   }
 }

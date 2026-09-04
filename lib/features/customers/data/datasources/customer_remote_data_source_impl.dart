@@ -1,68 +1,25 @@
 import 'dart:io';
+import 'package:dio/dio.dart';
 import 'package:fpdart/fpdart.dart';
+import 'package:makhzanflow/core/api/api_client.dart';
+import 'package:makhzanflow/core/api/api_response.dart';
+import 'package:makhzanflow/core/constants/api_endpoints.dart';
+import 'package:makhzanflow/core/constants/error_messages.dart';
 import 'package:makhzanflow/core/error/failures.dart';
 import 'package:makhzanflow/features/customers/data/datasources/customer_remote_data_source.dart';
 import 'package:makhzanflow/features/customers/data/models/customer_model.dart';
 import 'package:makhzanflow/features/customers/data/models/customer_filter_counts_model.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
+import 'package:makhzanflow/features/customers/data/models/create_customer_request_dto.dart';
+import 'package:makhzanflow/features/customers/data/models/update_customer_request_dto.dart';
+import 'package:makhzanflow/features/customers/data/models/customer_summary_response_dto.dart';
 
 class CustomerRemoteDataSourceImpl implements CustomerRemoteDataSource {
-  final supabase.SupabaseClient _supabaseClient;
+  final ApiClient _apiClient;
 
-  CustomerRemoteDataSourceImpl({
-    required supabase.SupabaseClient supabaseClient,
-  }) : _supabaseClient = supabaseClient;
+  CustomerRemoteDataSourceImpl({required ApiClient apiClient})
+      : _apiClient = apiClient;
 
-  @override
-  Future<Either<Failure, CustomerModel>> createCustomer({
-    required String name,
-    String? nameOfficial,
-    String? phone,
-    String? address,
-    double totalDebt = 0,
-    String? imageUrl,
-    required String companyId,
-  }) async {
-    try {
-      final customerId = await _supabaseClient.rpc(
-        'create_customer_full',
-        params: {
-          'p_name': name,
-          'p_name_official': nameOfficial,
-          'p_phone': phone,
-          'p_address': address,
-          'p_total_debt': totalDebt,
-          'p_image_url': imageUrl,
-        },
-      ) as String;
-      return getCustomer(customerId, companyId);
-    } on supabase.PostgrestException catch (error) {
-      if (error.code == '23505') {
-        return Left(ServerFailure('هذا الاسم موجود مسبقاً'));
-      }
-      return Left(ServerFailure(error.message));
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
-  }
-
-  @override
-  Future<Either<Failure, CustomerModel>> getCustomer(String id, String companyId) async {
-    try {
-      final response = await _supabaseClient.rpc(
-        'get_customer_by_id',
-        params: {'p_customer_id': id},
-      );
-      return Right(CustomerModel.fromJson(response as Map<String, dynamic>));
-    } on supabase.PostgrestException catch (error) {
-      if (error.message.contains('Customer not found')) {
-        return Left(ServerFailure('العميل غير موجود'));
-      }
-      return Left(ServerFailure(error.message));
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
-  }
+  // ──────── Phase 11: CRUD & Search ────────
 
   @override
   Future<Either<Failure, List<CustomerModel>>> listCustomers({
@@ -73,23 +30,21 @@ class CustomerRemoteDataSourceImpl implements CustomerRemoteDataSource {
     required String companyId,
   }) async {
     try {
-      final response =
-          await _supabaseClient.rpc(
-                'get_customers_with_aggregates',
-                params: {
-                  'search_query': query,
-                  'filter_type': filter ?? 'all',
-                  'page_limit': limit ?? 20,
-                  'page_offset': offset ?? 0,
-                },
-              )
-              as List<dynamic>;
-      final customers = response
-          .map((json) => CustomerModel.fromJson(json as Map<String, dynamic>))
-          .toList();
-      return Right(customers);
-    } on supabase.PostgrestException catch (error) {
-      return Left(ServerFailure(error.message));
+      final response = await _apiClient.dio.get(
+        ApiEndpoints.customers,
+        queryParameters: {
+          if (query != null && query.trim().isNotEmpty) 'search': query,
+          if (filter != null && filter != 'all') 'debt_status': filter,
+          'page': offset != null && limit != null && limit > 0
+              ? (offset ~/ limit) + 1
+              : 1,
+          'limit': limit ?? 20,
+        },
+      );
+      final data = _dataList(response);
+      return Right(data.map(CustomerModel.fromJson).toList());
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -101,99 +56,244 @@ class CustomerRemoteDataSourceImpl implements CustomerRemoteDataSource {
     required String companyId,
   }) async {
     try {
-      final response =
-          await _supabaseClient.rpc(
-                'get_customer_filter_counts',
-                params: {
-                  'search_query': query,
-                },
-              )
-              as List<dynamic>;
-
-      if (response.isEmpty) {
-        return const Right(
-          CustomerFilterCountsModel(
-            totalCount: 0,
-            paidCount: 0,
-            partialCount: 0,
-            deferredCount: 0,
-            totalDebtSum: 0,
-          ),
-        );
-      }
-
-      final counts = CustomerFilterCountsModel.fromJson(
-        response.first as Map<String, dynamic>,
+      final response = await _apiClient.dio.get(
+        ApiEndpoints.customersSummary,
+        queryParameters: {
+          if (query != null && query.trim().isNotEmpty) 'search': query,
+        },
       );
-      return Right(counts);
-    } on supabase.PostgrestException catch (error) {
-      return Left(ServerFailure(error.message));
+      final data = _dataOrThrow(response);
+      return Right(CustomerFilterCountsModel.fromJson(data));
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, CustomerModel>> updateCustomer({
-    required String id,
-    required String name,
-    String? nameOfficial,
-    String? phone,
-    String? address,
-    String? imageUrl,
-    required String companyId,
+  Future<Either<Failure, CustomerModel>> getCustomer(
+    String id,
+    String companyId,
+  ) async {
+    try {
+      final response = await _apiClient.dio.get(
+        ApiEndpoints.customerById(id),
+      );
+      return Right(CustomerModel.fromJson(_dataOrThrow(response)));
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, CustomerModel>> createCustomer(
+    CreateCustomerRequestDto dto,
+    String companyId,
+  ) async {
+    try {
+      final response = await _apiClient.dio.post(
+        ApiEndpoints.customers,
+        data: dto.toJson(),
+      );
+      return Right(CustomerModel.fromJson(_dataOrThrow(response)));
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, CustomerModel>> updateCustomer(
+    String id,
+    UpdateCustomerRequestDto dto,
+    String companyId,
+  ) async {
+    try {
+      final response = await _apiClient.dio.put(
+        ApiEndpoints.customerById(id),
+        data: dto.toJson(),
+      );
+      return Right(CustomerModel.fromJson(_dataOrThrow(response)));
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, String>> uploadImage(
+    String filePath,
+    String customerId,
+  ) async {
+    try {
+      final formData = FormData.fromMap({
+        'image': await MultipartFile.fromFile(
+          filePath,
+          filename: '${DateTime.now().millisecondsSinceEpoch}_'
+              '${filePath.split(Platform.pathSeparator).last}',
+        ),
+      });
+      final response = await _apiClient.dio.post(
+        ApiEndpoints.customerImage(customerId),
+        data: formData,
+      );
+      final data = _dataOrThrow(response);
+      final url = data['image_url'] as String?;
+      if (url == null || url.isEmpty) {
+        return Left(ServerFailure(ErrorMessages.unexpectedError));
+      }
+      return Right(url);
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  // ──────── Phase 12: Summary, Debt, Image ────────
+
+  @override
+  Future<Either<Failure, CustomerSummaryResponseDto>> getSummary(
+    String companyId,
+  ) async {
+    try {
+      final response = await _apiClient.dio.get(
+        ApiEndpoints.customersSummary,
+      );
+      return Right(
+        CustomerSummaryResponseDto.fromJson(_dataOrThrow(response)),
+      );
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<CustomerModel>>> getDebtors(
+    String companyId, {
+    int? limit,
+    int? offset,
   }) async {
     try {
-      final body = <String, dynamic>{'name': name};
-      if (nameOfficial != null) body['name_official'] = nameOfficial;
-      if (phone != null) body['phone'] = phone;
-      if (address != null) body['address'] = address;
-      if (imageUrl != null) body['image_url'] = imageUrl;
-
-      await _supabaseClient
-          .from('customers')
-          .update(body)
-          .filter('id', 'eq', id)
-          .filter('company_id', 'eq', companyId);
-
-      return getCustomer(id, companyId);
-    } on supabase.PostgrestException catch (error) {
-      if (error.code == 'PGRST116') {
-        return Left(ServerFailure('العميل غير موجود'));
-      }
-      return Left(ServerFailure(error.message));
+      final response = await _apiClient.dio.get(
+        ApiEndpoints.customersDebtors,
+        queryParameters: {
+          'page': offset != null && limit != null && limit > 0
+              ? (offset ~/ limit) + 1
+              : 1,
+          'limit': limit ?? 20,
+        },
+      );
+      final data = _dataList(response);
+      return Right(data.map(CustomerModel.fromJson).toList());
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, String>> uploadImage(String filePath) async {
+  Future<Either<Failure, Map<String, dynamic>>> getCustomerDebt(
+    String customerId,
+    String companyId,
+  ) async {
     try {
-      final fileName =
-          '${DateTime.now().millisecondsSinceEpoch}_${filePath.split(Platform.pathSeparator).last}';
-      final file = File(filePath);
-      await _supabaseClient.storage
-          .from('customer-images')
-          .upload(
-            fileName,
-            file,
-            fileOptions: const supabase.FileOptions(
-              contentType: 'image/jpeg',
-              upsert: true,
-            ),
-          );
-      final publicUrl = _supabaseClient.storage
-          .from('customer-images')
-          .getPublicUrl(fileName);
-      return Right(publicUrl);
-    } on supabase.StorageException catch (error) {
-      if (error.statusCode == '409') {
-        return Left(ServerFailure('الصورة موجودة مسبقاً'));
-      }
-      return Left(ServerFailure(error.message));
+      final response = await _apiClient.dio.get(
+        ApiEndpoints.customerDebt(customerId),
+      );
+      return Right(_dataOrThrow(response));
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
+  }
+
+  @override
+  Future<Either<Failure, List<Map<String, dynamic>>>> getCustomerInvoices(
+    String customerId,
+    String companyId, {
+    int? limit,
+    int? offset,
+  }) async {
+    try {
+      final response = await _apiClient.dio.get(
+        ApiEndpoints.customerInvoices(customerId),
+        queryParameters: {
+          'page': offset != null && limit != null && limit > 0
+              ? (offset ~/ limit) + 1
+              : 1,
+          'limit': limit ?? 20,
+        },
+      );
+      return Right(_dataList(response));
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<Map<String, dynamic>>>> getCustomerPayments(
+    String customerId,
+    String companyId, {
+    int? limit,
+    int? offset,
+  }) async {
+    try {
+      final response = await _apiClient.dio.get(
+        ApiEndpoints.customerPayments(customerId),
+        queryParameters: {
+          'page': offset != null && limit != null && limit > 0
+              ? (offset ~/ limit) + 1
+              : 1,
+          'limit': limit ?? 20,
+        },
+      );
+      return Right(_dataList(response));
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  // ──────── Helpers ────────
+
+  Map<String, dynamic> _dataOrThrow(Response<dynamic> response) {
+    final data = _data(response);
+    if (data == null) {
+      throw StateError(ErrorMessages.unexpectedError);
+    }
+    return data;
+  }
+
+  Map<String, dynamic>? _data(Response<dynamic> response) {
+    final body = response.data;
+    if (body is Map<String, dynamic>) {
+      final data = body['data'];
+      if (data is Map<String, dynamic>) return data;
+    }
+    return null;
+  }
+
+  List<Map<String, dynamic>> _dataList(Response<dynamic> response) {
+    final body = response.data;
+    if (body is Map<String, dynamic>) {
+      final data = body['data'];
+      if (data is List) {
+        return data.whereType<Map<String, dynamic>>().toList();
+      }
+    }
+    throw StateError(ErrorMessages.unexpectedError);
   }
 }

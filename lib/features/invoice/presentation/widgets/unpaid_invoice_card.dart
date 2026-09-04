@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:makhzanflow/core/constants/app_colors.dart';
 import 'package:makhzanflow/core/constants/app_sizes.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
+import 'package:makhzanflow/core/constants/error_messages.dart';
 import 'package:makhzanflow/features/invoice/domain/entities/invoice.dart';
 import 'package:makhzanflow/features/invoice/domain/entities/invoice_status.dart';
 
@@ -35,6 +36,16 @@ class UnpaidInvoiceCard extends StatelessWidget {
         AppStrings.addPaymentStatusPartial,
         AppColors.accent,
         AppColors.lightOrange,
+      ),
+      InvoiceStatus.paid => (
+        AppStrings.customerPaidFilter,
+        AppColors.trendUp,
+        AppColors.lightGreen,
+      ),
+      InvoiceStatus.canceled => (
+        ErrorMessages.invoiceCanceled,
+        AppColors.textSecondary,
+        AppColors.searchBg,
       ),
       _ => (
         AppStrings.addPaymentStatusDebt,

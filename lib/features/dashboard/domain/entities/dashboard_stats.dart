@@ -2,7 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'weekly_sales_point.dart';
 import 'activity_entry.dart';
 
-/// Core dashboard KPI entity — all values are computed from live Supabase data.
+/// Core dashboard KPI entity — all values are computed from REST `GET /dashboard/stats`.
 class DashboardStats extends Equatable {
   const DashboardStats({
     required this.productsCount,

@@ -1,7 +1,10 @@
 import 'package:get_it/get_it.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:makhzanflow/features/customers/domain/usecases/get_customer-filtercounts_usecase.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:makhzanflow/core/theme/app_locale_cubit.dart';
+import 'package:makhzanflow/core/api/api_client.dart';
+import 'package:makhzanflow/core/storage/file_upload_service.dart';
+import 'package:makhzanflow/core/storage/token_storage.dart';
 import 'package:makhzanflow/core/company/company_cubit.dart';
 import 'package:makhzanflow/core/permissions/permission_service.dart';
 import 'package:makhzanflow/core/permissions/permission_service_impl.dart';
@@ -38,6 +41,7 @@ import 'package:makhzanflow/features/companies/presentation/cubit/join_company_c
 import 'package:makhzanflow/features/companies/presentation/cubit/company_members_cubit.dart';
 import 'package:makhzanflow/features/companies/presentation/cubit/company_settings_cubit.dart';
 import '../../features/auth/data/datasources/auth_remote_data_source.dart';
+import '../../features/auth/data/datasources/auth_remote_data_source_impl.dart';
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
 import '../../features/auth/domain/usecases/auth_state_changes_usecase.dart';
@@ -46,6 +50,8 @@ import '../../features/auth/domain/usecases/sign_in_usecase.dart';
 import '../../features/auth/domain/usecases/sign_in_with_google_usecase.dart';
 import '../../features/auth/domain/usecases/sign_up_usecase.dart';
 import '../../features/auth/domain/usecases/sign_out_usecase.dart';
+import '../../features/auth/domain/usecases/verify_email_usecase.dart';
+import '../../features/auth/domain/usecases/resend_verification_email_usecase.dart';
 import '../../features/auth/presentation/cubit/auth_cubit.dart';
 import '../../features/products/data/datasources/product_remote_data_source.dart';
 import '../../features/products/data/datasources/product_remote_data_source_impl.dart';
@@ -76,9 +82,12 @@ import '../../features/customers/presentation/cubit/add_edit_customer/add_edit_c
 import '../../features/customers/presentation/cubit/customer_details/customer_details_cubit.dart';
 import '../../features/invoice/data/datasources/invoice_remote_data_source.dart';
 import '../../features/invoice/data/datasources/invoice_remote_data_source_impl.dart';
+import '../../features/invoice/data/mappers/invoice_mapper.dart';
 import '../../features/invoice/data/repositories/invoice_repository_impl.dart';
 import '../../features/invoice/domain/repositories/invoice_repository.dart';
+import '../../features/invoice/domain/services/discount_calculator.dart';
 import '../../features/invoice/domain/usecases/add_payment_usecase.dart';
+import '../../features/invoice/domain/usecases/cancel_invoice_usecase.dart';
 import '../../features/invoice/domain/usecases/create_invoice_usecase.dart';
 import '../../features/invoice/domain/usecases/get_invoice_usecase.dart';
 import '../../features/invoice/domain/usecases/get_invoices_usecase.dart';
@@ -96,10 +105,37 @@ import '../../features/dashboard/presentation/cubit/dashboard_cubit.dart';
 
 final sl = GetIt.instance;
 
-Future<void> initServiceLocator() async {
+Future<void> initServiceLocator({SharedPreferences? prefs}) async {
+  // Persisted theme / locale — single source, no hardcoded defaults
+  SharedPreferences? sp = prefs;
+  if (sp == null) {
+    try {
+      sp = await SharedPreferences.getInstance();
+    } catch (_) {
+      sp = null; // tests / unsupported platforms — fall back to in-memory
+    }
+  }
+  if (sp != null) {
+    sl.registerLazySingleton<SharedPreferences>(() => sp!);
+    sl.registerLazySingleton<AppLocaleCubit>(() => AppLocaleCubit(prefs: sp));
+  } else {
+    sl.registerLazySingleton<AppLocaleCubit>(() => AppLocaleCubit());
+  }
+  // Core: Token storage + API client + file upload
+  sl.registerLazySingleton<TokenStorage>(() => TokenStorage());
+  sl.registerLazySingleton<ApiClient>(
+    () => ApiClient(tokenStorage: sl<TokenStorage>()),
+  );
+  sl.registerLazySingleton<FileUploadService>(
+    () => FileUploadService(apiClient: sl<ApiClient>()),
+  );
+
   // Auth: Data sources
   sl.registerLazySingleton<AuthRemoteDataSource>(
-    () => AuthRemoteDataSourceImpl(Supabase.instance.client),
+    () => AuthRemoteDataSourceImpl(
+      apiClient: sl<ApiClient>(),
+      tokenStorage: sl<TokenStorage>(),
+    ),
   );
 
   // Auth: Repositories
@@ -120,6 +156,12 @@ Future<void> initServiceLocator() async {
   sl.registerLazySingleton<SignOutUseCase>(
     () => SignOutUseCase(sl<AuthRepository>()),
   );
+  sl.registerLazySingleton<VerifyEmailUseCase>(
+    () => VerifyEmailUseCase(sl<AuthRepository>()),
+  );
+  sl.registerLazySingleton<ResendVerificationEmailUseCase>(
+    () => ResendVerificationEmailUseCase(sl<AuthRepository>()),
+  );
   sl.registerLazySingleton<GetCurrentUserUseCase>(
     () => GetCurrentUserUseCase(sl<AuthRepository>()),
   );
@@ -136,12 +178,14 @@ Future<void> initServiceLocator() async {
       signOutUseCase: sl<SignOutUseCase>(),
       getCurrentUserUseCase: sl<GetCurrentUserUseCase>(),
       authStateChangesUseCase: sl<AuthStateChangesUseCase>(),
+      verifyEmailUseCase: sl<VerifyEmailUseCase>(),
+      resendVerificationEmailUseCase: sl<ResendVerificationEmailUseCase>(),
     ),
   );
 
   // Products: Data sources
   sl.registerLazySingleton<ProductRemoteDataSource>(
-    () => ProductRemoteDataSourceImpl(Supabase.instance.client),
+    () => ProductRemoteDataSourceImpl(apiClient: sl<ApiClient>()),
   );
 
   // Products: Repositories
@@ -201,11 +245,7 @@ Future<void> initServiceLocator() async {
 
   // Customers: Data sources
   sl.registerLazySingleton<CustomerRemoteDataSource>(
-    () =>
-        CustomerRemoteDataSourceImpl(supabaseClient: Supabase.instance.client),
-  );
-  sl.registerLazySingleton<GetCustomerFilterCountsUseCase>(
-    () => GetCustomerFilterCountsUseCase(sl<CustomerRepository>()),
+    () => CustomerRemoteDataSourceImpl(apiClient: sl<ApiClient>()),
   );
 
   // Customers: Repositories
@@ -232,10 +272,7 @@ Future<void> initServiceLocator() async {
 
   // Customers: Cubits
   sl.registerFactory<CustomersCubit>(
-    () => CustomersCubit(
-      getCustomersUseCase: sl<GetCustomersUseCase>(),
-      getCustomerFilterCountsUseCase: sl<GetCustomerFilterCountsUseCase>(),
-    ),
+    () => CustomersCubit(getCustomersUseCase: sl<GetCustomersUseCase>()),
   );
 
   sl.registerFactory<AddEditCustomerCubit>(
@@ -251,14 +288,22 @@ Future<void> initServiceLocator() async {
     () => CustomerDetailsCubit(getCustomerUseCase: sl<GetCustomerUseCase>()),
   );
 
+  // Invoice: Domain services (SRP — discount & mapping isolated)
+  sl.registerLazySingleton<DiscountCalculator>(() => DiscountCalculatorImpl());
+  sl.registerLazySingleton<InvoiceMapper>(() => InvoiceMapperImpl());
+
   // Invoice: Data sources
   sl.registerLazySingleton<InvoiceRemoteDataSource>(
-    () => InvoiceRemoteDataSourceImpl(supabaseClient: Supabase.instance.client),
+    () => InvoiceRemoteDataSourceImpl(apiClient: sl<ApiClient>()),
   );
 
-  // Invoice: Repositories
+  // Invoice: Repositories (DI — depends on abstractions DiscountCalculator/InvoiceMapper)
   sl.registerLazySingleton<InvoiceRepository>(
-    () => InvoiceRepositoryImpl(sl<InvoiceRemoteDataSource>()),
+    () => InvoiceRepositoryImpl(
+      sl<InvoiceRemoteDataSource>(),
+      discountCalculator: sl<DiscountCalculator>(),
+      invoiceMapper: sl<InvoiceMapper>(),
+    ),
   );
 
   // Invoice: Use cases
@@ -274,6 +319,9 @@ Future<void> initServiceLocator() async {
   sl.registerLazySingleton<GetInvoicesUseCase>(
     () => GetInvoicesUseCase(sl<InvoiceRepository>()),
   );
+  sl.registerLazySingleton<CancelInvoiceUseCase>(
+    () => CancelInvoiceUseCase(sl<InvoiceRepository>()),
+  );
 
   // Invoice: Cubits
   sl.registerFactory<CreateInvoiceCubit>(
@@ -281,7 +329,10 @@ Future<void> initServiceLocator() async {
   );
 
   sl.registerFactory<InvoiceDetailsCubit>(
-    () => InvoiceDetailsCubit(getInvoiceUseCase: sl<GetInvoiceUseCase>()),
+    () => InvoiceDetailsCubit(
+      getInvoiceUseCase: sl<GetInvoiceUseCase>(),
+      cancelInvoiceUseCase: sl<CancelInvoiceUseCase>(),
+    ),
   );
 
   sl.registerFactory<InvoicesCubit>(
@@ -307,7 +358,7 @@ Future<void> initServiceLocator() async {
 
   // Companies: Data sources
   sl.registerLazySingleton<CompanyRemoteDataSource>(
-    () => CompanyRemoteDataSourceImpl(Supabase.instance.client),
+    () => CompanyRemoteDataSourceImpl(apiClient: sl<ApiClient>()),
   );
 
   // Companies: Repository
@@ -418,7 +469,7 @@ Future<void> initServiceLocator() async {
     ),
   );
 
-  // Company Settings Cubit
+  // Company Settings Cubit — uses FileUploadService (SRP)
   sl.registerFactory<CompanySettingsCubit>(
     () => CompanySettingsCubit(
       updateCompanyUseCase: sl<UpdateCompanyUseCase>(),
@@ -426,13 +477,12 @@ Future<void> initServiceLocator() async {
       regenerateCompanyJoinCodeUseCase: sl<RegenerateCompanyJoinCodeUseCase>(),
       leaveCompanyUseCase: sl<LeaveCompanyUseCase>(),
       deleteCompanyUseCase: sl<DeleteCompanyUseCase>(),
+      fileUploadService: sl<FileUploadService>(),
     ),
   );
 
   // Permission Service
-  sl.registerLazySingleton<PermissionService>(
-    () => PermissionServiceImpl(),
-  );
+  sl.registerLazySingleton<PermissionService>(() => PermissionServiceImpl());
 
   // Company Cubit
   sl.registerLazySingleton<CompanyCubit>(
@@ -442,9 +492,9 @@ Future<void> initServiceLocator() async {
     ),
   );
 
-  // Dashboard: Data sources
+  // Dashboard: Data sources — REST via ApiClient
   sl.registerLazySingleton<DashboardRemoteDataSource>(
-    () => DashboardRemoteDataSourceImpl(Supabase.instance.client),
+    () => DashboardRemoteDataSourceImpl(apiClient: sl<ApiClient>()),
   );
 
   // Dashboard: Repositories
@@ -459,6 +509,8 @@ Future<void> initServiceLocator() async {
 
   // Dashboard: Cubits
   sl.registerFactory<DashboardCubit>(
-    () => DashboardCubit(getDashboardStatsUseCase: sl<GetDashboardStatsUseCase>()),
+    () => DashboardCubit(
+      getDashboardStatsUseCase: sl<GetDashboardStatsUseCase>(),
+    ),
   );
 }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_sizes.dart';
+import '../../../../core/theme/mf_tokens.dart';
 import '../../../../core/constants/app_strings.dart';
 
 class ProductScreenHeader extends StatelessWidget {
@@ -10,8 +9,13 @@ class ProductScreenHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? MFTokens.textPrimaryDark : MFTokens.textPrimaryLight;
+    final primary = isDark ? MFTokens.primaryDarkMode : MFTokens.primary;
+    final primarySubtle = isDark ? MFTokens.primaryDarkModeSubtle : MFTokens.primarySubtle;
+
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: AppSizes.spacingMedium),
+      padding: const EdgeInsets.symmetric(horizontal: MFTokens.sp16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
@@ -20,21 +24,21 @@ class ProductScreenHeader extends StatelessWidget {
               AppStrings.productsTitle,
               style: TextStyle(
                 fontFamily: 'Cairo',
-                fontSize: AppSizes.fontXXLarge,
+                fontSize: MFTokens.font2XL,
                 fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
+                color: textPrimary,
               ),
             ),
           ),
           Flexible(
             child: Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: AppSizes.spacingSmall,
-                vertical: AppSizes.spacingTiny,
+              padding: const EdgeInsets.symmetric(
+                horizontal: MFTokens.sp8,
+                vertical: MFTokens.sp4,
               ),
               decoration: BoxDecoration(
-                color: AppColors.lightGreen,
-                borderRadius: BorderRadius.circular(AppSizes.radiusSmall),
+                color: primarySubtle,
+                borderRadius: BorderRadius.circular(MFTokens.radiusSM),
               ),
               child: FittedBox(
                 fit: BoxFit.scaleDown,
@@ -42,8 +46,8 @@ class ProductScreenHeader extends StatelessWidget {
                   '$totalCount ${AppStrings.productCount}',
                   style: TextStyle(
                     fontFamily: 'Cairo',
-                    fontSize: AppSizes.fontSmall,
-                    color: AppColors.primary,
+                    fontSize: MFTokens.fontXS,
+                    color: primary,
                   ),
                 ),
               ),

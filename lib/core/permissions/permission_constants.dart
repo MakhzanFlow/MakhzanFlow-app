@@ -17,6 +17,7 @@ class PermissionKeys {
   static const String invoicesCreate = 'invoices.create';
   static const String invoicesEdit = 'invoices.edit';
   static const String invoicesDelete = 'invoices.delete';
+  static const String invoicesCancel = 'invoices.cancel';
 
   static const String paymentsView = 'payments.view';
   static const String paymentsCreate = 'payments.create';
@@ -39,6 +40,7 @@ class PermissionKeys {
     invoicesCreate,
     invoicesEdit,
     invoicesDelete,
+    invoicesCancel,
     paymentsView,
     paymentsCreate,
     reportsView,

@@ -5,6 +5,7 @@ import 'package:makhzanflow/core/company/company_aware_state.dart';
 import 'package:makhzanflow/core/constants/app_colors.dart';
 import 'package:makhzanflow/core/constants/app_sizes.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
+import 'package:makhzanflow/core/theme/mf_tokens.dart';
 import 'package:makhzanflow/core/constants/app_routes.dart';
 import 'package:makhzanflow/core/permissions/permission_constants.dart';
 import 'package:makhzanflow/core/permissions/permission_gate.dart';
@@ -55,9 +56,8 @@ class _InvoicesScreenState extends State<InvoicesScreen>
     );
   }
 
-void _setCustomerFilter(String? customerId) {
+  void _setCustomerFilter(String? customerId) {
     final resolvedId = customerId?.isEmpty == true ? null : customerId;
-    debugPrint('[_setCustomerFilter] raw: $customerId, resolved: $resolvedId, status: $_selectedStatus');
     setState(() => _selectedCustomerId = resolvedId ?? '');
     context.read<InvoicesCubit>().setFilter(
       companyId: companyId,
@@ -78,18 +78,24 @@ void _setCustomerFilter(String? customerId) {
   Widget build(BuildContext context) {
     final hasActiveFilter =
         _selectedStatus != null || _selectedCustomerId.isNotEmpty;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? MFTokens.backgroundDark : MFTokens.backgroundLight;
+    final surface = isDark ? MFTokens.surfaceDark : MFTokens.surfaceLight;
+    final textDark = isDark ? MFTokens.textPrimaryDark : MFTokens.textPrimaryLight;
 
     return Scaffold(
-      backgroundColor: AppColors.appBackground,
+      backgroundColor: bg,
       appBar: AppBar(
-        backgroundColor: AppColors.appBackground,
+        backgroundColor: bg,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
         title: Text(
           AppStrings.navInvoices,
           style: TextStyle(
             fontSize: AppSizes.fontXXLarge,
             fontWeight: FontWeight.w700,
-            color: AppColors.textDark,
+            color: textDark,
           ),
         ),
       ),
@@ -100,6 +106,8 @@ void _setCustomerFilter(String? customerId) {
             _buildFilters(hasActiveFilter),
             Expanded(
               child: BlocBuilder<InvoicesCubit, InvoicesState>(
+                buildWhen: (prev, curr) =>
+                    prev.status != curr.status || prev.invoices != curr.invoices || prev.failure != curr.failure,
                 builder: (context, state) {
                   switch (state.status) {
                     case InvoicesStatus.initial:
@@ -200,7 +208,7 @@ void _setCustomerFilter(String? customerId) {
                           label: AppStrings.customerAllFilter,
                           selected:
                               _selectedStatus == null &&
-                              _selectedCustomerId == null,
+                              _selectedCustomerId.isEmpty,
                           onTap: _clearFilters,
                         ),
                         InvoiceFilterChip(
@@ -226,7 +234,7 @@ void _setCustomerFilter(String? customerId) {
                           label: AppStrings.customerAllFilter,
                           selected:
                               _selectedStatus == null &&
-                              _selectedCustomerId == null,
+                              _selectedCustomerId.isEmpty,
                           onTap: _clearFilters,
                         ),
                         SizedBox(width: AppSizes.spacingSmall),
@@ -279,11 +287,11 @@ void _setCustomerFilter(String? customerId) {
                 style: TextStyle(color: AppColors.textSecondary),
               ),
               items: [
-                const DropdownMenuItem<String>(
+                DropdownMenuItem<String>(
                   value: '',
                   child: Text(
                     AppStrings.customerAllFilter,
-                    style: TextStyle(color: AppColors.textDark),
+                    style: const TextStyle(color: AppColors.textDark),
                   ),
                 ),
                 ...state.customers.map(

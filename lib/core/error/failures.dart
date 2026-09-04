@@ -23,6 +23,31 @@ class NetworkFailure extends Failure {
 }
 
 class GoogleSignInCancelledFailure extends Failure {
-  const GoogleSignInCancelledFailure()
+  GoogleSignInCancelledFailure()
       : super(AppStrings.googleSignInCancelled);
 }
+
+class UnauthorizedFailure extends Failure {
+  const UnauthorizedFailure([super.message]);
+}
+
+class ForbiddenFailure extends Failure {
+  const ForbiddenFailure([super.message]);
+}
+
+class NotFoundFailure extends Failure {
+  const NotFoundFailure([super.message]);
+}
+
+class ConflictFailure extends Failure {
+  const ConflictFailure([super.message]);
+}
+
+class RateLimitFailure extends Failure {
+  const RateLimitFailure([super.message]);
+}
+
+class ValidationFailure extends Failure {
+  const ValidationFailure([super.message]);
+}
+

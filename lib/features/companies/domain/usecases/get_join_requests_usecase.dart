@@ -8,7 +8,7 @@ class GetJoinRequestsUseCase {
 
   GetJoinRequestsUseCase(this._repository);
 
-  Future<Either<Failure, List<JoinRequest>>> call(String companyId, {String status = 'pending'}) {
-    return _repository.getJoinRequests(companyId, status: status);
+  Future<Either<Failure, List<JoinRequest>>> call(String companyId) {
+    return _repository.getJoinRequests(companyId);
   }
 }

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_sizes.dart';
+import '../../../../core/theme/mf_tokens.dart';
 
 class CustomerActionButton extends StatelessWidget {
   final String text;
@@ -9,70 +7,34 @@ class CustomerActionButton extends StatelessWidget {
   final bool isPrimary;
   final bool isLoading;
 
-  const CustomerActionButton({
-    super.key,
-    required this.text,
-    this.onPressed,
-    this.isPrimary = true,
-    this.isLoading = false,
-  });
+  const CustomerActionButton({super.key, required this.text, this.onPressed, this.isPrimary = true, this.isLoading = false});
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primary = isDark ? MFTokens.primaryDarkMode : MFTokens.primary;
+    final border = isDark ? MFTokens.borderDark : MFTokens.borderLight;
+    final textSecondary = isDark ? MFTokens.textSecondaryDark : MFTokens.textSecondaryLight;
+
     if (isPrimary) {
       return SizedBox(
-        width: 118.4.w,
-        height: 49.6.h,
+        width: 120, height: 50,
         child: ElevatedButton(
           onPressed: isLoading ? null : onPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: AppColors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
-            ),
-          ),
+          style: ElevatedButton.styleFrom(backgroundColor: primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(MFTokens.radiusMD))),
           child: isLoading
-              ? SizedBox(
-                  width: 20.w,
-                  height: 20.w,
-                  child: const CircularProgressIndicator(
-                    color: AppColors.white,
-                    strokeWidth: 2,
-                  ),
-                )
-              : Text(
-                  text,
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: AppSizes.fontLarge,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+              : Text(text, style: const TextStyle(fontFamily: 'Cairo', fontSize: MFTokens.fontMD, fontWeight: FontWeight.w600)),
         ),
       );
     }
 
     return SizedBox(
-      width: 118.4.w,
-      height: 49.6.h,
+      width: 120, height: 50,
       child: OutlinedButton(
         onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.darkGrey,
-          side: const BorderSide(color: AppColors.inputBorder),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
-          ),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontFamily: 'Cairo',
-            fontSize: AppSizes.fontLarge,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        style: OutlinedButton.styleFrom(foregroundColor: textSecondary, side: BorderSide(color: border), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(MFTokens.radiusMD))),
+        child: Text(text, style: const TextStyle(fontFamily: 'Cairo', fontSize: MFTokens.fontMD, fontWeight: FontWeight.w600)),
       ),
     );
   }

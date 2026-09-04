@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:makhzanflow/core/company/company_cubit.dart';
-import 'package:makhzanflow/core/constants/app_colors.dart';
-import 'package:makhzanflow/core/constants/app_sizes.dart';
+import 'package:makhzanflow/core/theme/mf_tokens.dart';
 import 'package:makhzanflow/core/constants/app_routes.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
 import 'package:makhzanflow/core/di/service_locator.dart';
@@ -83,9 +82,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
             center: Alignment(0.2, -0.6),
             radius: 1.5,
             colors: [
-              AppColors.welcomeGradientStart,
-              AppColors.secondary,
-              AppColors.welcomeGradientEnd,
+              MFTokens.sidebarActiveItem,
+              MFTokens.primaryDark,
+              MFTokens.primaryDarker,
             ],
           ),
         ),
@@ -106,7 +105,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                   ),
                   child: const WelcomeLogo(),
                 ),
-                SizedBox(height: AppSizes.spacingMedium),
+                const SizedBox(height: MFTokens.sp16),
                 AnimatedBuilder(
                   animation: _textSlide,
                   builder: (context, child) => Opacity(
@@ -114,7 +113,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                     child: Transform.translate(
                       offset: Offset(
                         0,
-                        AppSizes.spacingLarge * (1 - _textSlide.value),
+                        MFTokens.sp24 * (1 - _textSlide.value),
                       ),
                       child: child,
                     ),
@@ -129,7 +128,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                     child: Transform.translate(
                       offset: Offset(
                         0,
-                        AppSizes.spacingXLarge * (1 - _buttonsSlide.value),
+                        MFTokens.sp32 * (1 - _buttonsSlide.value),
                       ),
                       child: child,
                     ),
@@ -139,9 +138,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                     onJoinBusiness: () => context.push(AppRoutes.welcomeJoin),
                   ),
                 ),
-                SizedBox(height: AppSizes.spacingMedium),
+                const SizedBox(height: MFTokens.sp16),
                 _buildSignOut(),
-                SizedBox(height: AppSizes.spacingSmall),
+                const SizedBox(height: MFTokens.sp8),
               ],
             ),
           ),
@@ -161,11 +160,10 @@ class _WelcomeScreenState extends State<WelcomeScreen>
         AppStrings.signOut,
         style: TextStyle(
           fontFamily: 'Cairo',
-          color: AppColors.white.withValues(alpha: 0.4),
-          fontSize: AppSizes.fontSmall,
+          color: MFTokens.gradientOverlayFaint,
+          fontSize: MFTokens.fontXS,
         ),
       ),
     );
   }
 }
-

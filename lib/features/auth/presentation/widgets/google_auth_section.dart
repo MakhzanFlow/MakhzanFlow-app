@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_sizes.dart';
+import '../../../../core/theme/mf_tokens.dart';
 import '../../../../core/constants/app_strings.dart';
 import 'google_sign_in_button.dart';
 
@@ -18,28 +17,29 @@ class GoogleAuthSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final muted = isDark ? MFTokens.textMutedDark : MFTokens.textMutedLight;
+
     return Column(
       children: [
         Row(
           children: [
-            const Expanded(child: Divider(color: AppColors.inputBorder)),
+            Expanded(child: Divider(color: isDark ? MFTokens.borderDark : MFTokens.borderLight)),
             Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: AppSizes.spacingSmall,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: MFTokens.sp8),
               child: Text(
                 AppStrings.orContinueWith,
                 style: TextStyle(
-                  color: AppColors.hintText,
-                  fontSize: AppSizes.fontMedium,
+                  color: muted,
+                  fontSize: MFTokens.fontSM,
                   fontFamily: 'Cairo',
                 ),
               ),
             ),
-            const Expanded(child: Divider(color: AppColors.inputBorder)),
+            Expanded(child: Divider(color: isDark ? MFTokens.borderDark : MFTokens.borderLight)),
           ],
         ),
-        SizedBox(height: AppSizes.spacingLarge),
+        SizedBox(height: MFTokens.sp24),
         GoogleSignInButton(
           label: label,
           isLoading: isLoading,

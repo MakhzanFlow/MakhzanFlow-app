@@ -18,8 +18,17 @@ class WeeklySalesPointModel extends WeeklySalesPoint {
     required super.date,
   });
 
-  /// Expects a map with keys: [day] (ISO date string) and [total] (numeric).
+  /// Supports both REST `{date,label,amount}` and legacy `{day,total}` shapes.
   factory WeeklySalesPointModel.fromJson(Map<String, dynamic> json) {
+    // REST shape: { date, label, amount }
+    if (json.containsKey('date')) {
+      final dateStr = json['date'] as String? ?? '';
+      final date = DateTime.tryParse(dateStr) ?? DateTime.now();
+      final amount = (json['amount'] as num?)?.toDouble() ?? 0.0;
+      final label = json['label'] as String? ?? _kArabicDayLabels[date.weekday] ?? '؟';
+      return WeeklySalesPointModel(label: label, amount: amount, date: date);
+    }
+    // Legacy shape: { day, total }
     final date = DateTime.parse(json['day'] as String);
     final amount = (json['total'] as num?)?.toDouble() ?? 0.0;
     final label = _kArabicDayLabels[date.weekday] ?? '؟';

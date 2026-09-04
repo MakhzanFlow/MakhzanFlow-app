@@ -6,7 +6,6 @@ import 'package:makhzanflow/core/constants/app_colors.dart';
 import 'package:makhzanflow/core/constants/app_sizes.dart';
 import 'package:makhzanflow/core/constants/app_routes.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
-import 'package:makhzanflow/core/di/service_locator.dart';
 import 'package:makhzanflow/core/widgets/app_snackbar.dart';
 import '../cubit/add_payment/add_payment_cubit.dart';
 import '../widgets/add_payment_amount_card.dart';
@@ -32,17 +31,26 @@ class _AddPaymentScreenState extends State<AddPaymentScreen>
   late final AddPaymentCubit _cubit;
   late final TextEditingController _amountController;
   AddPaymentLoaded? _lastLoaded;
+  bool _initialized = false;
 
   @override
   void initState() {
     super.initState();
     _amountController = TextEditingController();
-    _cubit = sl<AddPaymentCubit>();
-    _cubit.loadUnpaidInvoices(
-      customerId: widget.customerId,
-      customerName: widget.customerName ?? '',
-      companyId: companyId,
-    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _cubit = context.read<AddPaymentCubit>();
+      _cubit.loadUnpaidInvoices(
+        customerId: widget.customerId,
+        customerName: widget.customerName ?? '',
+        companyId: companyId,
+      );
+      _initialized = true;
+    }
   }
 
   @override
@@ -57,7 +65,6 @@ class _AddPaymentScreenState extends State<AddPaymentScreen>
   @override
   void dispose() {
     _amountController.dispose();
-    _cubit.close();
     super.dispose();
   }
 
@@ -70,68 +77,63 @@ class _AddPaymentScreenState extends State<AddPaymentScreen>
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
-    return BlocProvider.value(
-      value: _cubit,
-      child: Directionality(
-        textDirection: TextDirection.rtl,
-        child: Scaffold(
-          backgroundColor: AppColors.appBackground,
-          body: BlocConsumer<AddPaymentCubit, AddPaymentState>(
-            listener: (context, state) {
-              switch (state) {
-                case AddPaymentError(:final failure):
-                  AppSnackbar.error(context, failure.message);
-                case AddPaymentSuccess(:final invoiceId):
-                  AppSnackbar.success(context, AppStrings.addPaymentSuccess);
-                  context.go(AppRoutes.invoiceDetailsPath(invoiceId));
-                case _:
-                  break;
-              }
-            },
-            builder: (context, state) {
-              if (state is AddPaymentLoaded) {
-                _lastLoaded = state;
-                _syncAmountController(state.amount);
-              }
-              return switch (state) {
-                AddPaymentInitial() || AddPaymentLoading() => const Center(
-                  child: CircularProgressIndicator(),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: AppColors.appBackground,
+        body: BlocConsumer<AddPaymentCubit, AddPaymentState>(
+          listener: (context, state) {
+            switch (state) {
+              case AddPaymentError(:final failure):
+                AppSnackbar.error(context, failure.message);
+              case AddPaymentSuccess(:final invoiceId):
+                AppSnackbar.success(context, AppStrings.addPaymentSuccess);
+                context.go(AppRoutes.invoiceDetailsPath(invoiceId));
+              case _:
+                break;
+            }
+          },
+          builder: (context, state) {
+            if (state is AddPaymentLoaded) {
+              _lastLoaded = state;
+              _syncAmountController(state.amount);
+            }
+            return switch (state) {
+              AddPaymentInitial() || AddPaymentLoading() => const Center(
+                child: CircularProgressIndicator(),
+              ),
+              AddPaymentError() => _buildError(),
+              AddPaymentLoaded(
+                :final invoices,
+                :final selectedInvoiceId,
+                :final customerName,
+                :final amountError,
+                :final maxAmount,
+              ) =>
+                _buildContent(
+                  invoices: invoices,
+                  selectedInvoiceId: selectedInvoiceId,
+                  customerName: customerName,
+                  amountError: amountError,
+                  maxAmount: maxAmount,
+                  isSubmitting: false,
                 ),
-                AddPaymentError() => _buildError(),
-                AddPaymentLoaded(
-                  :final invoices,
-                  :final selectedInvoiceId,
-                  :final customerName,
-                  :final amountError,
-                  :final maxAmount,
-                ) =>
-                  _buildContent(
-                    invoices: invoices,
-                    selectedInvoiceId: selectedInvoiceId,
-                    customerName: customerName,
-                    amountError: amountError,
-                    maxAmount: maxAmount,
-                    isSubmitting: false,
-                  ),
-                AddPaymentSubmitting() when _lastLoaded != null =>
-                  _buildContent(
-                    invoices: _lastLoaded!.invoices,
-                    selectedInvoiceId: _lastLoaded!.selectedInvoiceId,
-                    customerName: _lastLoaded!.customerName,
-                    amountError: _lastLoaded!.amountError,
-                    maxAmount: _lastLoaded!.maxAmount,
-                    isSubmitting: true,
-                  ),
-                AddPaymentSubmitting() => const Center(
-                  child: CircularProgressIndicator(),
-                ),
-                AddPaymentSuccess() => const SizedBox.shrink(),
-              };
-            },
-          ),
+              AddPaymentSubmitting() when _lastLoaded != null => _buildContent(
+                invoices: _lastLoaded!.invoices,
+                selectedInvoiceId: _lastLoaded!.selectedInvoiceId,
+                customerName: _lastLoaded!.customerName,
+                amountError: _lastLoaded!.amountError,
+                maxAmount: _lastLoaded!.maxAmount,
+                isSubmitting: true,
+              ),
+              AddPaymentSubmitting() => const Center(
+                child: CircularProgressIndicator(),
+              ),
+              AddPaymentSuccess() => const SizedBox.shrink(),
+            };
+          },
         ),
       ),
     );

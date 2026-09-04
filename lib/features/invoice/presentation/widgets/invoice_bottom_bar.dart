@@ -12,12 +12,15 @@ class InvoiceBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<CreateInvoiceCubit, CreateInvoiceState>(
-      buildWhen: (prev, next) => next is CreateInvoiceFormState,
-      builder: (context, state) {
-        if (state is! CreateInvoiceFormState) return const SizedBox.shrink();
-        final loaded = state;
-
+    return BlocSelector<CreateInvoiceCubit, CreateInvoiceState, _BarView>(
+      selector: (state) {
+        if (state is! CreateInvoiceFormState) return const _BarView.empty();
+        return _BarView(
+          totalAfterDiscount: state.totalAfterDiscount,
+          remainingDebt: state.remainingDebt,
+        );
+      },
+      builder: (context, view) {
         return Container(
           padding: EdgeInsets.fromLTRB(
             AppSizes.spacingMedium,
@@ -52,16 +55,16 @@ class InvoiceBottomBar extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '${loaded.totalAfterDiscount.toInt()} ${AppStrings.currencyEg}',
+                        '${view.totalAfterDiscount.toInt()} ${AppStrings.currencyEg}',
                         style: TextStyle(
                           fontSize: AppSizes.fontXXLarge,
                           fontWeight: FontWeight.w700,
                           color: AppColors.primary,
                         ),
                       ),
-                      if (loaded.remainingDebt > 0)
+                      if (view.remainingDebt > 0)
                         Text(
-                          '${AppStrings.remainingDebt}: ${loaded.remainingDebt.toInt()} ${AppStrings.currencyEg}',
+                          '${AppStrings.remainingDebt}: ${view.remainingDebt.toInt()} ${AppStrings.currencyEg}',
                           style: TextStyle(
                             fontSize: AppSizes.fontSmall,
                             color: AppColors.secondary,
@@ -103,4 +106,22 @@ class InvoiceBottomBar extends StatelessWidget {
       },
     );
   }
+}
+
+class _BarView {
+  final double totalAfterDiscount;
+  final double remainingDebt;
+  const _BarView({
+    required this.totalAfterDiscount,
+    required this.remainingDebt,
+  });
+  const _BarView.empty() : totalAfterDiscount = 0, remainingDebt = 0;
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is _BarView &&
+          totalAfterDiscount == other.totalAfterDiscount &&
+          remainingDebt == other.remainingDebt;
+  @override
+  int get hashCode => Object.hash(totalAfterDiscount, remainingDebt);
 }

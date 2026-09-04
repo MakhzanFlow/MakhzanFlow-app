@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_sizes.dart';
+import '../../../../core/theme/mf_tokens.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../domain/entities/customer.dart';
 import 'customer_debt_badge.dart';
@@ -16,49 +14,56 @@ class CustomerInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? MFTokens.textPrimaryDark : MFTokens.textPrimaryLight;
+    final textSecondary = isDark ? MFTokens.textSecondaryDark : MFTokens.textSecondaryLight;
+    final primary = isDark ? MFTokens.primaryDarkMode : MFTokens.primary;
+    final cardBg = isDark ? MFTokens.cardDark : MFTokens.cardLight;
+
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(AppSizes.spacingMedium),
+      padding: const EdgeInsets.all(MFTokens.sp16),
       decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.textPrimary.withValues(alpha: 0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: cardBg,
+        borderRadius: BorderRadius.circular(MFTokens.radiusMD),
+        boxShadow: MFTokens.shadowSM,
       ),
       child: Column(
         children: [
           CustomerDebtBadge(debt: customer.totalDebt),
-          SizedBox(height: AppSizes.spacingMedium),
+          SizedBox(height: MFTokens.sp16),
           const Divider(),
           _buildInfoRow(
             AppStrings.customerPhoneLabel,
             customer.phone,
             Icons.phone_outlined,
+            primary: primary,
+            textSecondary: textSecondary,
+            textPrimary: textPrimary,
           ),
           _buildInfoRow(
             AppStrings.customerAddressLabel,
             customer.address,
             Icons.location_on_outlined,
+            primary: primary,
+            textSecondary: textSecondary,
+            textPrimary: textPrimary,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String? value, IconData icon) {
+  Widget _buildInfoRow(String label, String? value, IconData icon,
+      {required Color primary, required Color textSecondary, required Color textPrimary}) {
     if (value == null || value.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: EdgeInsets.only(bottom: AppSizes.spacingMedium),
+      padding: EdgeInsets.only(bottom: MFTokens.sp16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: AppSizes.iconMedium, color: AppColors.primary),
-          SizedBox(width: AppSizes.spacingSmall),
+          Icon(icon, size: MFTokens.sp24, color: primary),
+          SizedBox(width: MFTokens.sp8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,17 +72,17 @@ class CustomerInfoCard extends StatelessWidget {
                   label,
                   style: TextStyle(
                     fontFamily: 'Cairo',
-                    fontSize: AppSizes.fontSmall,
-                    color: AppColors.textSecondary,
+                    fontSize: MFTokens.fontSM,
+                    color: textSecondary,
                   ),
                 ),
-                SizedBox(height: 2.h),
+                SizedBox(height: MFTokens.sp2),
                 Text(
                   value,
                   style: TextStyle(
                     fontFamily: 'Cairo',
-                    fontSize: AppSizes.fontLarge,
-                    color: AppColors.textPrimary,
+                    fontSize: MFTokens.fontMD,
+                    color: textPrimary,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -89,4 +94,3 @@ class CustomerInfoCard extends StatelessWidget {
     );
   }
 }
-

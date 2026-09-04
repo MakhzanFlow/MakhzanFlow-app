@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_sizes.dart';
+import '../../../../core/theme/mf_tokens.dart';
 
 class AuthButton extends StatelessWidget {
   final String label;
@@ -18,26 +17,22 @@ class AuthButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: AppSizes.buttonHeight,
+      height: MFTokens.buttonHeightMD,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          elevation: 4,
-          shadowColor: AppColors.primary.withValues(alpha: 0.25),
-        ),
         child: isLoading
-            ? SizedBox(
-                width: AppSizes.iconMedium,
-                height: AppSizes.iconMedium,
-                child: const CircularProgressIndicator(
-                  color: AppColors.white,
+            ? const SizedBox(
+                width: MFTokens.sp24,
+                height: MFTokens.sp24,
+                child: CircularProgressIndicator(
+                  color: MFTokens.textOnPrimary,
                   strokeWidth: 2,
                 ),
               )
             : Text(
                 label,
-                style: TextStyle(
-                  fontSize: AppSizes.fontLarge,
+                style: const TextStyle(
+                  fontSize: MFTokens.fontMD,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -45,4 +40,3 @@ class AuthButton extends StatelessWidget {
     );
   }
 }
-

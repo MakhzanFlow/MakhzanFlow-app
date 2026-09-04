@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:makhzanflow/core/constants/app_colors.dart';
-import 'package:makhzanflow/core/constants/app_sizes.dart';
+import 'package:makhzanflow/core/theme/mf_tokens.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
 import 'package:makhzanflow/features/auth/presentation/widgets/welcome_painters.dart';
 
@@ -13,42 +12,42 @@ class WelcomeLogo extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: AppSizes.logoContainerSize,
-          height: AppSizes.logoContainerSize,
+          width: 80,
+          height: 80,
           decoration: BoxDecoration(
-            color: AppColors.white.withValues(alpha: 0.12),
+            color: MFTokens.gradientOverlayLight,
             border: Border.all(
-              color: AppColors.white.withValues(alpha: 0.2),
-              width: AppSizes.borderWidthThin,
+              color: MFTokens.gradientOverlayMedium,
+              width: 0.8,
             ),
-            borderRadius: BorderRadius.circular(AppSizes.radiusXLarge),
+            borderRadius: BorderRadius.circular(MFTokens.radiusXL),
           ),
           child: Center(
             child: SizedBox(
-              width: AppSizes.logoIconSize,
-              height: AppSizes.logoIconSize,
+              width: 36,
+              height: 36,
               child: const CustomPaint(painter: StockIconPainter()),
             ),
           ),
         ),
-        SizedBox(height: AppSizes.spacingSmall),
+        const SizedBox(height: MFTokens.sp8),
         Text(
           AppStrings.appName,
-          style: TextStyle(
+          style: const TextStyle(
             fontFamily: 'Cairo',
-            color: AppColors.white,
-            fontSize: AppSizes.fontXXLarge,
+            color: MFTokens.textOnPrimary,
+            fontSize: MFTokens.font2XL,
             fontWeight: FontWeight.w400,
-            letterSpacing: AppSizes.welcomeLetterSpacing,
+            letterSpacing: 0.5,
           ),
         ),
-        SizedBox(height: AppSizes.spacingTiny),
+        const SizedBox(height: MFTokens.sp4),
         Text(
           AppStrings.welcomeAppSubtitle,
-          style: TextStyle(
+          style: const TextStyle(
             fontFamily: 'Cairo',
-            color: AppColors.white.withValues(alpha: 0.6),
-            fontSize: AppSizes.fontMedium,
+            color: MFTokens.gradientOverlayMuted,
+            fontSize: MFTokens.fontSM,
             fontWeight: FontWeight.w400,
           ),
         ),
@@ -56,4 +55,3 @@ class WelcomeLogo extends StatelessWidget {
     );
   }
 }
-

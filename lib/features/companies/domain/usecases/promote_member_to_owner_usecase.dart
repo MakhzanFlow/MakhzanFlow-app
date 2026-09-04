@@ -5,5 +5,6 @@ import 'package:makhzanflow/features/companies/domain/repositories/company_repos
 class PromoteMemberToOwnerUseCase {
   final CompanyRepository _repository;
   PromoteMemberToOwnerUseCase(this._repository);
-  Future<Either<Failure, void>> call(String memberId) => _repository.promoteMemberToOwner(memberId);
+  Future<Either<Failure, void>> call(String companyId, String userId) =>
+      _repository.promoteMemberToOwner(companyId, userId);
 }

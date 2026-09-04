@@ -83,7 +83,7 @@ class MemberCard extends StatelessWidget {
                       if (!member.isActive) ...[
                         SizedBox(width: AppSizes.spacingTiny),
                         _buildBadge(
-                          'غير نشط',
+                          AppStrings.inactiveBadge,
                           AppColors.error,
                         ),
                       ],
@@ -99,7 +99,7 @@ class MemberCard extends StatelessWidget {
                     ),
                   if (member.isOwner)
                     Text(
-                      'صلاحية كاملة',
+                      AppStrings.fullAccess,
                       style: TextStyle(
                         fontSize: AppSizes.fontSmall,
                         color: AppColors.primary,
@@ -107,7 +107,7 @@ class MemberCard extends StatelessWidget {
                     ),
                   if (!member.isOwner && member.isActive)
                     Text(
-                      'موظف',
+                      AppStrings.employeeRole,
                       style: TextStyle(
                         fontSize: AppSizes.fontSmall,
                         color: AppColors.textSecondary,
@@ -181,7 +181,7 @@ class MemberCard extends StatelessWidget {
                   children: [
                     Icon(Icons.arrow_downward, size: 20, color: AppColors.error),
                     SizedBox(width: 8),
-                    Text('تنزيل إلى موظف'),
+                    Text(AppStrings.demoteToEmployeeLabel),
                   ],
                 ),
               ),
@@ -195,7 +195,7 @@ class MemberCard extends StatelessWidget {
                 children: [
                   Icon(Icons.lock_outline, size: 20, color: AppColors.primary),
                   SizedBox(width: 8),
-                  Text('الصلاحيات'),
+                  Text(AppStrings.permissionsLabel),
                 ],
               ),
             ),
@@ -205,7 +205,7 @@ class MemberCard extends StatelessWidget {
                 children: [
                   Icon(Icons.block, size: 20, color: AppColors.error),
                   SizedBox(width: 8),
-                  Text('إلغاء التنشيط'),
+                  Text(AppStrings.deactivateLabel),
                 ],
               ),
             ),
@@ -225,7 +225,7 @@ class MemberCard extends StatelessWidget {
                 children: [
                   Icon(Icons.arrow_upward, size: 20, color: AppColors.trendUp),
                   SizedBox(width: 8),
-                  Text('ترقية إلى مالك'),
+                  Text(AppStrings.promoteToOwnerLabel),
                 ],
               ),
             ),
@@ -238,7 +238,7 @@ class MemberCard extends StatelessWidget {
                 children: [
                   Icon(Icons.refresh, size: 20, color: AppColors.trendUp),
                   SizedBox(width: 8),
-                  Text('إعادة تنشيط'),
+                  Text(AppStrings.reactivateLabel),
                 ],
               ),
             ),

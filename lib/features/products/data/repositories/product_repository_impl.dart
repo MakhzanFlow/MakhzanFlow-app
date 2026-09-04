@@ -4,6 +4,9 @@ import '../../domain/entities/inventory_movement.dart';
 import '../../domain/entities/product_input.dart';
 import '../../domain/repositories/product_repository.dart';
 import '../datasources/product_remote_data_source.dart';
+import '../models/adjust_stock_request_dto.dart';
+import '../models/create_product_request_dto.dart';
+import '../models/update_product_request_dto.dart';
 
 class ProductRepositoryImpl implements ProductRepository {
   final ProductRemoteDataSource dataSource;
@@ -42,8 +45,17 @@ class ProductRepositoryImpl implements ProductRepository {
     if (validationError != null) {
       return TaskEither.left(validationError);
     }
+    final dto = CreateProductRequestDto(
+      name: input.name,
+      sku: input.sku,
+      barcode: input.barcode,
+      price: input.price,
+      stock: input.quantity,
+      minStock: input.minStock,
+      expiryDate: input.expirationDate,
+    );
     return dataSource
-        .createProduct(input, userId, companyId)
+        .createProduct(dto, userId, companyId)
         .map((model) => model.toEntity());
   }
 
@@ -58,7 +70,16 @@ class ProductRepositoryImpl implements ProductRepository {
     if (validationError != null) {
       return TaskEither.left(validationError);
     }
-    return dataSource.updateProduct(id, input, userId, companyId).map((model) => model.toEntity());
+    final dto = UpdateProductRequestDto(
+      name: input.name,
+      sku: input.sku,
+      barcode: input.barcode,
+      price: input.price,
+      stock: input.quantity,
+      minStock: input.minStock,
+      expiryDate: input.expirationDate,
+    );
+    return dataSource.updateProduct(id, dto, userId, companyId).map((model) => model.toEntity());
   }
 
   @override
@@ -67,8 +88,8 @@ class ProductRepositoryImpl implements ProductRepository {
   }
 
   @override
-  TaskEither<String, String> uploadProductImage(String filePath) {
-    return dataSource.uploadImage(filePath);
+  TaskEither<String, String> uploadProductImage(String filePath, String productId) {
+    return dataSource.uploadImage(filePath, productId);
   }
 
   @override
@@ -79,17 +100,15 @@ class ProductRepositoryImpl implements ProductRepository {
     required String userId,
     required String companyId,
   }) {
-    final type = delta > 0 ? 'in' : 'out';
-    final absDelta = delta.abs();
+    final dto = AdjustStockRequestDto(
+      quantityChange: delta,
+      reason: note ?? '',
+    );
 
     return dataSource
         .updateQuantityTransaction(
+          dto,
           productId: productId,
-          newQuantity: 0,
-          type: type,
-          delta: absDelta,
-          note: note,
-          userId: userId,
           companyId: companyId,
         )
         .flatMap((_) {

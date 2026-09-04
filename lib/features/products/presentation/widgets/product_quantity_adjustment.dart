@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_sizes.dart';
+import '../../../../core/theme/mf_tokens.dart';
 import '../../../../core/constants/app_strings.dart';
 
 class ProductQuantityAdjustment extends StatefulWidget {
@@ -36,9 +34,13 @@ class _ProductQuantityAdjustmentState
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? MFTokens.textPrimaryDark : MFTokens.textPrimaryLight;
+    final textSecondary = isDark ? MFTokens.textSecondaryDark : MFTokens.textSecondaryLight;
+
     return Card(
       child: Padding(
-        padding: EdgeInsets.all(AppSizes.spacingMedium),
+        padding: const EdgeInsets.all(MFTokens.sp16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -46,45 +48,45 @@ class _ProductQuantityAdjustmentState
               AppStrings.productQuantityUpdate,
               style: TextStyle(
                 fontFamily: 'Cairo',
-                fontSize: AppSizes.fontXLarge,
+                fontSize: MFTokens.fontLG,
                 fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
+                color: textPrimary,
               ),
             ),
-            SizedBox(height: AppSizes.spacingSmall),
+            const SizedBox(height: MFTokens.sp8),
             Text(
               '${AppStrings.productQuantityLabel}: ${widget.currentQuantity}',
               style: TextStyle(
                 fontFamily: 'Cairo',
-                fontSize: AppSizes.fontLarge,
-                color: AppColors.textSecondary,
+                fontSize: MFTokens.fontMD,
+                color: textSecondary,
               ),
             ),
-            SizedBox(height: AppSizes.spacingMedium),
+            const SizedBox(height: MFTokens.sp16),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                      onPressed: widget.isLoading
-                          ? null
-                          : () {
-                              setState(() => _delta = -1);
-                            },
-                      icon: const Icon(Icons.remove),
-                      label: Text(
-                        '${AppStrings.productQuantityOut} (${_delta < 0 ? -_delta : 0})',
-                        style: const TextStyle(fontFamily: 'Cairo'),
-                      ),
+                    onPressed: widget.isLoading
+                        ? null
+                        : () {
+                            setState(() => _delta = -1);
+                          },
+                    icon: const Icon(Icons.remove),
+                    label: Text(
+                      '${AppStrings.productQuantityOut} (${_delta < 0 ? -_delta : 0})',
+                      style: const TextStyle(fontFamily: 'Cairo'),
                     ),
                   ),
-                  SizedBox(width: AppSizes.spacingSmall),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: widget.isLoading
-                          ? null
-                          : () {
-                              setState(() => _delta = 1);
-                            },
+                ),
+                const SizedBox(width: MFTokens.sp8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: widget.isLoading
+                        ? null
+                        : () {
+                            setState(() => _delta = 1);
+                          },
                     icon: const Icon(Icons.add),
                     label: Text(
                       '${AppStrings.productQuantityIn} (${_delta > 0 ? _delta : 0})',
@@ -94,7 +96,7 @@ class _ProductQuantityAdjustmentState
                 ),
               ],
             ),
-            SizedBox(height: AppSizes.spacingSmall),
+            const SizedBox(height: MFTokens.sp8),
             Row(
               children: [
                 _qtyButton('-10', () => _updateDelta(-10)),
@@ -105,17 +107,17 @@ class _ProductQuantityAdjustmentState
                 _qtyButton('+10', () => _updateDelta(10)),
               ],
             ),
-            SizedBox(height: AppSizes.spacingSmall),
+            const SizedBox(height: MFTokens.sp8),
             TextField(
               controller: _noteController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: AppStrings.productQuantityNote,
                 hintText: AppStrings.productQuantityNote,
               ),
               textDirection: TextDirection.rtl,
               onChanged: widget.onNoteChanged,
             ),
-            SizedBox(height: AppSizes.spacingMedium),
+            const SizedBox(height: MFTokens.sp16),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -126,7 +128,7 @@ class _ProductQuantityAdjustmentState
                     ? const SizedBox(
                         width: 20, height: 20,
                         child: CircularProgressIndicator(
-                          color: AppColors.white,
+                          color: Colors.white,
                           strokeWidth: 2,
                         ),
                       )
@@ -145,17 +147,17 @@ class _ProductQuantityAdjustmentState
   Widget _qtyButton(String label, VoidCallback onTap) {
     return Expanded(
       child: Padding(
-        padding: EdgeInsets.all(2.w),
+        padding: const EdgeInsets.all(2),
         child: OutlinedButton(
           onPressed: onTap,
           style: OutlinedButton.styleFrom(
-            padding: EdgeInsets.symmetric(vertical: 8.h),
+            padding: const EdgeInsets.symmetric(vertical: 8),
           ),
           child: Text(
             label,
-            style: TextStyle(
+            style: const TextStyle(
               fontFamily: 'Cairo',
-              fontSize: AppSizes.fontSmall,
+              fontSize: MFTokens.fontXS,
             ),
           ),
         ),

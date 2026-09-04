@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/mf_tokens.dart';
 import '../../../../core/constants/app_strings.dart';
 
 class DeleteConfirmationDialog extends StatelessWidget {
-  final String title;
-  final String message;
-  final String confirmLabel;
-  final String cancelLabel;
+  final String? title;
+  final String? message;
+  final String? confirmLabel;
+  final String? cancelLabel;
 
   const DeleteConfirmationDialog({
     super.key,
-    this.title = AppStrings.productDelete,
-    this.message = AppStrings.productDeleteConfirm,
-    this.confirmLabel = AppStrings.productDelete,
-    this.cancelLabel = AppStrings.productCancel,
+    this.title,
+    this.message,
+    this.confirmLabel,
+    this.cancelLabel,
   });
 
   static Future<bool?> show(BuildContext context, {
@@ -35,19 +35,22 @@ class DeleteConfirmationDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final errorColor = isDark ? MFTokens.errorTextDark : MFTokens.errorText;
+
     return AlertDialog(
-      title: Text(title),
-      content: Text(message),
+      title: Text(title ?? AppStrings.productDelete),
+      content: Text(message ?? AppStrings.productDeleteConfirm),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
-          child: Text(cancelLabel),
+          child: Text(cancelLabel ?? AppStrings.productCancel),
         ),
         TextButton(
           onPressed: () => Navigator.pop(context, true),
           child: Text(
-            confirmLabel,
-            style: const TextStyle(color: AppColors.error),
+            confirmLabel ?? AppStrings.productDelete,
+            style: TextStyle(color: errorColor),
           ),
         ),
       ],

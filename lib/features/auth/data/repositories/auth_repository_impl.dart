@@ -1,9 +1,11 @@
 import 'package:fpdart/fpdart.dart';
 import '../../../../core/error/failures.dart';
-import '../../../../core/error/exceptions.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_remote_data_source.dart';
+import '../models/login_request_dto.dart';
+import '../models/register_request_dto.dart';
+import '../models/verify_email_request_dto.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource _remoteDataSource;
@@ -15,70 +17,59 @@ class AuthRepositoryImpl implements AuthRepository {
       _remoteDataSource.authStateChanges.cast<UserEntity?>();
 
   @override
-  Future<Either<Failure, UserEntity?>> getCurrentUser() async {
-    try {
-      final user = await _remoteDataSource.getCurrentUser();
-      return Right(user as UserEntity?);
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
+  Future<Either<Failure, UserEntity?>> getCurrentUser() {
+    return _remoteDataSource.getCurrentUser();
   }
 
   @override
-  Future<Either<Failure, UserEntity>> signUp(String email, String password, String name) async {
-    try {
-      final user = await _remoteDataSource.signUp(email, password, name);
-      return Right(user as UserEntity);
-    } on AuthException catch (e) {
-      return Left(AuthFailure(e.message));
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
+  Future<Either<Failure, UserEntity>> signUp(
+    String email,
+    String password,
+    String name,
+  ) {
+    return _remoteDataSource.register(
+      RegisterRequestDto(name: name, email: email, password: password),
+    );
   }
 
   @override
-  Future<Either<Failure, UserEntity>> signInWithEmailAndPassword(String email, String password) async {
-    try {
-      final user = await _remoteDataSource.signInWithEmailAndPassword(email, password);
-      return Right(user as UserEntity);
-    } on AuthException catch (e) {
-      return Left(AuthFailure(e.message));
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
+  Future<Either<Failure, UserEntity>> verifyEmail(
+    String email,
+    String token,
+  ) {
+    return _remoteDataSource.verifyEmail(
+      VerifyEmailRequestDto(email: email, token: token),
+    );
+  }
+
+  @override
+  Future<Either<Failure, void>> resendVerificationEmail(String email) {
+    return _remoteDataSource.resendVerificationEmail(email);
+  }
+
+  @override
+  Future<Either<Failure, UserEntity>> signInWithEmailAndPassword(
+    String email,
+    String password,
+  ) {
+    return _remoteDataSource.login(
+      LoginRequestDto(email: email, password: password),
+    );
   }
 
   @override
   Future<Either<Failure, UserEntity>> signInWithGoogle() async {
     try {
-      final user = await _remoteDataSource.signInWithGoogle();
-      return Right(user as UserEntity);
-    } on GoogleSignInCancelledException catch (_) {
-      return const Left(GoogleSignInCancelledFailure());
-    } on AuthException catch (e) {
-      return Left(AuthFailure(e.message));
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
+      return _remoteDataSource.signInWithGoogle();
     } catch (e) {
+      // Backend /auth/google is not ready yet — surface a controlled failure
+      // instead of letting the stub crash the UI.
       return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, void>> signOut() async {
-    try {
-      await _remoteDataSource.signOut();
-      return const Right(null);
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
+  Future<Either<Failure, void>> signOut() {
+    return _remoteDataSource.signOut();
   }
 }

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_sizes.dart';
+import '../../core/theme/mf_tokens.dart';
 
 class MakhzanFlowSearchField extends StatelessWidget {
   final TextEditingController controller;
@@ -21,31 +19,40 @@ class MakhzanFlowSearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      onChanged: onChanged,
-      autofocus: autofocus,
-      textDirection: TextDirection.rtl,
-      textAlign: TextAlign.right,
-      style: TextStyle(
-        fontFamily: 'Cairo',
-        fontSize: AppSizes.fontLarge,
-        color: AppColors.textPrimary,
-      ),
-      decoration: InputDecoration(
-        hintText: hintText,
-        prefixIcon: const Icon(Icons.search),
-        suffixIcon: controller.text.isEmpty
-            ? null
-            : IconButton(
-                onPressed: onClear,
-                icon: const Icon(Icons.close),
-              ),
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: 12.w,
-          vertical: 12.h,
-        ),
-      ),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary =
+        isDark ? MFTokens.textPrimaryDark : MFTokens.textPrimaryLight;
+
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) {
+        return TextField(
+          controller: controller,
+          onChanged: onChanged,
+          autofocus: autofocus,
+          textDirection: TextDirection.rtl,
+          textAlign: TextAlign.right,
+          style: TextStyle(
+            fontFamily: 'Cairo',
+            fontSize: MFTokens.fontMD,
+            color: textPrimary,
+          ),
+          decoration: InputDecoration(
+            hintText: hintText,
+            prefixIcon: const Icon(Icons.search),
+            suffixIcon: controller.text.isEmpty
+                ? null
+                : IconButton(
+                    onPressed: onClear,
+                    icon: const Icon(Icons.close),
+                  ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: MFTokens.sp12,
+              vertical: MFTokens.sp12,
+            ),
+          ),
+        );
+      },
     );
   }
 }

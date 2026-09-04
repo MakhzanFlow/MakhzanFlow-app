@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:makhzanflow/core/company/company_cubit.dart';
-import 'package:makhzanflow/core/constants/app_colors.dart';
-import 'package:makhzanflow/core/constants/app_sizes.dart';
+import 'package:makhzanflow/core/theme/mf_tokens.dart';
 import 'package:makhzanflow/core/constants/app_routes.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
-import 'package:makhzanflow/core/di/service_locator.dart';
 import 'package:makhzanflow/features/companies/presentation/cubit/join_company_cubit.dart';
 
 class PendingApprovalScreen extends StatefulWidget {
@@ -29,55 +27,57 @@ class PendingApprovalScreen extends StatefulWidget {
 
 class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
   late final JoinCompanyCubit _cubit;
+  bool _initialized = false;
 
   @override
-  void initState() {
-    super.initState();
-    _cubit = sl<JoinCompanyCubit>();
-    _cubit.resumePolling(
-      requestId: widget.requestId,
-      companyId: widget.companyId,
-      companyName: widget.companyName,
-      companyLogo: widget.companyLogo,
-    );
-  }
-
-  @override
-  void dispose() {
-    _cubit.close();
-    super.dispose();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _cubit = context.read<JoinCompanyCubit>();
+      _cubit.resumePolling(
+        requestId: widget.requestId,
+        companyId: widget.companyId,
+        companyName: widget.companyName,
+        companyLogo: widget.companyLogo,
+      );
+      _initialized = true;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider.value(
-      value: _cubit,
-      child: BlocListener<JoinCompanyCubit, JoinCompanyState>(
-        listener: (context, state) async {
-          if (state is JoinCompanyApproved) {
-            await context.read<CompanyCubit>().loadCompanies(selectCompanyId: state.companyId);
-            if (context.mounted) {
-              context.go(AppRoutes.dashboard);
-            }
-          } else if (state is JoinCompanyInitial) {
-            context.go(AppRoutes.welcomeJoin);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? MFTokens.backgroundDark : MFTokens.backgroundLight;
+    final textPrimary = isDark ? MFTokens.textPrimaryDark : MFTokens.textPrimaryLight;
+    final textSecondary = isDark ? MFTokens.textSecondaryDark : MFTokens.textSecondaryLight;
+
+    return BlocListener<JoinCompanyCubit, JoinCompanyState>(
+      listener: (context, state) async {
+        if (state is JoinCompanyApproved) {
+          await context.read<CompanyCubit>().loadCompanies(
+            selectCompanyId: state.companyId,
+          );
+          if (context.mounted) {
+            context.go(AppRoutes.dashboard);
           }
-        },
-        child: Scaffold(
-          backgroundColor: AppColors.appBackground,
-          body: Center(
-            child: Padding(
-              padding: EdgeInsets.all(AppSizes.spacingXLarge),
-              child: BlocBuilder<JoinCompanyCubit, JoinCompanyState>(
-                builder: (context, state) {
-                  return switch (state) {
-                    JoinCompanyRejected() => _buildRejected(context),
-                    JoinCompanyInitial() => _buildCancelled(),
-                    JoinCompanyRequestData() => _buildPending(context, state),
-                    _ => _buildPending(context, null),
-                  };
-                },
-              ),
+        } else if (state is JoinCompanyInitial) {
+          context.go(AppRoutes.welcomeJoin);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: bg,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(MFTokens.sp32),
+            child: BlocBuilder<JoinCompanyCubit, JoinCompanyState>(
+              builder: (context, state) {
+                return switch (state) {
+                  JoinCompanyRejected() => _buildRejected(context, textPrimary, textSecondary),
+                  JoinCompanyInitial() => _buildCancelled(textPrimary),
+                  JoinCompanyRequestData() => _buildPending(context, state, textPrimary, textSecondary),
+                  _ => _buildPending(context, null, textPrimary, textSecondary),
+                };
+              },
             ),
           ),
         ),
@@ -85,60 +85,59 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
     );
   }
 
-  Widget _buildPending(BuildContext context, JoinCompanyRequestData? data) {
+  Widget _buildPending(BuildContext context, JoinCompanyRequestData? data, Color textPrimary, Color textSecondary) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(
           Icons.hourglass_empty_outlined,
-          size: AppSizes.iconXLarge * 2,
-          color: AppColors.secondary,
+          size: 80,
+          color: isDark ? MFTokens.primaryDarkMode : MFTokens.primary,
         ),
-        SizedBox(height: AppSizes.spacingXLarge),
+        const SizedBox(height: MFTokens.sp32),
         Text(
           AppStrings.pendingTitle,
           style: TextStyle(
-            fontSize: AppSizes.fontXXLarge,
+            fontSize: MFTokens.font2XL,
             fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
+            color: textPrimary,
           ),
         ),
-        SizedBox(height: AppSizes.spacingMedium),
+        const SizedBox(height: MFTokens.sp16),
         Text(
           AppStrings.pendingSubtitle,
           style: TextStyle(
-            fontSize: AppSizes.fontMedium,
-            color: AppColors.textSecondary,
+            fontSize: MFTokens.fontSM,
+            color: textSecondary,
           ),
           textAlign: TextAlign.center,
         ),
-        SizedBox(height: AppSizes.spacingXLarge * 2),
-        CircularProgressIndicator(
-          color: AppColors.primary,
-        ),
-        SizedBox(height: AppSizes.spacingMedium),
+        const SizedBox(height: 64),
+        CircularProgressIndicator(color: isDark ? MFTokens.primaryDarkMode : MFTokens.primary),
+        const SizedBox(height: MFTokens.sp16),
         Text(
           AppStrings.pendingChecking,
           style: TextStyle(
-            fontSize: AppSizes.fontSmall,
-            color: AppColors.textSecondary,
+            fontSize: MFTokens.fontXS,
+            color: textSecondary,
           ),
         ),
-        SizedBox(height: AppSizes.spacingXLarge * 2),
+        const SizedBox(height: 64),
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
             onPressed: () {
               _cubit.cancelJoinRequest(data?.requestId ?? widget.requestId);
             },
-            icon: Icon(Icons.close, size: AppSizes.iconMedium),
+            icon: const Icon(Icons.close, size: MFTokens.sp24),
             label: Text(AppStrings.cancelButton),
             style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.redDark,
-              side: BorderSide(color: AppColors.redDark),
-              padding: EdgeInsets.all(AppSizes.spacingMedium),
+              foregroundColor: isDark ? MFTokens.errorTextDark : MFTokens.errorText,
+              side: BorderSide(color: isDark ? MFTokens.errorTextDark : MFTokens.errorText),
+              padding: const EdgeInsets.all(MFTokens.sp16),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
+                borderRadius: BorderRadius.circular(MFTokens.radiusLG),
               ),
             ),
           ),
@@ -147,48 +146,49 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
     );
   }
 
-  Widget _buildRejected(BuildContext context) {
+  Widget _buildRejected(BuildContext context, Color textPrimary, Color textSecondary) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(
           Icons.cancel_outlined,
-          size: AppSizes.iconXLarge * 2,
-          color: AppColors.redDark,
+          size: 80,
+          color: isDark ? MFTokens.errorTextDark : MFTokens.errorText,
         ),
-        SizedBox(height: AppSizes.spacingXLarge),
+        const SizedBox(height: MFTokens.sp32),
         Text(
           AppStrings.requestRejected,
           style: TextStyle(
-            fontSize: AppSizes.fontXXLarge,
+            fontSize: MFTokens.font2XL,
             fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
+            color: textPrimary,
           ),
         ),
-        SizedBox(height: AppSizes.spacingMedium),
+        const SizedBox(height: MFTokens.sp16),
         Text(
-          'لم يتم الموافقة على طلب الانضمام',
+          AppStrings.joinRequestNotApprovedDesc,
           style: TextStyle(
-            fontSize: AppSizes.fontMedium,
-            color: AppColors.textSecondary,
+            fontSize: MFTokens.fontSM,
+            color: textSecondary,
           ),
           textAlign: TextAlign.center,
         ),
-        SizedBox(height: AppSizes.spacingXLarge * 2),
+        const SizedBox(height: 64),
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
             onPressed: () {
               context.go(AppRoutes.welcomeJoin);
             },
-            icon: Icon(Icons.refresh, size: AppSizes.iconMedium),
+            icon: const Icon(Icons.refresh, size: MFTokens.sp24),
             label: Text(AppStrings.retry),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.white,
-              padding: EdgeInsets.all(AppSizes.spacingMedium),
+              backgroundColor: isDark ? MFTokens.primaryDarkMode : MFTokens.primary,
+              foregroundColor: MFTokens.textOnPrimary,
+              padding: const EdgeInsets.all(MFTokens.sp16),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
+                borderRadius: BorderRadius.circular(MFTokens.radiusLG),
               ),
             ),
           ),
@@ -197,22 +197,22 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
     );
   }
 
-  Widget _buildCancelled() {
+  Widget _buildCancelled(Color textPrimary) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(
           Icons.info_outline,
-          size: AppSizes.iconXLarge * 2,
-          color: AppColors.textSecondary,
+          size: 80,
+          color: MFTokens.textSecondaryLight,
         ),
-        SizedBox(height: AppSizes.spacingXLarge),
+        const SizedBox(height: MFTokens.sp32),
         Text(
-          'تم إلغاء الطلب',
+          AppStrings.requestCancelled,
           style: TextStyle(
-            fontSize: AppSizes.fontXXLarge,
+            fontSize: MFTokens.font2XL,
             fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
+            color: textPrimary,
           ),
         ),
       ],

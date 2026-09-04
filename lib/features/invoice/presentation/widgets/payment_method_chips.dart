@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:makhzanflow/core/constants/app_colors.dart';
 import 'package:makhzanflow/core/constants/app_sizes.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
+import 'package:makhzanflow/features/invoice/domain/constants/invoice_constants.dart';
 import 'package:makhzanflow/features/invoice/presentation/cubit/create_invoice/create_invoice_cubit.dart';
 
 class PaymentMethodChips extends StatelessWidget {
@@ -12,12 +13,9 @@ class PaymentMethodChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<CreateInvoiceCubit, CreateInvoiceState>(
-      buildWhen: (prev, next) => next is CreateInvoiceFormState,
-      builder: (context, state) {
-        if (state is! CreateInvoiceFormState) return const SizedBox.shrink();
-        final loaded = state;
-
+    return BlocSelector<CreateInvoiceCubit, CreateInvoiceState, String>(
+      selector: (state) => state is CreateInvoiceFormState ? state.paymentMethod : InvoiceConstants.paymentFull,
+      builder: (context, paymentMethod) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -30,24 +28,24 @@ class PaymentMethodChips extends StatelessWidget {
               ),
             ),
             SizedBox(height: AppSizes.spacingSmall),
-            Row(
+            Wrap(
+              spacing: AppSizes.spacingSmall,
+              runSpacing: AppSizes.spacingSmall,
               children: [
                 _MethodChip(
                   label: AppStrings.deferredPayment,
-                  selected: loaded.paymentMethod == 'deferred',
-                  onTap: () => cubit.setPaymentMethod('deferred'),
+                  selected: paymentMethod == InvoiceConstants.paymentDeferred,
+                  onTap: () => cubit.setPaymentMethod(InvoiceConstants.paymentDeferred),
                 ),
-                SizedBox(width: AppSizes.spacingSmall),
                 _MethodChip(
                   label: AppStrings.partialPayment,
-                  selected: loaded.paymentMethod == 'partial',
-                  onTap: () => cubit.setPaymentMethod('partial'),
+                  selected: paymentMethod == InvoiceConstants.paymentPartial,
+                  onTap: () => cubit.setPaymentMethod(InvoiceConstants.paymentPartial),
                 ),
-                SizedBox(width: AppSizes.spacingSmall),
                 _MethodChip(
                   label: AppStrings.fullPayment,
-                  selected: loaded.paymentMethod == 'full',
-                  onTap: () => cubit.setPaymentMethod('full'),
+                  selected: paymentMethod == InvoiceConstants.paymentFull,
+                  onTap: () => cubit.setPaymentMethod(InvoiceConstants.paymentFull),
                 ),
               ],
             ),
@@ -90,7 +88,7 @@ class _MethodChip extends StatelessWidget {
           style: TextStyle(
             color: selected ? AppColors.primary : AppColors.textSecondary,
             fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-            fontSize: AppSizes.fontLarge,
+            fontSize: AppSizes.fontMedium,
           ),
         ),
       ),

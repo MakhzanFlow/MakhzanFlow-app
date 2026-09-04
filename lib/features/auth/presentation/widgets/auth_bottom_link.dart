@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_sizes.dart';
+import '../../../../core/theme/mf_tokens.dart';
 
 class AuthBottomLink extends StatelessWidget {
   final String label;
@@ -17,6 +16,9 @@ class AuthBottomLink extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textSecondary = isDark ? MFTokens.textSecondaryDark : MFTokens.textSecondaryLight;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -24,8 +26,8 @@ class AuthBottomLink extends StatelessWidget {
           label,
           style: TextStyle(
             fontFamily: 'Cairo',
-            fontSize: AppSizes.fontMedium,
-            color: AppColors.textSecondary,
+            fontSize: MFTokens.fontSM,
+            color: textSecondary,
           ),
         ),
         GestureDetector(
@@ -34,8 +36,8 @@ class AuthBottomLink extends StatelessWidget {
             actionLabel,
             style: TextStyle(
               fontFamily: 'Cairo',
-              fontSize: AppSizes.fontMedium,
-              color: AppColors.primary,
+              fontSize: MFTokens.fontSM,
+              color: isDark ? MFTokens.primaryDarkMode : MFTokens.primary,
               fontWeight: FontWeight.bold,
             ),
           ),

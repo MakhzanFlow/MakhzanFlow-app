@@ -7,7 +7,7 @@ class UploadCustomerImageUseCase {
 
   UploadCustomerImageUseCase(this.repository);
 
-  Future<Either<Failure, String>> call(String filePath) {
-    return repository.uploadCustomerImage(filePath);
+  Future<Either<Failure, String>> call(String filePath, String customerId) {
+    return repository.uploadCustomerImage(filePath, customerId);
   }
 }

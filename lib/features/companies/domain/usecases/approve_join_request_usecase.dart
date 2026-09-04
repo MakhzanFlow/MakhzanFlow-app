@@ -7,7 +7,7 @@ class ApproveJoinRequestUseCase {
 
   ApproveJoinRequestUseCase(this._repository);
 
-  Future<Either<Failure, String>> call(String requestId) {
-    return _repository.approveJoinRequest(requestId);
+  Future<Either<Failure, void>> call(String companyId, String requestId) {
+    return _repository.approveJoinRequest(companyId, requestId);
   }
 }

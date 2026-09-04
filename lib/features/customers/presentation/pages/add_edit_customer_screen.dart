@@ -3,9 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:makhzanflow/core/company/company_aware_state.dart';
-import '../../../../core/constants/app_sizes.dart';
+import '../../../../core/theme/mf_tokens.dart';
 import '../../../../core/constants/app_strings.dart';
-import '../../../../core/di/service_locator.dart';
 import '../../../../core/widgets/app_snackbar.dart';
 import '../cubit/add_edit_customer/add_edit_customer_cubit.dart';
 import '../widgets/customer_text_input.dart';
@@ -32,15 +31,19 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen>
   final _debtController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   final _picker = ImagePicker();
+  bool _initialized = false;
 
   bool get _isEditMode => widget.customerId != null;
 
   @override
-  void initState() {
-    super.initState();
-    _cubit = sl<AddEditCustomerCubit>();
-    if (_isEditMode) {
-      _cubit.loadForEdit(widget.customerId!, companyId);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _cubit = context.read<AddEditCustomerCubit>();
+      if (_isEditMode) {
+        _cubit.loadForEdit(widget.customerId!, companyId);
+      }
+      _initialized = true;
     }
   }
 
@@ -58,36 +61,20 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen>
     _phoneController.dispose();
     _addressController.dispose();
     _debtController.dispose();
-    _cubit.close();
     super.dispose();
   }
 
   void _syncControllersFromState(AddEditCustomerState state) {
-    if (_nameController.text != state.name) {
-      _nameController.text = state.name;
-    }
-    if (_nameOfficialController.text != state.nameOfficial) {
-      _nameOfficialController.text = state.nameOfficial;
-    }
-    if (_phoneController.text != state.phone) {
-      _phoneController.text = state.phone;
-    }
-    if (_addressController.text != state.address) {
-      _addressController.text = state.address;
-    }
-    if (_debtController.text != state.debtText) {
-      _debtController.text = state.debtText;
-    }
+    if (_nameController.text != state.name) _nameController.text = state.name;
+    if (_nameOfficialController.text != state.nameOfficial) _nameOfficialController.text = state.nameOfficial;
+    if (_phoneController.text != state.phone) _phoneController.text = state.phone;
+    if (_addressController.text != state.address) _addressController.text = state.address;
+    if (_debtController.text != state.debtText) _debtController.text = state.debtText;
   }
 
   Future<void> _pickImage() async {
-    final picked = await _picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 80,
-    );
-    if (picked != null) {
-      _cubit.setImagePath(picked.path);
-    }
+    final picked = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    if (picked != null) _cubit.setImagePath(picked.path);
   }
 
   Future<void> _save() async {
@@ -102,133 +89,113 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen>
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider.value(
-      value: _cubit,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            _isEditMode ? AppStrings.customerEdit : AppStrings.customerAdd,
-          ),
-        ),
-        body: BlocConsumer<AddEditCustomerCubit, AddEditCustomerState>(
-          listener: (context, state) {
-            if (state.status == AddEditCustomerStatus.success) {
-              AppSnackbar.success(
-                context,
-                state.successMessage ?? AppStrings.customerSaveSuccess,
-              );
-              context.pop(true);
-            }
-            if (state.status == AddEditCustomerStatus.error &&
-                state.failure != null) {
-              AppSnackbar.error(
-                context,
-                state.failure?.message ?? AppStrings.unexpectedError,
-              );
-              _cubit.resetStatus();
-            }
-            if (state.status == AddEditCustomerStatus.initial &&
-                state.isEditMode) {
-              _syncControllersFromState(state);
-            }
-          },
-          builder: (context, state) {
-            if (state.status == AddEditCustomerStatus.loading && _isEditMode) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            return SingleChildScrollView(
-              padding: EdgeInsets.all(AppSizes.spacingMedium),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    CustomerImageUploader(
-                      imageUrl: state.imageUploadUrl,
-                      localPath: state.imageLocalPath,
-                      isUploading: state.isImageUploading,
-                      onTap: _pickImage,
-                    ),
-                    SizedBox(height: AppSizes.spacingLarge),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_isEditMode ? AppStrings.customerEdit : AppStrings.customerAdd),
+      ),
+      body: BlocConsumer<AddEditCustomerCubit, AddEditCustomerState>(
+        listener: (context, state) {
+          if (state.status == AddEditCustomerStatus.success) {
+            AppSnackbar.success(context, state.successMessage ?? AppStrings.customerSaveSuccess);
+            context.pop(true);
+          }
+          if (state.status == AddEditCustomerStatus.error && state.failure != null) {
+            AppSnackbar.error(context, state.failure?.message ?? AppStrings.unexpectedError);
+            _cubit.resetStatus();
+          }
+          if (state.status == AddEditCustomerStatus.initial && state.isEditMode) {
+            _syncControllersFromState(state);
+          }
+        },
+        builder: (context, state) {
+          if (state.status == AddEditCustomerStatus.loading && _isEditMode) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(MFTokens.sp16),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  CustomerImageUploader(
+                    imageUrl: state.imageUploadUrl,
+                    localPath: state.imageLocalPath,
+                    isUploading: state.isImageUploading,
+                    onTap: _pickImage,
+                  ),
+                  const SizedBox(height: MFTokens.sp24),
+                  CustomerTextInput(
+                    controller: _nameController,
+                    label: AppStrings.customerNameLabel,
+                    hintText: AppStrings.customerNameHint,
+                    iconData: Icons.store_outlined,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) return AppStrings.customerNameRequired;
+                      return null;
+                    },
+                    onChanged: (value) => _cubit.updateName(value),
+                  ),
+                  const SizedBox(height: MFTokens.sp16),
+                  CustomerTextInput(
+                    controller: _nameOfficialController,
+                    label: AppStrings.customerOfficialNameLabel,
+                    hintText: AppStrings.customerOfficialNameHint,
+                    iconData: Icons.person_outline,
+                    onChanged: (value) => _cubit.updateNameOfficial(value),
+                  ),
+                  const SizedBox(height: MFTokens.sp16),
+                  CustomerTextInput(
+                    controller: _phoneController,
+                    label: AppStrings.customerPhoneLabel,
+                    hintText: AppStrings.customerPhoneHint,
+                    iconData: Icons.phone_outlined,
+                    keyboardType: TextInputType.phone,
+                    onChanged: (value) => _cubit.updatePhone(value),
+                  ),
+                  const SizedBox(height: MFTokens.sp16),
+                  CustomerTextInput(
+                    controller: _addressController,
+                    label: AppStrings.customerAddressLabel,
+                    hintText: AppStrings.customerAddressHint,
+                    iconData: Icons.location_on_outlined,
+                    onChanged: (value) => _cubit.updateAddress(value),
+                  ),
+                  const SizedBox(height: MFTokens.sp16),
+                  if (!_isEditMode)
                     CustomerTextInput(
-                      controller: _nameController,
-                      label: AppStrings.customerNameLabel,
-                      hintText: AppStrings.customerNameHint,
-                      iconData: Icons.store_outlined,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return AppStrings.customerNameRequired;
-                        }
-                        return null;
-                      },
-                      onChanged: (value) => _cubit.updateName(value),
-                    ),
-                    SizedBox(height: AppSizes.spacingMedium),
-                    CustomerTextInput(
-                      controller: _nameOfficialController,
-                      label: AppStrings.customerOfficialNameLabel,
-                      hintText: AppStrings.customerOfficialNameHint,
-                      iconData: Icons.person_outline,
-                      onChanged: (value) => _cubit.updateNameOfficial(value),
-                    ),
-                    SizedBox(height: AppSizes.spacingMedium),
-                    CustomerTextInput(
-                      controller: _phoneController,
-                      label: AppStrings.customerPhoneLabel,
-                      hintText: AppStrings.customerPhoneHint,
-                      iconData: Icons.phone_outlined,
-                      keyboardType: TextInputType.phone,
-                      onChanged: (value) => _cubit.updatePhone(value),
-                    ),
-                    SizedBox(height: AppSizes.spacingMedium),
-                    CustomerTextInput(
-                      controller: _addressController,
-                      label: AppStrings.customerAddressLabel,
-                      hintText: AppStrings.customerAddressHint,
-                      iconData: Icons.location_on_outlined,
-                      onChanged: (value) => _cubit.updateAddress(value),
-                    ),
-                    SizedBox(height: AppSizes.spacingMedium),
-                    if (!_isEditMode)
-                      CustomerTextInput(
-                        controller: _debtController,
-                        label: AppStrings.customerDebtLabel,
-                        hintText: AppStrings.customerDebtHint,
-                        iconData: Icons.currency_exchange,
-                        keyboardType: TextInputType.number,
-                        onChanged: (value) => _cubit.updateDebt(value),
-                      )
-                    else
-                      CustomerDebtDisplay(debtText: state.debtText),
-                    SizedBox(height: AppSizes.spacingMedium),
-
-                    SizedBox(height: AppSizes.spacingXLarge),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        CustomerActionButton(
-                          text: AppStrings.customerCancel,
-                          isPrimary: false,
-                          onPressed: () => context.pop(),
-                        ),
-                        CustomerActionButton(
-                          text: _isEditMode
-                              ? AppStrings.customerSave
-                              : AppStrings.customerAddButton,
-                          isLoading:
-                              state.status == AddEditCustomerStatus.loading,
-                          onPressed: _save,
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: AppSizes.spacingLarge),
-                  ],
-                ),
+                      controller: _debtController,
+                      label: AppStrings.customerDebtLabel,
+                      hintText: AppStrings.customerDebtHint,
+                      iconData: Icons.currency_exchange,
+                      keyboardType: TextInputType.number,
+                      onChanged: (value) => _cubit.updateDebt(value),
+                    )
+                  else
+                    CustomerDebtDisplay(debtText: state.debtText),
+                  const SizedBox(height: MFTokens.sp16),
+                  const SizedBox(height: MFTokens.sp32),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      CustomerActionButton(
+                        text: AppStrings.customerCancel,
+                        isPrimary: false,
+                        onPressed: () => context.pop(),
+                      ),
+                      CustomerActionButton(
+                        text: _isEditMode ? AppStrings.customerSave : AppStrings.customerAddButton,
+                        isLoading: state.status == AddEditCustomerStatus.loading,
+                        onPressed: _save,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: MFTokens.sp24),
+                ],
               ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }

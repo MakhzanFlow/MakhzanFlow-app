@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_sizes.dart';
+import '../../../../core/theme/mf_tokens.dart';
 import '../../../../core/constants/app_strings.dart';
 
 class CustomerDebtSummaryCard extends StatelessWidget {
@@ -18,22 +16,25 @@ class CustomerDebtSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textSecondary = isDark ? MFTokens.textSecondaryDark : MFTokens.textSecondaryLight;
+    final primary = isDark ? MFTokens.primaryDarkMode : MFTokens.primary;
+    final primarySubtle = isDark ? MFTokens.primaryDarkModeSubtle : MFTokens.primarySubtle;
+    final accent = isDark ? MFTokens.primaryDarkMode : MFTokens.accent;
+    final warningBg = isDark ? MFTokens.warningBgDark : MFTokens.warningBg;
+    final cardBg = isDark ? MFTokens.cardDark : MFTokens.cardLight;
+    final border = isDark ? MFTokens.borderDark : MFTokens.borderLight;
+
     final ratio = totalPurchases > 0 ? (totalPaid / totalPurchases * 100) : 0.0;
 
     return Container(
       width: double.infinity,
-      margin: EdgeInsets.symmetric(horizontal: 16.w),
-      padding: EdgeInsets.all(AppSizes.spacingMedium),
+      margin: const EdgeInsets.symmetric(horizontal: MFTokens.sp16),
+      padding: const EdgeInsets.all(MFTokens.sp16),
       decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.14),
-            blurRadius: 30.r,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        color: cardBg,
+        borderRadius: BorderRadius.circular(MFTokens.radiusLG),
+        boxShadow: MFTokens.shadowSM,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,26 +46,26 @@ class CustomerDebtSummaryCard extends StatelessWidget {
                 AppStrings.customerTotalPurchases,
                 style: TextStyle(
                   fontFamily: 'Cairo',
-                  fontSize: AppSizes.fontSmall,
-                  color: AppColors.textSecondary,
+                  fontSize: MFTokens.fontSM,
+                  color: textSecondary,
                 ),
               ),
             ],
           ),
-          SizedBox(height: 2.h),
-          _amountRow(),
-          SizedBox(height: 12.h),
-          _ratioRow(ratio),
-          SizedBox(height: 6.h),
-          _progressBar(ratio),
-          SizedBox(height: 12.h),
-          _statBoxes(),
+          SizedBox(height: MFTokens.sp2),
+          _amountRow(primary, textSecondary),
+          SizedBox(height: MFTokens.sp12),
+          _ratioRow(ratio, textSecondary, primary),
+          SizedBox(height: MFTokens.sp6),
+          _progressBar(ratio, border, primary),
+          SizedBox(height: MFTokens.sp12),
+          _statBoxes(primary, primarySubtle, accent, warningBg, textSecondary),
         ],
       ),
     );
   }
 
-  Widget _amountRow() {
+  Widget _amountRow(Color primary, Color textSecondary) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
@@ -72,26 +73,26 @@ class CustomerDebtSummaryCard extends StatelessWidget {
           AppStrings.currencyEg,
           style: TextStyle(
             fontFamily: 'Cairo',
-            fontSize: AppSizes.fontSmall,
-            color: AppColors.textSecondary,
+            fontSize: MFTokens.fontSM,
+            color: textSecondary,
           ),
         ),
-        SizedBox(width: 4.w),
+        SizedBox(width: MFTokens.sp4),
         Text(
           totalPurchases == 0 && totalPurchases.truncateToDouble() == 0
               ? '0'
               : totalPurchases.toInt().toString(),
           style: TextStyle(
             fontFamily: 'Cairo',
-            fontSize: 24.sp,
-            color: AppColors.primary,
+            fontSize: MFTokens.font3XL,
+            color: primary,
           ),
         ),
       ],
     );
   }
 
-  Widget _ratioRow(double ratio) {
+  Widget _ratioRow(double ratio, Color textSecondary, Color primary) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -99,38 +100,38 @@ class CustomerDebtSummaryCard extends StatelessWidget {
           AppStrings.customerPaymentRatio,
           style: TextStyle(
             fontFamily: 'Cairo',
-            fontSize: AppSizes.fontSmall,
-            color: AppColors.textSecondary,
+            fontSize: MFTokens.fontSM,
+            color: textSecondary,
           ),
         ),
         Text(
           '${ratio.toInt()}${AppStrings.customerPaidPercent}',
           style: TextStyle(
             fontFamily: 'Cairo',
-            fontSize: AppSizes.fontSmall,
-            color: AppColors.primary,
+            fontSize: MFTokens.fontSM,
+            color: primary,
           ),
         ),
       ],
     );
   }
 
-  Widget _progressBar(double ratio) {
+  Widget _progressBar(double ratio, Color border, Color primary) {
     return Container(
       width: double.infinity,
-      height: 10.h,
+      height: MFTokens.sp10,
       decoration: BoxDecoration(
-        color: AppColors.searchBg,
-        borderRadius: BorderRadius.circular(AppSizes.radiusXLarge),
+        color: border,
+        borderRadius: BorderRadius.circular(MFTokens.radiusXL),
       ),
       child: FractionallySizedBox(
         alignment: Alignment.centerRight,
         widthFactor: ratio.clamp(0, 100) / 100,
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppSizes.radiusXLarge),
+            borderRadius: BorderRadius.circular(MFTokens.radiusXL),
             gradient: const LinearGradient(
-              colors: [AppColors.primary, AppColors.trendUp],
+              colors: [MFTokens.primary, MFTokens.successText],
             ),
           ),
         ),
@@ -138,33 +139,35 @@ class CustomerDebtSummaryCard extends StatelessWidget {
     );
   }
 
-  Widget _statBoxes() {
+  Widget _statBoxes(Color primary, Color primarySubtle, Color accent, Color warningBg, Color textSecondary) {
     return Row(
       children: [
         _statBox(
           AppStrings.customerPaidLabel,
           totalPaid,
-          AppColors.lightPrimaryBg,
-          AppColors.primary,
+          primarySubtle,
+          primary,
+          textSecondary,
         ),
-        SizedBox(width: AppSizes.spacingSmall),
+        SizedBox(width: MFTokens.sp8),
         _statBox(
           AppStrings.customerRemainingLabel,
           totalDebt,
-          AppColors.lightOrange,
-          AppColors.accent,
+          warningBg,
+          accent,
+          textSecondary,
         ),
       ],
     );
   }
 
-  Widget _statBox(String label, double amount, Color bg, Color amountColor) {
+  Widget _statBox(String label, double amount, Color bg, Color amountColor, Color textSecondary) {
     return Expanded(
       child: Container(
-        padding: EdgeInsets.all(10.w),
+        padding: const EdgeInsets.all(MFTokens.sp10),
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
+          borderRadius: BorderRadius.circular(MFTokens.radiusMD),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,11 +176,11 @@ class CustomerDebtSummaryCard extends StatelessWidget {
               label,
               style: TextStyle(
                 fontFamily: 'Cairo',
-                fontSize: 9.sp,
-                color: AppColors.textSecondary,
+                fontSize: MFTokens.fontXS,
+                color: textSecondary,
               ),
             ),
-            SizedBox(height: 2.h),
+            SizedBox(height: MFTokens.sp2),
             Row(
               children: [
                 Text(
@@ -186,18 +189,18 @@ class CustomerDebtSummaryCard extends StatelessWidget {
                       : amount.toInt().toString(),
                   style: TextStyle(
                     fontFamily: 'Cairo',
-                    fontSize: AppSizes.fontXLarge,
+                    fontSize: MFTokens.fontLG,
                     fontWeight: FontWeight.w600,
                     color: amountColor,
                   ),
                 ),
-                SizedBox(width: 2.w),
+                SizedBox(width: MFTokens.sp2),
                 Text(
                   AppStrings.currencyEg,
                   style: TextStyle(
                     fontFamily: 'Cairo',
-                    fontSize: AppSizes.fontSmall,
-                    color: AppColors.textSecondary,
+                    fontSize: MFTokens.fontSM,
+                    color: textSecondary,
                   ),
                 ),
               ],

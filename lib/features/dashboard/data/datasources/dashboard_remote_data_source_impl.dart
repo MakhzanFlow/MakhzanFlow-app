@@ -1,205 +1,154 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:makhzanflow/core/error/exceptions.dart';
+import 'package:dio/dio.dart';
+import 'package:fpdart/fpdart.dart';
+import 'package:makhzanflow/core/api/api_client.dart';
+import 'package:makhzanflow/core/api/api_response.dart';
+import 'package:makhzanflow/core/constants/api_endpoints.dart';
+import 'package:makhzanflow/core/constants/error_messages.dart';
+import 'package:makhzanflow/core/error/failures.dart';
+import '../models/activity_entry_dto.dart';
 import '../models/dashboard_stats_model.dart';
+import '../models/low_stock_product_dto.dart';
+import '../models/monthly_report_entry_dto.dart';
 import 'dashboard_remote_data_source.dart';
 
 class DashboardRemoteDataSourceImpl implements DashboardRemoteDataSource {
-  DashboardRemoteDataSourceImpl(this._client);
+  final ApiClient _apiClient;
 
-  final SupabaseClient _client;
+  DashboardRemoteDataSourceImpl({required ApiClient apiClient}) : _apiClient = apiClient;
 
   @override
-  Future<DashboardStatsModel> getDashboardStats(String companyId) async {
+  Future<Either<Failure, DashboardStatsModel>> getDashboardStats(String companyId) async {
+    // companyId is tenant-scoped via x-company-id header; empty string is
+    // allowed for backward compat callers. No assert needed.
     try {
-      final results = await Future.wait([
-        _fetchProductsCount(companyId),
-        _fetchCustomersCount(companyId),
-        _fetchTotalDebt(companyId),
-        _fetchTodaySales(companyId),
-        _fetchMonthlyPayments(companyId),
-        _fetchWeeklySales(companyId),
-        _fetchRecentActivity(companyId),
-      ]);
+      final response = await _apiClient.dio.get(ApiEndpoints.dashboardStats);
+      final data = _dataOrThrow(response);
+      return Right(DashboardStatsModel.fromJson(data));
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (_) {
+      return Left(ServerFailure(ErrorMessages.unexpectedError));
+    }
+  }
 
-      return DashboardStatsModel.fromRawData(
-        productsCount: results[0] as int,
-        customersCount: results[1] as int,
-        totalDebt: results[2] as double,
-        todaySales: results[3] as double,
-        monthlyPayments: results[4] as double,
-        weeklySalesRaw: (results[5] as List).cast<Map<String, dynamic>>(),
-        recentActivitiesRaw: (results[6] as List).cast<Map<String, dynamic>>(),
+  @override
+  Future<Either<Failure, PaginatedResponse<LowStockProductDto>>> getLowStock({
+    required String companyId,
+    int page = 1,
+    int limit = 20,
+    String? search,
+    String? sort,
+    String? order,
+  }) async {
+    try {
+      final response = await _apiClient.dio.get(
+        ApiEndpoints.dashboardLowStock,
+        queryParameters: {
+          'page': page,
+          'limit': limit,
+          if (search != null && search.trim().isNotEmpty) 'search': search,
+          if (sort != null) 'sort': sort,
+          if (order != null) 'order': order,
+        },
       );
-    } on PostgrestException catch (e) {
-      throw ServerException(e.message);
-    } catch (e) {
-      throw ServerException(e.toString());
+      final paginated = PaginatedResponse<LowStockProductDto>.fromJson(
+        response.data as Map<String, dynamic>,
+        (json) => LowStockProductDto.fromJson(json as Map<String, dynamic>),
+      );
+      return Right(paginated);
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (_) {
+      return Left(ServerFailure(ErrorMessages.unexpectedError));
     }
   }
 
-  // ── private helpers ────────────────────────────────────────────────────────
-
-  Future<int> _fetchProductsCount(String companyId) async {
-    final resp = await _client
-        .from('products')
-        .select()
-        .eq('company_id', companyId)
-        .count(CountOption.exact);
-    return resp.count;
-  }
-
-  Future<int> _fetchCustomersCount(String companyId) async {
-    final resp = await _client
-        .from('customers')
-        .select()
-        .eq('company_id', companyId)
-        .count(CountOption.exact);
-    return resp.count;
-  }
-
-  Future<double> _fetchTotalDebt(String companyId) async {
-    final data = await _client
-        .from('invoices')
-        .select('remaining_amount')
-        .eq('company_id', companyId);
-    final list = data as List;
-    double sum = 0;
-    for (final row in list) {
-      sum += (row['remaining_amount'] as num?)?.toDouble() ?? 0.0;
+  @override
+  Future<Either<Failure, List<MonthlyReportEntryDto>>> getMonthlyReport({
+    required String companyId,
+    int months = 12,
+    String? from,
+    String? to,
+  }) async {
+    try {
+      final response = await _apiClient.dio.get(
+        ApiEndpoints.dashboardMonthlyReport,
+        queryParameters: {
+          'months': months,
+          if (from != null && from.isNotEmpty) 'from': from,
+          if (to != null && to.isNotEmpty) 'to': to,
+        },
+      );
+      final body = response.data as Map<String, dynamic>;
+      final raw = body['data'];
+      if (raw is List) {
+        final list = raw.whereType<Map<String, dynamic>>().map(MonthlyReportEntryDto.fromJson).toList();
+        return Right(list);
+      }
+      // Fallback: _dataList style
+      final dataList = _dataList(response);
+      return Right(dataList.map(MonthlyReportEntryDto.fromJson).toList());
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (_) {
+      return Left(ServerFailure(ErrorMessages.unexpectedError));
     }
-    return sum;
   }
 
-  Future<double> _fetchTodaySales(String companyId) async {
-    final today = DateTime.now();
-    final startOfDay = DateTime(
-      today.year,
-      today.month,
-      today.day,
-    ).toIso8601String();
-    final endOfDay = DateTime(
-      today.year,
-      today.month,
-      today.day,
-      23,
-      59,
-      59,
-    ).toIso8601String();
-
-    final data = await _client
-        .from('payments')
-        .select('amount')
-        .eq('company_id', companyId)
-        .eq('payment_type', 'payment')
-        .gte('created_at', startOfDay)
-        .lte('created_at', endOfDay);
-
-    final list = data as List;
-    double sum = 0;
-    for (final row in list) {
-      sum += (row['amount'] as num?)?.toDouble() ?? 0.0;
+  @override
+  Future<Either<Failure, PaginatedResponse<ActivityEntryDto>>> getActivity({
+    required String companyId,
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final response = await _apiClient.dio.get(
+        ApiEndpoints.dashboardActivity,
+        queryParameters: {'page': page, 'limit': limit},
+      );
+      final paginated = PaginatedResponse<ActivityEntryDto>.fromJson(
+        response.data as Map<String, dynamic>,
+        (json) => ActivityEntryDto.fromJson(json as Map<String, dynamic>),
+      );
+      return Right(paginated);
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (_) {
+      return Left(ServerFailure(ErrorMessages.unexpectedError));
     }
-    return sum;
   }
 
-  Future<double> _fetchMonthlyPayments(String companyId) async {
-    final now = DateTime.now();
-    final startOfMonth = DateTime(now.year, now.month).toIso8601String();
+  // ── Helpers (same pattern as other REST data sources) ──
 
-    final data = await _client
-        .from('payments')
-        .select('amount')
-        .eq('company_id', companyId)
-        .eq('payment_type', 'payment')
-        .gte('created_at', startOfMonth);
-
-    final list = data as List;
-    double sum = 0;
-    for (final row in list) {
-      sum += (row['amount'] as num?)?.toDouble() ?? 0.0;
+  Map<String, dynamic> _dataOrThrow(Response<dynamic> response) {
+    final data = _data(response);
+    if (data == null) {
+      throw StateError(ErrorMessages.unexpectedError);
     }
-    return sum;
+    return data;
   }
 
-  Future<List<Map<String, dynamic>>> _fetchWeeklySales(String companyId) async {
-    // Build 7 days: today and the 6 preceding days (oldest → newest)
-    final today = DateTime.now();
-    final days = List.generate(
-      7,
-      (i) => DateTime(
-        today.year,
-        today.month,
-        today.day,
-      ).subtract(Duration(days: 6 - i)),
-    );
-
-    // Fetch all invoices in the 7-day window
-    final startDate = days.first.toIso8601String();
-    final endDate = DateTime(
-      today.year,
-      today.month,
-      today.day,
-      23,
-      59,
-      59,
-    ).toIso8601String();
-
-    final data = await _client
-        .from('invoices')
-        .select('total_amount, created_at')
-        .eq('company_id', companyId)
-        .gte('created_at', startDate)
-        .lte('created_at', endDate);
-
-    final list = data as List;
-
-    // Group by date string (yyyy-MM-dd)
-    final Map<String, double> totals = {for (final d in days) _dateKey(d): 0.0};
-    for (final row in list) {
-      final key = _dateKey(DateTime.parse(row['created_at'] as String));
-      if (totals.containsKey(key)) {
-        totals[key] =
-            totals[key]! + ((row['total_amount'] as num?)?.toDouble() ?? 0.0);
+  Map<String, dynamic>? _data(Response<dynamic> response) {
+    final body = response.data;
+    if (body is Map<String, dynamic>) {
+      final data = body['data'];
+      if (data is Map<String, dynamic>) return data;
+      // Some endpoints may return the object directly (no wrapper)
+      if (body.containsKey('productsCount') || body.containsKey('products_count')) {
+        return body;
       }
     }
-
-    return days.map((d) {
-      final key = _dateKey(d);
-      return <String, dynamic>{'day': key, 'total': totals[key] ?? 0.0};
-    }).toList();
+    return null;
   }
 
-  Future<List<Map<String, dynamic>>> _fetchRecentActivity(
-    String companyId,
-  ) async {
-    final data = await _client.rpc(
-      'get_activity_log',
-      params: {
-        'p_company_id': companyId,
-        'p_filter_days': 7,
-        'p_page_limit': 5,
-        'p_page_offset': 0,
-      },
-    );
-
-    final list = data as List;
-    return list.map((row) {
-      final m = row as Map<String, dynamic>;
-      return <String, dynamic>{
-        'id': m['id'],
-        'user_id': m['user_id'] ?? '',
-        'user_name': m['user_name'] ?? '',
-        'action': m['action'],
-        'entity_type': m['entity_type'],
-        'entity_id': m['entity_id'],
-        'details': m['details'] ?? {},
-        'created_at': m['created_at'],
-      };
-    }).toList();
+  List<Map<String, dynamic>> _dataList(Response<dynamic> response) {
+    final body = response.data;
+    if (body is Map<String, dynamic>) {
+      final data = body['data'];
+      if (data is List) {
+        return data.whereType<Map<String, dynamic>>().toList();
+      }
+    }
+    throw StateError(ErrorMessages.unexpectedError);
   }
-
-  static String _dateKey(DateTime d) =>
-      '${d.year.toString().padLeft(4, '0')}-'
-      '${d.month.toString().padLeft(2, '0')}-'
-      '${d.day.toString().padLeft(2, '0')}';
 }

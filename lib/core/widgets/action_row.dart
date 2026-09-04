@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:makhzanflow/core/constants/app_sizes.dart';
+import '../theme/mf_tokens.dart';
 
 /// A tappable row with a coloured icon container and a label, used inside
 /// the company-switcher bottom‑sheet for actions (create, join, sign out).
@@ -12,6 +11,7 @@ class ActionRow extends StatelessWidget {
   final Color labelColor;
   final VoidCallback onTap;
   final bool showTopPadding;
+  final bool isLoading;
 
   const ActionRow({
     super.key,
@@ -22,33 +22,46 @@ class ActionRow extends StatelessWidget {
     required this.labelColor,
     required this.onTap,
     this.showTopPadding = false,
+    this.isLoading = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: isLoading ? null : onTap,
       child: Padding(
-        padding: EdgeInsets.only(top: showTopPadding ? 4.h : 0),
+        padding: EdgeInsets.only(top: showTopPadding ? MFTokens.sp4 : 0),
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 10.h),
+          padding: const EdgeInsets.symmetric(horizontal: MFTokens.sp4, vertical: MFTokens.sp10),
           child: Row(
             children: [
               Container(
-                width: 36.w,
-                height: 36.w,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
                   color: iconBg,
-                  borderRadius: BorderRadius.circular(14.r),
+                  borderRadius: BorderRadius.circular(MFTokens.radiusMD),
                 ),
-                child: Icon(icon, size: 16.w, color: iconColor),
+                child: isLoading
+                    ? Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: iconColor,
+                          ),
+                        ),
+                      )
+                    : Icon(icon, size: 16, color: iconColor),
               ),
-              SizedBox(width: 12.w),
+              const SizedBox(width: MFTokens.sp12),
               Text(
                 label,
                 style: TextStyle(
                   fontFamily: 'Cairo',
-                  fontSize: AppSizes.fontML,
+                  fontSize: MFTokens.fontBase,
                   fontWeight: FontWeight.w400,
                   color: labelColor,
                 ),

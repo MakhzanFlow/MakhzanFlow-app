@@ -11,11 +11,21 @@ class CustomerFilterCountsModel extends CustomerFilterCounts {
 
   factory CustomerFilterCountsModel.fromJson(Map<String, dynamic> json) {
     return CustomerFilterCountsModel(
-      totalCount: (json['total_count'] as num?)?.toInt() ?? 0,
-      paidCount: (json['paid_count'] as num?)?.toInt() ?? 0,
-      partialCount: (json['partial_count'] as num?)?.toInt() ?? 0,
-      deferredCount: (json['deferred_count'] as num?)?.toInt() ?? 0,
-      totalDebtSum: (json['total_debt_sum'] as num?)?.toDouble() ?? 0.0,
+      totalCount: json['total'] as int? ??
+          (json['total_count'] as num?)?.toInt() ??
+          0,
+      paidCount: json['zero_debt'] as int? ??
+          (json['paid_count'] as num?)?.toInt() ??
+          0,
+      partialCount: json['with_debt'] as int? ??
+          (json['partial_count'] as num?)?.toInt() ??
+          0,
+      deferredCount: json['credit_balance'] as int? ??
+          (json['deferred_count'] as num?)?.toInt() ??
+          0,
+      totalDebtSum: (json['total_debt'] as num?)?.toDouble() ??
+          (json['total_debt_sum'] as num?)?.toDouble() ??
+          0.0,
     );
   }
 

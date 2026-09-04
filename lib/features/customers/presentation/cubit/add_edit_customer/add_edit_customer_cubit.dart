@@ -71,7 +71,7 @@ class AddEditCustomerCubit extends Cubit<AddEditCustomerState> {
       emit(
         state.copyWith(
           status: AddEditCustomerStatus.error,
-          failure: const ServerFailure(AppStrings.customerNameRequired),
+          failure: ServerFailure(AppStrings.customerNameRequired),
         ),
       );
       return false;
@@ -79,36 +79,33 @@ class AddEditCustomerCubit extends Cubit<AddEditCustomerState> {
 
     emit(state.copyWith(status: AddEditCustomerStatus.loading));
 
-    String? imageUrl;
-
-    final localPath = state.imageLocalPath;
-    if (localPath != null) {
-      emit(state.copyWith(isImageUploading: true));
-      final uploadResult = await _uploadImageUseCase(localPath);
-      final uploadError = uploadResult.fold(
-        (failure) {
-          emit(
-            state.copyWith(
-              status: AddEditCustomerStatus.error,
-              failure: failure,
-              isImageUploading: false,
-            ),
-          );
-          return failure;
-        },
-        (url) {
-          imageUrl = url;
-          return null;
-        },
-      );
-      if (uploadError != null) return false;
-    } else {
-      imageUrl = state.imageUploadUrl;
-    }
-
     final debt = double.tryParse(state.debtText) ?? 0;
 
     if (state.isEditMode && _updateCustomerUseCase != null) {
+      String? imageUrl = state.imageUploadUrl;
+      final localPath = state.imageLocalPath;
+      if (localPath != null) {
+        emit(state.copyWith(isImageUploading: true));
+        final uploadResult = await _uploadImageUseCase(localPath, _customerId!);
+        final uploadError = uploadResult.fold(
+          (failure) {
+            emit(
+              state.copyWith(
+                status: AddEditCustomerStatus.error,
+                failure: failure,
+                isImageUploading: false,
+              ),
+            );
+            return failure;
+          },
+          (url) {
+            imageUrl = url;
+            return null;
+          },
+        );
+        if (uploadError != null) return false;
+      }
+
       final result = await _updateCustomerUseCase(
         id: _customerId!,
         name: state.name,
@@ -126,10 +123,58 @@ class AddEditCustomerCubit extends Cubit<AddEditCustomerState> {
         phone: state.phone.isNotEmpty ? state.phone : null,
         address: state.address.isNotEmpty ? state.address : null,
         totalDebt: debt,
-        imageUrl: imageUrl,
         companyId: companyId,
       );
-      return _handleResult(result, AppStrings.customerAddSuccess);
+      return result.fold(
+        (failure) {
+          emit(
+            state.copyWith(
+              status: AddEditCustomerStatus.error,
+              failure: failure,
+            ),
+          );
+          return false;
+        },
+        (customer) async {
+          _customerId = customer.id;
+          final localPath = state.imageLocalPath;
+          if (localPath != null) {
+            emit(state.copyWith(isImageUploading: true));
+            final uploadResult = await _uploadImageUseCase(
+              localPath,
+              customer.id,
+            );
+            return uploadResult.fold(
+              (failure) {
+                emit(
+                  state.copyWith(
+                    status: AddEditCustomerStatus.error,
+                    failure: failure,
+                    isImageUploading: false,
+                  ),
+                );
+                return false;
+              },
+              (_) {
+                emit(
+                  state.copyWith(
+                    status: AddEditCustomerStatus.success,
+                    successMessage: AppStrings.customerAddSuccess,
+                  ),
+                );
+                return true;
+              },
+            );
+          }
+          emit(
+            state.copyWith(
+              status: AddEditCustomerStatus.success,
+              successMessage: AppStrings.customerAddSuccess,
+            ),
+          );
+          return true;
+        },
+      );
     }
   }
 

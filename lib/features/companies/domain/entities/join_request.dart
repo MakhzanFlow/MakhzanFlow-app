@@ -6,6 +6,8 @@ class JoinRequest {
   final String userEmail;
   final String status;
   final DateTime createdAt;
+  final String companyName;
+  final String companyLogo;
 
   const JoinRequest({
     required this.id,
@@ -15,5 +17,7 @@ class JoinRequest {
     required this.userEmail,
     required this.status,
     required this.createdAt,
+    this.companyName = '',
+    this.companyLogo = '',
   });
 }

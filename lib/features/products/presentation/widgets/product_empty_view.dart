@@ -1,39 +1,37 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_sizes.dart';
+import '../../../../core/theme/mf_tokens.dart';
 import '../../../../core/constants/app_strings.dart';
 
 class ProductEmptyView extends StatelessWidget {
-  final String message;
+  final String? message;
   final VoidCallback? onAction;
 
   const ProductEmptyView({
     super.key,
-    this.message = AppStrings.emptyProducts,
+    this.message,
     this.onAction,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textSecondary = isDark ? MFTokens.textSecondaryDark : MFTokens.textSecondaryLight;
+    final muted = isDark ? MFTokens.textMutedDark : MFTokens.textMutedLight;
+
     return Center(
       child: Padding(
-        padding: EdgeInsets.all(AppSizes.spacingLarge),
+        padding: const EdgeInsets.all(MFTokens.sp24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.inventory_2_outlined,
-              size: 64.w,
-              color: AppColors.grey,
-            ),
-            SizedBox(height: AppSizes.spacingMedium),
+            Icon(Icons.inventory_2_outlined, size: 64, color: muted),
+            const SizedBox(height: MFTokens.sp16),
             Text(
-              message,
+              message ?? AppStrings.emptyProducts,
               style: TextStyle(
                 fontFamily: 'Cairo',
-                fontSize: AppSizes.fontLarge,
-                color: AppColors.textSecondary,
+                fontSize: MFTokens.fontMD,
+                color: textSecondary,
               ),
               textAlign: TextAlign.center,
             ),

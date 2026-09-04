@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:makhzanflow/core/constants/app_colors.dart';
 import 'package:makhzanflow/core/constants/app_sizes.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
+import 'package:makhzanflow/core/constants/error_messages.dart';
 import 'package:makhzanflow/features/invoice/domain/entities/invoice.dart';
 import 'package:makhzanflow/features/invoice/domain/entities/invoice_status.dart';
 
@@ -29,6 +30,10 @@ class InvoiceDetailsPaymentStatus extends StatelessWidget {
         statusLabel = AppStrings.customerDeferredFilter;
         statusColor = AppColors.redDark;
         statusBg = AppColors.lightRed;
+      case InvoiceStatus.canceled:
+        statusLabel = ErrorMessages.invoiceCanceled;
+        statusColor = AppColors.textSecondary;
+        statusBg = AppColors.searchBg;
     }
 
     return Container(
