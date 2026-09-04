@@ -39,7 +39,10 @@ class _EditMemberPermissionsPageState
     setState(() => _isLoading = true);
 
     final cubit = context.read<CompanyMembersCubit>();
-    final existing = await cubit.getMemberPermissions(widget.member.id);
+    final existing = await cubit.getMemberPermissions(
+      widget.companyId,
+      widget.member.userId,
+    );
 
     final flat = <String, bool>{};
     for (final section in permissionSections.values) {
@@ -82,17 +85,17 @@ class _EditMemberPermissionsPageState
   }
 
   Future<void> _save() async {
+    if (!mounted) return;
     setState(() => _isSaving = true);
     final permissions = _buildPermissionsJson();
     await context.read<CompanyMembersCubit>().updateMemberPermissions(
           widget.companyId,
-          widget.member.id,
+          widget.member.userId,
           permissions,
         );
-    if (mounted) {
-      AppSnackbar.success(context, 'تم حفظ الصلاحيات بنجاح');
-      Navigator.pop(context);
-    }
+    if (!mounted) return;
+    AppSnackbar.success(context, AppStrings.permissionsSaved);
+    if (mounted) Navigator.pop(context);
   }
 
   @override
@@ -103,7 +106,8 @@ class _EditMemberPermissionsPageState
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.white,
         title: Text(
-          'صلاحيات ${widget.member.userName ?? AppStrings.unknownUser}',
+          AppStrings.permissionsTitle(
+              widget.member.userName ?? AppStrings.unknownUser),
         ),
         actions: [
           if (!_isLoading && !widget.member.isOwner)
@@ -143,7 +147,7 @@ class _EditMemberPermissionsPageState
             ),
             SizedBox(height: AppSizes.spacingMedium),
             Text(
-              'مالك - صلاحية كاملة',
+              AppStrings.ownerFullAccess,
               style: TextStyle(
                 fontSize: AppSizes.fontXLarge,
                 fontWeight: FontWeight.bold,

@@ -28,16 +28,21 @@ class MembersPage extends StatefulWidget {
 
 class _MembersPageState extends State<MembersPage>
     with CompanyAwareState<MembersPage> {
-  late final CompanyMembersCubit _cubit = sl<CompanyMembersCubit>();
+  late final CompanyMembersCubit _cubit;
   List<JoinRequest>? _joinRequests;
   bool _joinRequestActionInProgress = false;
   bool _joinRequestsExpanded = true;
+  bool _initialized = false;
 
   @override
-  void initState() {
-    super.initState();
-    _cubit.loadMembers(companyId);
-    _loadJoinRequests();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _cubit = context.read<CompanyMembersCubit>();
+      _cubit.loadMembers(companyId);
+      _loadJoinRequests();
+      _initialized = true;
+    }
   }
 
   @override
@@ -46,59 +51,71 @@ class _MembersPageState extends State<MembersPage>
     _loadJoinRequests();
   }
 
-  @override
-  void dispose() {
-    _cubit.close();
-    super.dispose();
-  }
-
   Future<void> _loadJoinRequests() async {
-    if (companyId.isEmpty) return;
+    if (!mounted || companyId.isEmpty) return;
     final useCase = sl<GetJoinRequestsUseCase>();
     final result = await useCase.call(companyId);
-    result.fold((_) {}, (requests) => setState(() => _joinRequests = requests));
+    if (!mounted) return;
+    result.fold(
+      (_) {},
+      (requests) => setState(() => _joinRequests = requests),
+    );
   }
 
   Future<void> _approveRequest(String requestId) async {
+    if (!mounted) return;
     setState(() => _joinRequestActionInProgress = true);
-    final result = await sl<ApproveJoinRequestUseCase>().call(requestId);
+    final result = await sl<ApproveJoinRequestUseCase>().call(
+      companyId,
+      requestId,
+    );
+    if (!mounted) return;
     result.fold(
       (_) => AppSnackbar.error(context, AppStrings.unexpectedError),
       (_) {
+        if (!mounted) return;
         AppSnackbar.success(context, AppStrings.requestApproved);
         _loadJoinRequests();
         _cubit.loadMembers(companyId);
       },
     );
-    setState(() => _joinRequestActionInProgress = false);
+    if (mounted) setState(() => _joinRequestActionInProgress = false);
   }
 
   Future<void> _rejectRequest(String requestId) async {
+    if (!mounted) return;
     setState(() => _joinRequestActionInProgress = true);
-    final result = await sl<RejectJoinRequestUseCase>().call(requestId);
+    final result = await sl<RejectJoinRequestUseCase>().call(
+      companyId,
+      requestId,
+    );
+    if (!mounted) return;
     result.fold(
       (_) => AppSnackbar.error(context, AppStrings.unexpectedError),
       (_) {
+        if (!mounted) return;
         AppSnackbar.success(context, AppStrings.requestRejected);
         _loadJoinRequests();
       },
     );
-    setState(() => _joinRequestActionInProgress = false);
+    if (mounted) setState(() => _joinRequestActionInProgress = false);
   }
 
   void _showShareCodeSheet() async {
     final settingsCubit = context.read<CompanySettingsCubit>();
-    final code = await settingsCubit.getJoinCode();
+    final code = await settingsCubit.getJoinCode(companyId);
     if (!mounted) return;
     if (code == null) {
-      AppSnackbar.error(context, 'فشل تحميل رمز الدعوة');
+      AppSnackbar.error(context, AppStrings.inviteCodeLoadFailed);
       return;
     }
 
     showModalBottomSheet(
       context: context,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.radiusXLarge)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppSizes.radiusXLarge),
+        ),
       ),
       builder: (_) => Padding(
         padding: EdgeInsets.all(AppSizes.spacingLarge),
@@ -106,7 +123,7 @@ class _MembersPageState extends State<MembersPage>
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'رمز الدعوة',
+              AppStrings.inviteCode,
               style: TextStyle(
                 fontSize: AppSizes.fontXLarge,
                 fontWeight: FontWeight.bold,
@@ -117,7 +134,7 @@ class _MembersPageState extends State<MembersPage>
             ShareCodeWidget(
               code: code,
               onCopy: () {
-                AppSnackbar.success(context, 'تم نسخ الرمز');
+                AppSnackbar.success(context, AppStrings.codeCopied);
                 Navigator.pop(context);
               },
               onRegenerate: () async {
@@ -136,8 +153,8 @@ class _MembersPageState extends State<MembersPage>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text('تغيير رمز الدعوة'),
-        content: Text('سيتم تعطيل الرمز الحالي وإنشاء رمز جديد. هل أنت متأكد؟'),
+        title: Text(AppStrings.changeInviteCode),
+        content: Text(AppStrings.changeInviteCodeConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -149,7 +166,7 @@ class _MembersPageState extends State<MembersPage>
               backgroundColor: AppColors.error,
               foregroundColor: AppColors.white,
             ),
-            child: Text('تأكيد'),
+            child: Text(AppStrings.confirm),
           ),
         ],
       ),
@@ -157,12 +174,12 @@ class _MembersPageState extends State<MembersPage>
 
     if (confirmed == true && mounted) {
       final settingsCubit = context.read<CompanySettingsCubit>();
-      final newCode = await settingsCubit.regenerateJoinCode();
+      final newCode = await settingsCubit.regenerateJoinCode(companyId);
       if (mounted) {
         if (newCode != null) {
-          AppSnackbar.success(context, 'تم تغيير رمز الدعوة');
+          AppSnackbar.success(context, AppStrings.inviteCodeChanged);
         } else {
-          AppSnackbar.error(context, 'فشل تغيير رمز الدعوة');
+          AppSnackbar.error(context, AppStrings.inviteCodeChangeFailed);
         }
       }
     }
@@ -201,7 +218,7 @@ class _MembersPageState extends State<MembersPage>
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text('رفض طلب الانضمام'),
+        title: Text(AppStrings.rejectJoinTitle),
         content: Text(AppStrings.rejectJoinConfirm),
         actions: [
           TextButton(
@@ -228,8 +245,10 @@ class _MembersPageState extends State<MembersPage>
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text('إلغاء تنشيط العضو'),
-        content: Text('سيتم تعطيل حساب ${member.userName ?? member.userId}. هل أنت متأكد؟'),
+        title: Text(AppStrings.deactivateMemberTitle),
+        content: Text(
+          AppStrings.deactivateConfirm(member.userName ?? member.userId),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -244,7 +263,7 @@ class _MembersPageState extends State<MembersPage>
               backgroundColor: AppColors.error,
               foregroundColor: AppColors.white,
             ),
-            child: Text('إلغاء التنشيط'),
+            child: Text(AppStrings.deactivateAction),
           ),
         ],
       ),
@@ -255,8 +274,10 @@ class _MembersPageState extends State<MembersPage>
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text('إعادة تنشيط العضو'),
-        content: Text('سيتم إعادة تفعيل حساب ${member.userName ?? member.userId}. هل أنت متأكد؟'),
+        title: Text(AppStrings.reactivateMemberTitle),
+        content: Text(
+          AppStrings.reactivateConfirm(member.userName ?? member.userId),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -271,7 +292,7 @@ class _MembersPageState extends State<MembersPage>
               backgroundColor: AppColors.trendUp,
               foregroundColor: AppColors.white,
             ),
-            child: Text('إعادة تنشيط'),
+            child: Text(AppStrings.reactivateAction),
           ),
         ],
       ),
@@ -297,7 +318,7 @@ class _MembersPageState extends State<MembersPage>
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              _cubit.removeMember(companyId, member.id);
+              _cubit.removeMember(companyId, member.userId);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
@@ -314,8 +335,10 @@ class _MembersPageState extends State<MembersPage>
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text('ترقية إلى مالك'),
-        content: Text('سيتم ترقية ${member.userName ?? member.userId} إلى مالك. هل أنت متأكد؟'),
+        title: Text(AppStrings.promoteToOwnerTitle),
+        content: Text(
+          AppStrings.promoteConfirm(member.userName ?? member.userId),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -324,13 +347,13 @@ class _MembersPageState extends State<MembersPage>
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              _cubit.promoteToOwner(companyId, member.id);
+              _cubit.promoteToOwner(companyId, member.userId);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.trendUp,
               foregroundColor: AppColors.white,
             ),
-            child: Text('ترقية'),
+            child: Text(AppStrings.promoteAction),
           ),
         ],
       ),
@@ -341,8 +364,10 @@ class _MembersPageState extends State<MembersPage>
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text('تنزيل إلى موظف'),
-        content: Text('سيتم تحويل ${member.userName ?? member.userId} من مالك إلى موظف. هل أنت متأكد؟'),
+        title: Text(AppStrings.demoteToMemberTitle),
+        content: Text(
+          AppStrings.demoteConfirm(member.userName ?? member.userId),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -351,13 +376,13 @@ class _MembersPageState extends State<MembersPage>
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              _cubit.demoteToMember(companyId, member.id, {});
+              _cubit.demoteToMember(companyId, member.userId, {});
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
               foregroundColor: AppColors.white,
             ),
-            child: Text('تنزيل'),
+            child: Text(AppStrings.demoteAction),
           ),
         ],
       ),
@@ -374,32 +399,29 @@ class _MembersPageState extends State<MembersPage>
         : null;
     final isOwner = currentMembership?.isOwner ?? false;
 
-    return BlocProvider.value(
-      value: _cubit,
-      child: BlocConsumer<CompanyMembersCubit, CompanyMembersState>(
-        listener: (context, state) {
-          if (state is CompanyMembersError) {
-            AppSnackbar.error(context, state.message);
-          }
-        },
-        builder: (context, state) {
-          return Scaffold(
-            backgroundColor: AppColors.appBackground,
-            appBar: AppBar(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.white,
-              title: Text('فريق العمل'),
-              actions: [
-                IconButton(
-                  icon: Icon(Icons.share),
-                  onPressed: _showShareCodeSheet,
-                ),
-              ],
-            ),
-            body: _buildBody(state, isOwner),
-          );
-        },
-      ),
+    return BlocConsumer<CompanyMembersCubit, CompanyMembersState>(
+      listener: (context, state) {
+        if (state is CompanyMembersError) {
+          AppSnackbar.error(context, state.message);
+        }
+      },
+      builder: (context, state) {
+        return Scaffold(
+          backgroundColor: AppColors.appBackground,
+          appBar: AppBar(
+            backgroundColor: AppColors.primary,
+            foregroundColor: AppColors.white,
+            title: Text(AppStrings.teamMembers),
+            actions: [
+              IconButton(
+                icon: Icon(Icons.share),
+                onPressed: _showShareCodeSheet,
+              ),
+            ],
+          ),
+          body: _buildBody(state, isOwner),
+        );
+      },
     );
   }
 
@@ -410,10 +432,10 @@ class _MembersPageState extends State<MembersPage>
 
     if (state is CompanyMembersLoaded) {
       final owners = state.members.where((m) => m.isOwner).toList();
-      final activeEmployees =
-          state.members.where((m) => !m.isOwner && m.isActive).toList();
-      final inactiveMembers =
-          state.members.where((m) => !m.isActive).toList();
+      final activeEmployees = state.members
+          .where((m) => !m.isOwner && m.isActive)
+          .toList();
+      final inactiveMembers = state.members.where((m) => !m.isActive).toList();
       final hasJoinRequests =
           _joinRequests != null && _joinRequests!.isNotEmpty;
 
@@ -452,14 +474,12 @@ class _MembersPageState extends State<MembersPage>
 
             // Owners
             if (owners.isNotEmpty) ...[
-              SectionHeader(title: 'المالكين'),
+              SectionHeader(title: AppStrings.ownersTitle),
               ...owners.map(
                 (m) => MemberCard(
                   member: m,
                   isLastOwner: owners.length == 1,
-                  onDemote: owners.length > 1
-                      ? () => _confirmDemote(m)
-                      : null,
+                  onDemote: owners.length > 1 ? () => _confirmDemote(m) : null,
                 ),
               ),
               SizedBox(height: AppSizes.spacingMedium),
@@ -467,7 +487,7 @@ class _MembersPageState extends State<MembersPage>
 
             // Active Employees
             if (activeEmployees.isNotEmpty) ...[
-              SectionHeader(title: 'الموظفين'),
+              SectionHeader(title: AppStrings.employeesTitle),
               ...activeEmployees.map(
                 (m) => MemberCard(
                   member: m,
@@ -495,7 +515,7 @@ class _MembersPageState extends State<MembersPage>
 
             // Inactive Members
             if (inactiveMembers.isNotEmpty) ...[
-              SectionHeader(title: 'الأعضاء غير النشطين'),
+              SectionHeader(title: AppStrings.inactiveMembersTitle),
               ...inactiveMembers.map(
                 (m) => MemberCard(
                   member: m,
@@ -540,10 +560,7 @@ class _MembersPageState extends State<MembersPage>
             ],
           ),
         ),
-        if (expanded) ...[
-          SizedBox(height: AppSizes.spacingSmall),
-          ...children,
-        ],
+        if (expanded) ...[SizedBox(height: AppSizes.spacingSmall), ...children],
       ],
     );
   }
@@ -641,9 +658,9 @@ class _MembersPageState extends State<MembersPage>
     final local = date.toLocal();
     final now = DateTime.now();
     final diff = now.difference(local);
-    if (diff.inMinutes < 60) return 'منذ ${diff.inMinutes} دقيقة';
-    if (diff.inHours < 24) return 'منذ ${diff.inHours} ساعة';
-    if (diff.inDays < 7) return 'منذ ${diff.inDays} يوم';
+    if (diff.inMinutes < 60) return 'منذ ${diff.inMinutes} ${AppStrings.activityMinutes}';
+    if (diff.inHours < 24) return 'منذ ${diff.inHours} ${AppStrings.activityHours}';
+    if (diff.inDays < 7) return 'منذ ${diff.inDays} ${AppStrings.activityDays}';
     return '${local.year}/${local.month}/${local.day}';
   }
 }
