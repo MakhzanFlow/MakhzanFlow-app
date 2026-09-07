@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../domain/usecases/get_customer_filter_counts_usecase.dart';
 import '../../../domain/usecases/get_customers_usecase.dart';
 import 'customers_state.dart';
 
@@ -9,12 +10,16 @@ const int _pageSize = 20;
 
 class CustomersCubit extends Cubit<CustomersState> {
   final GetCustomersUseCase _getCustomersUseCase;
+  final GetCustomerFilterCountsUseCase _getCustomerFilterCountsUseCase;
   Timer? _debounce;
   int _currentPage = 0;
 
-  CustomersCubit({required GetCustomersUseCase getCustomersUseCase})
-    : _getCustomersUseCase = getCustomersUseCase,
-      super(const CustomersState());
+  CustomersCubit({
+    required GetCustomersUseCase getCustomersUseCase,
+    required GetCustomerFilterCountsUseCase getCustomerFilterCountsUseCase,
+  }) : _getCustomersUseCase = getCustomersUseCase,
+       _getCustomerFilterCountsUseCase = getCustomerFilterCountsUseCase,
+       super(const CustomersState());
 
   Future<void> loadCustomers(String companyId) async {
     _currentPage = 0;
@@ -26,23 +31,35 @@ class CustomersCubit extends Cubit<CustomersState> {
       offset: 0,
       companyId: companyId,
     );
+    final countsResult = await _getCustomerFilterCountsUseCase(
+      query: state.query.isNotEmpty ? state.query : null,
+      companyId: companyId,
+    );
 
     customerResult.fold(
       (failure) {
         emit(state.copyWith(status: CustomersStatus.error, failure: failure));
       },
       (customersList) {
-        emit(
-          state.copyWith(
-            status: customersList.isEmpty
-                ? CustomersStatus.empty
-                : CustomersStatus.success,
-            customers: customersList,
-            totalCount: state.totalCount,
-            hasMore: customersList.length == _pageSize,
-            filterCounts: state.filterCounts,
-            totalDebtSum: state.totalDebtSum,
-          ),
+        countsResult.fold(
+          (failure) {
+            emit(
+              state.copyWith(status: CustomersStatus.error, failure: failure),
+            );
+          },
+          (filterCounts) {
+            emit(
+              state.copyWith(
+                status: customersList.isEmpty
+                    ? CustomersStatus.empty
+                    : CustomersStatus.success,
+                customers: customersList,
+                totalCount: filterCounts.totalCount,
+                filterCounts: filterCounts,
+                totalDebtSum: filterCounts.totalDebtSum,
+              ),
+            );
+          },
         );
       },
     );
@@ -73,10 +90,8 @@ class CustomersCubit extends Cubit<CustomersState> {
           state.copyWith(
             status: CustomersStatus.success,
             customers: allCustomers,
-            totalCount: state.filterCounts.totalCount,
             hasMore: newCustomers.length == _pageSize,
             isLoadingMore: false,
-            totalDebtSum: state.filterCounts.totalDebtSum,
           ),
         );
       },

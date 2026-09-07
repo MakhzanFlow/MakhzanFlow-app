@@ -73,6 +73,7 @@ import '../../features/customers/data/datasources/customer_remote_data_source_im
 import '../../features/customers/data/repositories/customer_repository_impl.dart';
 import '../../features/customers/domain/repositories/customer_repository.dart';
 import '../../features/customers/domain/usecases/get_customers_usecase.dart';
+import '../../features/customers/domain/usecases/get_customer_filter_counts_usecase.dart';
 import '../../features/customers/domain/usecases/create_customer_usecase.dart';
 import '../../features/customers/domain/usecases/upload_customer_image_usecase.dart';
 import '../../features/customers/domain/usecases/get_customer_usecase.dart';
@@ -257,6 +258,9 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
   sl.registerLazySingleton<GetCustomersUseCase>(
     () => GetCustomersUseCase(sl<CustomerRepository>()),
   );
+  sl.registerLazySingleton<GetCustomerFilterCountsUseCase>(
+    () => GetCustomerFilterCountsUseCase(sl<CustomerRepository>()),
+  );
   sl.registerLazySingleton<CreateCustomerUseCase>(
     () => CreateCustomerUseCase(sl<CustomerRepository>()),
   );
@@ -272,7 +276,10 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
 
   // Customers: Cubits
   sl.registerFactory<CustomersCubit>(
-    () => CustomersCubit(getCustomersUseCase: sl<GetCustomersUseCase>()),
+    () => CustomersCubit(
+      getCustomersUseCase: sl<GetCustomersUseCase>(),
+      getCustomerFilterCountsUseCase: sl<GetCustomerFilterCountsUseCase>(),
+    ),
   );
 
   sl.registerFactory<AddEditCustomerCubit>(
