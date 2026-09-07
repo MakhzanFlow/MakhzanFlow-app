@@ -5,6 +5,7 @@ import '../models/dashboard_stats_model.dart';
 import '../models/low_stock_product_dto.dart';
 import '../models/monthly_report_entry_dto.dart';
 import '../models/activity_entry_dto.dart';
+import '../models/weekly_sales_point_dto.dart';
 
 /// Contract for dashboard REST endpoints.
 /// Primary endpoint `GET /dashboard/stats` aggregates 7 previous queries.
@@ -14,6 +15,12 @@ abstract interface class DashboardRemoteDataSource {
   /// [companyId] is kept for backward-compat; tenant isolation is enforced
   /// via `x-company-id` header injected by [AuthInterceptor].
   Future<Either<Failure, DashboardStatsModel>> getDashboardStats(String companyId);
+
+  /// `GET /dashboard/sales?range=7d|30d|90d`
+  Future<Either<Failure, List<WeeklySalesPointDto>>> getSales({
+    required String companyId,
+    String range = '7d',
+  });
 
   /// `GET /dashboard/low-stock?page=&limit=&search=&sort=&order=`
   Future<Either<Failure, PaginatedResponse<LowStockProductDto>>> getLowStock({

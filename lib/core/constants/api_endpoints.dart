@@ -52,6 +52,7 @@ abstract class ApiEndpoints {
 
   static const dashboardBase = '/dashboard';
   static const dashboardStats = '$dashboardBase/stats';
+    static const dashboardSales = '$dashboardBase/sales';
   static const dashboardLowStock = '$dashboardBase/low-stock';
   static const dashboardMonthlyReport = '$dashboardBase/monthly-report';
   static const dashboardActivity = '$dashboardBase/activity';

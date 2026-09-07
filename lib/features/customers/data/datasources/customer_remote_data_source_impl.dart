@@ -25,6 +25,8 @@ class CustomerRemoteDataSourceImpl implements CustomerRemoteDataSource {
   Future<Either<Failure, List<CustomerModel>>> listCustomers({
     String? query,
     String? filter,
+    String? sort,
+    String? order,
     int? limit,
     int? offset,
     required String companyId,
@@ -35,6 +37,8 @@ class CustomerRemoteDataSourceImpl implements CustomerRemoteDataSource {
         queryParameters: {
           if (query != null && query.trim().isNotEmpty) 'search': query,
           if (filter != null && filter != 'all') 'debt_status': filter,
+          if (sort != null && sort.isNotEmpty) 'sort': sort,
+          if (order != null && order.isNotEmpty) 'order': order,
           'page': offset != null && limit != null && limit > 0
               ? (offset ~/ limit) + 1
               : 1,

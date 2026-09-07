@@ -17,6 +17,8 @@ class CustomerRepositoryImpl implements CustomerRepository {
   Future<Either<Failure, List<Customer>>> listCustomers({
     String? query,
     String? filter,
+    String? sort,
+    String? order,
     int? limit,
     int? offset,
     required String companyId,
@@ -24,6 +26,8 @@ class CustomerRepositoryImpl implements CustomerRepository {
     final result = await dataSource.listCustomers(
       query: query,
       filter: filter,
+      sort: sort,
+      order: order,
       limit: limit,
       offset: offset,
       companyId: companyId,

@@ -8,6 +8,8 @@ abstract class CustomerRepository {
   Future<Either<Failure, List<Customer>>> listCustomers({
     String? query,
     String? filter,
+    String? sort,
+    String? order,
     int? limit,
     int? offset,
     required String companyId,

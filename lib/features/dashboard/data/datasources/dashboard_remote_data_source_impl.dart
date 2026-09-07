@@ -9,6 +9,7 @@ import '../models/activity_entry_dto.dart';
 import '../models/dashboard_stats_model.dart';
 import '../models/low_stock_product_dto.dart';
 import '../models/monthly_report_entry_dto.dart';
+import '../models/weekly_sales_point_dto.dart';
 import 'dashboard_remote_data_source.dart';
 
 class DashboardRemoteDataSourceImpl implements DashboardRemoteDataSource {
@@ -24,6 +25,32 @@ class DashboardRemoteDataSourceImpl implements DashboardRemoteDataSource {
       final response = await _apiClient.dio.get(ApiEndpoints.dashboardStats);
       final data = _dataOrThrow(response);
       return Right(DashboardStatsModel.fromJson(data));
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (_) {
+      return Left(ServerFailure(ErrorMessages.unexpectedError));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<WeeklySalesPointDto>>> getSales({
+    required String companyId,
+    String range = '7d',
+  }) async {
+    try {
+      final response = await _apiClient.dio.get(
+        ApiEndpoints.dashboardSales,
+        queryParameters: {'range': range},
+      );
+      final body = response.data as Map<String, dynamic>;
+      final data = body['data'];
+      if (data is! List) throw StateError(ErrorMessages.unexpectedError);
+      return Right(
+        data
+            .whereType<Map<String, dynamic>>()
+            .map(WeeklySalesPointDto.fromJson)
+            .toList(),
+      );
     } on DioException catch (e) {
       return Left(mapDioExceptionToFailure(e));
     } catch (_) {

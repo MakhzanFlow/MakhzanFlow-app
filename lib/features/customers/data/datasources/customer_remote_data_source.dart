@@ -10,6 +10,8 @@ abstract class CustomerRemoteDataSource {
   Future<Either<Failure, List<CustomerModel>>> listCustomers({
     String? query,
     String? filter,
+    String? sort,
+    String? order,
     int? limit,
     int? offset,
     required String companyId,
