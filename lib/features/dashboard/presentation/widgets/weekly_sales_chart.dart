@@ -38,9 +38,13 @@ class _WeeklySalesChartState extends State<WeeklySalesChart>
 
   @override
   Widget build(BuildContext context) {
-    if (widget.points.isEmpty) return const SizedBox.shrink();
+    if (widget.points.isEmpty) {
+      return const SizedBox.shrink();
+    }
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final maxY = widget.points.map((p) => p.amount).reduce((a, b) => a > b ? a : b);
+    final maxY = widget.points
+        .map((p) => p.amount)
+        .reduce((a, b) => a > b ? a : b);
     final effectiveMax = maxY <= 0 ? 1000.0 : maxY * 1.25;
 
     final primary = isDark ? MFTokens.primaryDarkMode : MFTokens.primary;
@@ -49,112 +53,177 @@ class _WeeklySalesChartState extends State<WeeklySalesChart>
     final cardBg = isDark ? MFTokens.cardDark : MFTokens.cardLight;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(MFTokens.sp8, MFTokens.sp16, MFTokens.sp8, MFTokens.sp8),
+      padding: const EdgeInsets.fromLTRB(
+        MFTokens.sp8,
+        MFTokens.sp16,
+        MFTokens.sp8,
+        MFTokens.sp8,
+      ),
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(MFTokens.radiusLG),
-        border: Border.all(color: isDark ? MFTokens.borderDark : MFTokens.borderLight),
+        border: Border.all(
+          color: isDark ? MFTokens.borderDark : MFTokens.borderLight,
+        ),
         boxShadow: MFTokens.shadowSM,
       ),
-      child: AnimatedBuilder(
-        animation: _anim,
-        builder: (_, __) => SizedBox(
-          height: 160,
-          child: BarChart(
-            BarChartData(
-              maxY: effectiveMax,
-              minY: 0,
-              barTouchData: BarTouchData(
-                touchTooltipData: BarTouchTooltipData(
-                  getTooltipColor: (_) => tooltipBg.withValues(alpha: 0.9),
-                  tooltipBorderRadius: BorderRadius.circular(MFTokens.radiusSM),
-                  getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                    final point = widget.points[group.x];
-                    final formatted = NumberFormat('#,##0', 'ar').format(point.amount);
-                    return BarTooltipItem(
-                      '$formatted ج.م',
-                      const TextStyle(
-                        fontFamily: 'Cairo',
-                        color: Colors.white,
-                        fontSize: MFTokens.fontSM,
-                        fontWeight: FontWeight.w700,
-                      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) => AnimatedBuilder(
+          animation: _anim,
+          builder: (_, _) => SizedBox(
+            height: constraints.maxWidth < 420 ? 180 : 220,
+            child: LineChart(
+              LineChartData(
+                minX: 0,
+                maxX: (widget.points.length - 1).toDouble(),
+                maxY: effectiveMax,
+                minY: 0,
+                lineTouchData: LineTouchData(
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipColor: (_) => tooltipBg.withValues(alpha: 0.9),
+                    tooltipBorderRadius: BorderRadius.circular(
+                      MFTokens.radiusSM,
+                    ),
+                    getTooltipItems: (spots) {
+                      return spots.map((spot) {
+                        final point = widget.points[spot.x.toInt()];
+                        final formatted = NumberFormat(
+                          '#,##0',
+                          'ar',
+                        ).format(point.amount);
+                        return LineTooltipItem(
+                          '$formatted ج.م',
+                          const TextStyle(
+                            fontFamily: 'Cairo',
+                            color: Colors.white,
+                            fontSize: MFTokens.fontSM,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        );
+                      }).toList();
+                    },
+                  ),
+                  touchCallback: (event, response) {
+                    final spots = response?.lineBarSpots;
+                    setState(
+                      () => _touchedIndex = spots == null || spots.isEmpty
+                          ? -1
+                          : spots.first.x.toInt(),
                     );
                   },
                 ),
-                touchCallback: (event, response) {
-                  setState(() => _touchedIndex = response?.spot?.touchedBarGroupIndex ?? -1);
-                },
-              ),
-              titlesData: FlTitlesData(
-                show: true,
-                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 28,
-                    getTitlesWidget: (value, meta) {
-                      final i = value.toInt();
-                      if (i < 0 || i >= widget.points.length) return const SizedBox.shrink();
-                      final isToday = i == widget.points.length - 1;
-                      return Padding(
-                        padding: const EdgeInsets.only(top: MFTokens.sp4),
-                        child: Text(
-                          widget.points[i].label,
-                          style: TextStyle(
-                            fontFamily: 'Cairo',
-                            fontSize: MFTokens.fontSM,
-                            fontWeight: isToday ? FontWeight.w700 : FontWeight.w400,
-                            color: isToday ? MFTokens.accent : MFTokens.textSecondaryLight,
+                titlesData: FlTitlesData(
+                  show: true,
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  leftTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 28,
+                      getTitlesWidget: (value, meta) {
+                        final i = value.toInt();
+                        if (i < 0 || i >= widget.points.length) {
+                          return const SizedBox.shrink();
+                        }
+                        final labelInterval = widget.points.length > 60
+                            ? 14
+                            : widget.points.length > 14
+                            ? 5
+                            : 1;
+                        if (i != widget.points.length - 1 &&
+                            i % labelInterval != 0) {
+                          return const SizedBox.shrink();
+                        }
+                        final isToday = i == widget.points.length - 1;
+                        final label = widget.points.length > 7
+                            ? DateFormat(
+                                'd/M',
+                                'ar',
+                              ).format(widget.points[i].date)
+                            : widget.points[i].label;
+                        return Padding(
+                          padding: const EdgeInsets.only(top: MFTokens.sp4),
+                          child: Text(
+                            label,
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: MFTokens.fontSM,
+                              fontWeight: isToday
+                                  ? FontWeight.w700
+                                  : FontWeight.w400,
+                              color: isToday
+                                  ? MFTokens.accent
+                                  : MFTokens.textSecondaryLight,
+                            ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
                 ),
-              ),
-              borderData: FlBorderData(show: false),
-              gridData: FlGridData(
-                show: true,
-                drawVerticalLine: false,
-                horizontalInterval: effectiveMax / 4,
-                getDrawingHorizontalLine: (_) => FlLine(
-                  color: mutedGrid.withValues(alpha: 0.5),
-                  strokeWidth: 0.8,
-                  dashArray: [4, 4],
+                borderData: FlBorderData(show: false),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: true,
+                  horizontalInterval: effectiveMax / 4,
+                  getDrawingHorizontalLine: (_) => FlLine(
+                    color: mutedGrid.withValues(alpha: 0.5),
+                    strokeWidth: 0.8,
+                    dashArray: [4, 4],
+                  ),
+                  getDrawingVerticalLine: (_) => FlLine(
+                    color: mutedGrid.withValues(alpha: 0.28),
+                    strokeWidth: 0.8,
+                  ),
                 ),
-              ),
-              barGroups: List.generate(widget.points.length, (i) {
-                final point = widget.points[i];
-                final isToday = i == widget.points.length - 1;
-                final isTouched = i == _touchedIndex;
-                return BarChartGroupData(
-                  x: i,
-                  barRods: [
-                    BarChartRodData(
-                      toY: (point.amount * _anim.value).clamp(0, effectiveMax),
-                      width: 18,
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(MFTokens.radiusSM)),
-                      gradient: LinearGradient(
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.topCenter,
-                        colors: isToday || isTouched
-                            ? [MFTokens.accent.withValues(alpha: 0.7), MFTokens.accent]
-                            : [primary.withValues(alpha: 0.4), primary.withValues(alpha: 0.85)],
-                      ),
-                      backDrawRodData: BackgroundBarChartRodData(
-                        show: true,
-                        toY: effectiveMax,
-                        color: (isDark ? MFTokens.backgroundDark : MFTokens.backgroundLight).withValues(alpha: 0.5),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: List.generate(
+                      widget.points.length,
+                      (i) => FlSpot(
+                        i.toDouble(),
+                        (widget.points[i].amount * _anim.value).clamp(
+                          0,
+                          effectiveMax,
+                        ),
                       ),
                     ),
-                  ],
-                );
-              }),
+                    isCurved: true,
+                    curveSmoothness: 0.28,
+                    color: primary,
+                    barWidth: 3,
+                    dotData: FlDotData(
+                      show: true,
+                      getDotPainter: (spot, percent, bar, index) =>
+                          FlDotCirclePainter(
+                            radius: index == _touchedIndex ? 5 : 0,
+                            color: MFTokens.accent,
+                            strokeWidth: 2,
+                            strokeColor: cardBg,
+                          ),
+                    ),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          primary.withValues(alpha: 0.24),
+                          primary.withValues(alpha: 0.02),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            duration: const Duration(milliseconds: 300),
           ),
         ),
       ),

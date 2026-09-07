@@ -104,8 +104,8 @@ class _AppShellState extends State<AppShell> {
                   if (isDashboard) {
                     return Scaffold(
                       backgroundColor: bg,
-                      appBar: _MFMobileAppBar(isDark: isDark),
-                      body: widget.navigationShell,
+                      // appBar: _MFMobileAppBar(isDark: isDark),
+                      body: SafeArea(child: widget.navigationShell),
                       bottomNavigationBar: MakhzanFlowBottomNav(
                         navigationShell: widget.navigationShell,
                       ),

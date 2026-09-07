@@ -22,6 +22,26 @@ void main() {
       expect(model.totalDebtSum, 12500.50);
     });
 
+    test('fromJson parses backend total_debt response field', () {
+      final model = CustomerFilterCountsModel.fromJson({
+        'total': 10,
+        'zero_debt': 4,
+        'with_debt': 6,
+        'credit_balance': 2,
+        'total_debt': 12500.50,
+      });
+
+      expect(model.totalDebtSum, 12500.50);
+    });
+
+    test('fromJson parses total_debt when backend returns a string', () {
+      final model = CustomerFilterCountsModel.fromJson({
+        'total_debt': '12500.50',
+      });
+
+      expect(model.totalDebtSum, 12500.50);
+    });
+
     test('toJson serializes fields correctly', () {
       const model = CustomerFilterCountsModel(
         totalCount: 5,

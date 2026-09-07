@@ -102,6 +102,7 @@ import '../../features/dashboard/data/datasources/dashboard_remote_data_source_i
 import '../../features/dashboard/data/repositories/dashboard_repository_impl.dart';
 import '../../features/dashboard/domain/repositories/dashboard_repository.dart';
 import '../../features/dashboard/domain/usecases/get_dashboard_stats_usecase.dart';
+import '../../features/dashboard/domain/usecases/get_dashboard_sales_usecase.dart';
 import '../../features/dashboard/presentation/cubit/dashboard_cubit.dart';
 
 final sl = GetIt.instance;
@@ -513,11 +514,15 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
   sl.registerLazySingleton<GetDashboardStatsUseCase>(
     () => GetDashboardStatsUseCase(sl<DashboardRepository>()),
   );
+  sl.registerLazySingleton<GetDashboardSalesUseCase>(
+    () => GetDashboardSalesUseCase(sl<DashboardRepository>()),
+  );
 
   // Dashboard: Cubits
   sl.registerFactory<DashboardCubit>(
     () => DashboardCubit(
       getDashboardStatsUseCase: sl<GetDashboardStatsUseCase>(),
+      getDashboardSalesUseCase: sl<GetDashboardSalesUseCase>(),
     ),
   );
 }

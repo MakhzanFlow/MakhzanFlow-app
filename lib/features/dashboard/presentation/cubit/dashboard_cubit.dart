@@ -1,16 +1,22 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:makhzanflow/features/dashboard/domain/usecases/get_dashboard_stats_usecase.dart';
+import 'package:makhzanflow/features/dashboard/domain/usecases/get_dashboard_sales_usecase.dart';
 import 'dashboard_state.dart';
 
 class DashboardCubit extends Cubit<DashboardState> {
-  DashboardCubit({required GetDashboardStatsUseCase getDashboardStatsUseCase})
-    : _getDashboardStatsUseCase = getDashboardStatsUseCase,
-      super(const DashboardInitial());
+  DashboardCubit({
+    required GetDashboardStatsUseCase getDashboardStatsUseCase,
+    required GetDashboardSalesUseCase getDashboardSalesUseCase,
+  }) : _getDashboardStatsUseCase = getDashboardStatsUseCase,
+       _getDashboardSalesUseCase = getDashboardSalesUseCase,
+       super(const DashboardInitial());
 
   final GetDashboardStatsUseCase _getDashboardStatsUseCase;
+  final GetDashboardSalesUseCase _getDashboardSalesUseCase;
 
   String? _companyId;
   int _fetchSeq = 0;
+  int _salesFetchSeq = 0;
 
   /// Fetches all dashboard data from scratch — shows full loading shimmer.
   Future<void> loadDashboard(String companyId) async {
@@ -28,13 +34,45 @@ class DashboardCubit extends Cubit<DashboardState> {
     await _fetch(_companyId!);
   }
 
+  Future<void> loadSales(String range) async {
+    final current = state;
+    if (current is! DashboardLoaded || _companyId == null) return;
+    if (current.salesRange == range && current.salesPoints != null) return;
+
+    final seq = ++_salesFetchSeq;
+    emit(current.copyWith(salesRange: range, isSalesLoading: true));
+    final result = await _getDashboardSalesUseCase(
+      companyId: _companyId!,
+      range: range,
+    );
+    if (seq != _salesFetchSeq) return;
+    if (result.isLeft()) {
+      if (state is DashboardLoaded) {
+        emit((state as DashboardLoaded).copyWith(isSalesLoading: false));
+      }
+      return;
+    }
+    result.fold((_) {}, (points) {
+      if (state is DashboardLoaded) {
+        emit(
+          (state as DashboardLoaded).copyWith(
+            salesPoints: points,
+            salesRange: range,
+            isSalesLoading: false,
+          ),
+        );
+      }
+    });
+  }
+
   Future<void> _fetch(String companyId) async {
     final seq = ++_fetchSeq;
     final result = await _getDashboardStatsUseCase(companyId);
     if (seq != _fetchSeq) return;
     result.fold(
       (failure) => emit(DashboardError(message: failure.message)),
-      (stats) => emit(DashboardLoaded(stats: stats)),
+      (stats) =>
+          emit(DashboardLoaded(stats: stats, salesPoints: stats.weeklySales)),
     );
   }
 }

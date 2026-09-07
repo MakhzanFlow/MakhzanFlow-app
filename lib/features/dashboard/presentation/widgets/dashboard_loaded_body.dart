@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:forui/forui.dart';
-import 'package:forui_hooks/forui_hooks.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import 'package:makhzanflow/core/theme/app_locale_cubit.dart';
 import 'package:makhzanflow/core/theme/mf_tokens.dart';
 import 'package:makhzanflow/features/companies/domain/entities/company.dart';
 import 'package:makhzanflow/features/dashboard/domain/entities/dashboard_stats.dart';
+import 'package:makhzanflow/features/dashboard/domain/entities/weekly_sales_point.dart';
 import 'weekly_sales_chart.dart';
 
 /// Redesigned dashboard body using ForUI cards + design tokens.
@@ -27,25 +27,35 @@ class DashboardLoadedBody extends HookWidget {
     required this.userName,
     required this.company,
     required this.stats,
+    this.salesPoints,
     required this.isRefreshing,
+    this.isSalesLoading = false,
     required this.onRefresh,
+    this.onSalesRangeChanged,
   });
 
   final String userName;
   final Company? company;
   final DashboardStats stats;
+  final List<WeeklySalesPoint>? salesPoints;
   final bool isRefreshing;
+  final bool isSalesLoading;
   final VoidCallback onRefresh;
+  final ValueChanged<String>? onSalesRangeChanged;
 
   @override
   Widget build(BuildContext context) {
     // forui_hooks / flutter_hooks — minimal state for chart period tabs
-    final chartTabIndex = useState(0); // 0=today, 1=week, 2=month
+    final chartTabIndex = useState(2); // 0=90d, 1=30d, 2=7d
     final isArabic = context.watch<AppLocaleCubit>().state.isArabic;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDark ? MFTokens.cardDark : MFTokens.cardLight;
-    final textPrimary = isDark ? MFTokens.textPrimaryDark : MFTokens.textPrimaryLight;
-    final textSecondary = isDark ? MFTokens.textSecondaryDark : MFTokens.textSecondaryLight;
+    final textPrimary = isDark
+        ? MFTokens.textPrimaryDark
+        : MFTokens.textPrimaryLight;
+    final textSecondary = isDark
+        ? MFTokens.textSecondaryDark
+        : MFTokens.textSecondaryLight;
     final border = isDark ? MFTokens.borderDark : MFTokens.borderLight;
 
     final greeting = _getGreeting(isArabic);
@@ -60,7 +70,9 @@ class DashboardLoadedBody extends HookWidget {
           if (isRefreshing)
             LinearProgressIndicator(
               minHeight: 2,
-              backgroundColor: isDark ? MFTokens.successBgDark : MFTokens.successBg,
+              backgroundColor: isDark
+                  ? MFTokens.successBgDark
+                  : MFTokens.successBg,
               valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
             ),
 
@@ -80,7 +92,9 @@ class DashboardLoadedBody extends HookWidget {
 
           // ② Metrics grid
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: MFTokens.contentPaddingMobile),
+            padding: const EdgeInsets.symmetric(
+              horizontal: MFTokens.contentPaddingMobile,
+            ),
             child: _buildMetricsGrid(
               context,
               isArabic: isArabic,
@@ -96,7 +110,9 @@ class DashboardLoadedBody extends HookWidget {
 
           // ③ Sales chart — minimal FCard with hook-driven FTabs
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: MFTokens.contentPaddingMobile),
+            padding: const EdgeInsets.symmetric(
+              horizontal: MFTokens.contentPaddingMobile,
+            ),
             child: _buildChartCard(
               context,
               isArabic: isArabic,
@@ -106,6 +122,9 @@ class DashboardLoadedBody extends HookWidget {
               textSecondary: textSecondary,
               border: border,
               tabIndex: chartTabIndex,
+              salesPoints: salesPoints ?? stats.weeklySales,
+              isSalesLoading: isSalesLoading,
+              onSalesRangeChanged: onSalesRangeChanged,
             ),
           ),
 
@@ -113,7 +132,9 @@ class DashboardLoadedBody extends HookWidget {
 
           // ④ Recent invoices
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: MFTokens.contentPaddingMobile),
+            padding: const EdgeInsets.symmetric(
+              horizontal: MFTokens.contentPaddingMobile,
+            ),
             child: _buildRecentInvoicesCard(
               context,
               isArabic: isArabic,
@@ -142,7 +163,12 @@ class DashboardLoadedBody extends HookWidget {
   }) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(MFTokens.sp20, MFTokens.sp20, MFTokens.sp20, MFTokens.sp24),
+      padding: const EdgeInsets.fromLTRB(
+        MFTokens.sp20,
+        MFTokens.sp20,
+        MFTokens.sp20,
+        MFTokens.sp24,
+      ),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: const BorderRadius.only(
@@ -151,8 +177,9 @@ class DashboardLoadedBody extends HookWidget {
         ),
       ),
       child: Column(
-        crossAxisAlignment:
-            isArabic ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: isArabic
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
         children: [
           Text(
             '$greeting ${userName.isNotEmpty ? userName : (isArabic ? 'المستخدم' : 'User')} 👋',
@@ -162,7 +189,9 @@ class DashboardLoadedBody extends HookWidget {
               fontWeight: FontWeight.bold,
               fontFamily: 'Cairo',
             ),
-            textDirection: isArabic ? ui.TextDirection.rtl : ui.TextDirection.ltr,
+            textDirection: isArabic
+                ? ui.TextDirection.rtl
+                : ui.TextDirection.ltr,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             softWrap: true,
@@ -175,7 +204,9 @@ class DashboardLoadedBody extends HookWidget {
               fontSize: MFTokens.fontBase,
               fontFamily: 'Cairo',
             ),
-            textDirection: isArabic ? ui.TextDirection.rtl : ui.TextDirection.ltr,
+            textDirection: isArabic
+                ? ui.TextDirection.rtl
+                : ui.TextDirection.ltr,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -249,12 +280,14 @@ class DashboardLoadedBody extends HookWidget {
           // Reduced aspect to give extra vertical space and prevent 1.3px overflow (see _MetricCard)
           childAspectRatio: isWidePhone ? 1.45 : 1.30,
           children: metrics
-              .map((m) => _MetricCard(
-                    data: m,
-                    cardBg: cardBg,
-                    textSecondary: textSecondary,
-                    border: border,
-                  ))
+              .map(
+                (m) => _MetricCard(
+                  data: m,
+                  cardBg: cardBg,
+                  textSecondary: textSecondary,
+                  border: border,
+                ),
+              )
               .toList(),
         );
       },
@@ -271,15 +304,24 @@ class DashboardLoadedBody extends HookWidget {
     required Color textSecondary,
     required Color border,
     required ValueNotifier<int> tabIndex,
+    required List<WeeklySalesPoint> salesPoints,
+    required bool isSalesLoading,
+    ValueChanged<String>? onSalesRangeChanged,
   }) {
     final tabs = isArabic
-        ? ['اليوم', 'الأسبوع', 'الشهر']
-        : ['Today', 'Week', 'Month'];
+        ? ['آخر 3 أشهر', 'آخر 30 يوم', 'آخر 7 أيام']
+        : ['Last 3 months', 'Last 30 days', 'Last 7 days'];
+    const ranges = ['90d', '30d', '7d'];
 
     // Minimal FCard — ForUI provides consistent padding/border/shadow via theme/style
     return FCard(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(MFTokens.sp16, MFTokens.sp12, MFTokens.sp16, MFTokens.sp12),
+        padding: const EdgeInsets.fromLTRB(
+          MFTokens.sp16,
+          MFTokens.sp12,
+          MFTokens.sp16,
+          MFTokens.sp12,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -297,7 +339,9 @@ class DashboardLoadedBody extends HookWidget {
                 ),
                 Container(
                   decoration: BoxDecoration(
-                    color: isDark ? MFTokens.borderDark : MFTokens.surfaceMutedLight,
+                    color: isDark
+                        ? MFTokens.borderDark
+                        : MFTokens.surfaceMutedLight,
                     borderRadius: BorderRadius.circular(MFTokens.radiusSM),
                   ),
                   child: Row(
@@ -305,22 +349,36 @@ class DashboardLoadedBody extends HookWidget {
                     children: List.generate(tabs.length, (i) {
                       final isSelected = tabIndex.value == i;
                       return GestureDetector(
-                        onTap: () => tabIndex.value = i,
+                        onTap: () {
+                          tabIndex.value = i;
+                          onSalesRangeChanged?.call(ranges[i]);
+                        },
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(horizontal: MFTokens.sp10, vertical: MFTokens.sp6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: MFTokens.sp10,
+                            vertical: MFTokens.sp6,
+                          ),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? (isDark ? MFTokens.primaryDarkMode : MFTokens.primary)
+                                ? (isDark
+                                      ? MFTokens.primaryDarkMode
+                                      : MFTokens.primary)
                                 : Colors.transparent,
-                            borderRadius: BorderRadius.circular(MFTokens.radiusSM),
+                            borderRadius: BorderRadius.circular(
+                              MFTokens.radiusSM,
+                            ),
                           ),
                           child: Text(
                             tabs[i],
                             style: TextStyle(
-                              color: isSelected ? MFTokens.textInverseLight : textSecondary,
+                              color: isSelected
+                                  ? MFTokens.textInverseLight
+                                  : textSecondary,
                               fontSize: MFTokens.fontXS,
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                              fontWeight: isSelected
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
                               fontFamily: 'Cairo',
                             ),
                           ),
@@ -332,7 +390,22 @@ class DashboardLoadedBody extends HookWidget {
               ],
             ),
             const SizedBox(height: MFTokens.sp12),
-            WeeklySalesChart(points: stats.weeklySales),
+            Stack(
+              children: [
+                AnimatedOpacity(
+                  duration: const Duration(milliseconds: 150),
+                  opacity: isSalesLoading ? 0.45 : 1,
+                  child: WeeklySalesChart(points: salesPoints),
+                ),
+                if (isSalesLoading)
+                  const Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: LinearProgressIndicator(minHeight: 2),
+                  ),
+              ],
+            ),
           ],
         ),
       ),
@@ -355,7 +428,12 @@ class DashboardLoadedBody extends HookWidget {
     // ForUI FCard gives minimal border + consistent radius, no heavy shadow — clearer hierarchy
     return FCard(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(MFTokens.sp16, MFTokens.sp12, MFTokens.sp16, MFTokens.sp12),
+        padding: const EdgeInsets.fromLTRB(
+          MFTokens.sp16,
+          MFTokens.sp12,
+          MFTokens.sp16,
+          MFTokens.sp12,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -388,7 +466,8 @@ class DashboardLoadedBody extends HookWidget {
               ...activities.take(5).map((activity) {
                 final entityId = activity.entityId ?? '';
                 final name = activity.userName;
-                final amount = (activity.details?['amount'] as num?)?.toDouble() ?? 0.0;
+                final amount =
+                    (activity.details?['amount'] as num?)?.toDouble() ?? 0.0;
                 return _InvoiceRow(
                   invoiceNumber: '#$entityId',
                   customerName: name,
@@ -397,7 +476,9 @@ class DashboardLoadedBody extends HookWidget {
                   textPrimary: textPrimary,
                   textSecondary: textSecondary,
                   border: border,
-                  primaryColor: isDark ? MFTokens.primaryDarkMode : MFTokens.primary,
+                  primaryColor: isDark
+                      ? MFTokens.primaryDarkMode
+                      : MFTokens.primary,
                 );
               }),
             const SizedBox(height: MFTokens.sp8),
@@ -559,7 +640,10 @@ class _InvoiceRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: MFTokens.sp16, vertical: MFTokens.sp12),
+      padding: const EdgeInsets.symmetric(
+        horizontal: MFTokens.sp16,
+        vertical: MFTokens.sp12,
+      ),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: border, width: 0.5)),
       ),
@@ -568,7 +652,10 @@ class _InvoiceRow extends StatelessWidget {
           Flexible(
             flex: 0,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: MFTokens.sp8, vertical: MFTokens.sp4),
+              padding: const EdgeInsets.symmetric(
+                horizontal: MFTokens.sp8,
+                vertical: MFTokens.sp4,
+              ),
               decoration: BoxDecoration(
                 color: primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(MFTokens.radiusXS),

@@ -102,7 +102,7 @@ class _CustomersScreenState extends State<CustomersScreen>
                   builder: (context, state) {
                     return CustomerListHeader(
                       totalCount: state.filterCounts.totalCount,
-                      totalDebt: state.totalDebtSum,
+                      totalDebt: state.filterCounts.totalDebtSum,
                     );
                   },
                 ),

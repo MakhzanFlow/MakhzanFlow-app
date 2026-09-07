@@ -1,8 +1,10 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:makhzanflow/core/error/failures.dart';
 import 'package:makhzanflow/features/dashboard/domain/entities/dashboard_stats.dart';
+import 'package:makhzanflow/features/dashboard/domain/entities/weekly_sales_point.dart';
 import 'package:makhzanflow/features/dashboard/domain/repositories/dashboard_repository.dart';
 import '../datasources/dashboard_remote_data_source.dart';
+import '../models/weekly_sales_point_model.dart';
 
 class DashboardRepositoryImpl implements DashboardRepository {
   const DashboardRepositoryImpl(this._dataSource);
@@ -11,11 +13,34 @@ class DashboardRepositoryImpl implements DashboardRepository {
 
   @override
   Future<Either<Failure, DashboardStats>> getDashboardStats(
-      String companyId) async {
+    String companyId,
+  ) async {
     final result = await _dataSource.getDashboardStats(companyId);
+    return result.fold((failure) => Left(failure), (model) => Right(model));
+  }
+
+  @override
+  Future<Either<Failure, List<WeeklySalesPoint>>> getSales({
+    required String companyId,
+    required String range,
+  }) async {
+    final result = await _dataSource.getSales(
+      companyId: companyId,
+      range: range,
+    );
     return result.fold(
       (failure) => Left(failure),
-      (model) => Right(model),
+      (points) => Right(
+        points
+            .map(
+              (point) => WeeklySalesPointModel(
+                label: point.label,
+                amount: point.amount,
+                date: DateTime.tryParse(point.date) ?? DateTime.now(),
+              ),
+            )
+            .toList(),
+      ),
     );
   }
 }

@@ -97,13 +97,22 @@ class _DashboardViewState extends State<DashboardView>
               message: message,
               onRetry: _triggerLoad,
             ),
-            DashboardLoaded(:final stats, :final isRefreshing) =>
+            DashboardLoaded(
+              :final stats,
+              :final salesPoints,
+              :final isRefreshing,
+              :final isSalesLoading,
+            ) =>
               DashboardLoadedBody(
                 userName: _userName,
                 company: _company,
                 stats: stats,
+                salesPoints: salesPoints ?? stats.weeklySales,
                 isRefreshing: isRefreshing,
+                isSalesLoading: isSalesLoading,
                 onRefresh: () => context.read<DashboardCubit>().refresh(),
+                onSalesRangeChanged: (range) =>
+                    context.read<DashboardCubit>().loadSales(range),
               ),
           };
         },
