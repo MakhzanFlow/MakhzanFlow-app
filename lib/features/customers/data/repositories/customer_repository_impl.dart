@@ -114,16 +114,16 @@ class CustomerRepositoryImpl implements CustomerRepository {
   // ──────── Phase 12: Summary, Debt ────────
 
   @override
-  Future<Either<Failure, CustomerSummary>> getSummary(
-    String companyId,
-  ) async {
+  Future<Either<Failure, CustomerSummary>> getSummary(String companyId) async {
     final result = await dataSource.getSummary(companyId);
-    return result.map((dto) => CustomerSummary(
-      total: dto.total,
-      withDebt: dto.withDebt,
-      zeroDebt: dto.zeroDebt,
-      creditBalance: dto.creditBalance,
-    ));
+    return result.map(
+      (dto) => CustomerSummary(
+        total: dto.total,
+        withDebt: dto.withDebt,
+        zeroDebt: dto.zeroDebt,
+        creditBalance: dto.creditBalance,
+      ),
+    );
   }
 
   @override

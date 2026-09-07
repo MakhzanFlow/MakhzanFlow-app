@@ -20,10 +20,7 @@ abstract class CustomerRepository {
     required String companyId,
   });
 
-  Future<Either<Failure, Customer>> getCustomer(
-    String id,
-    String companyId,
-  );
+  Future<Either<Failure, Customer>> getCustomer(String id, String companyId);
 
   Future<Either<Failure, Customer>> createCustomer({
     required String name,
@@ -50,9 +47,7 @@ abstract class CustomerRepository {
     String customerId,
   );
 
-  Future<Either<Failure, CustomerSummary>> getSummary(
-    String companyId,
-  );
+  Future<Either<Failure, CustomerSummary>> getSummary(String companyId);
 
   Future<Either<Failure, List<Customer>>> getDebtors(
     String companyId, {

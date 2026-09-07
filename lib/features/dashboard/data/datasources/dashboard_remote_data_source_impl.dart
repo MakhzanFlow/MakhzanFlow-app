@@ -15,10 +15,13 @@ import 'dashboard_remote_data_source.dart';
 class DashboardRemoteDataSourceImpl implements DashboardRemoteDataSource {
   final ApiClient _apiClient;
 
-  DashboardRemoteDataSourceImpl({required ApiClient apiClient}) : _apiClient = apiClient;
+  DashboardRemoteDataSourceImpl({required ApiClient apiClient})
+    : _apiClient = apiClient;
 
   @override
-  Future<Either<Failure, DashboardStatsModel>> getDashboardStats(String companyId) async {
+  Future<Either<Failure, DashboardStatsModel>> getDashboardStats(
+    String companyId,
+  ) async {
     // companyId is tenant-scoped via x-company-id header; empty string is
     // allowed for backward compat callers. No assert needed.
     try {
@@ -109,7 +112,10 @@ class DashboardRemoteDataSourceImpl implements DashboardRemoteDataSource {
       final body = response.data as Map<String, dynamic>;
       final raw = body['data'];
       if (raw is List) {
-        final list = raw.whereType<Map<String, dynamic>>().map(MonthlyReportEntryDto.fromJson).toList();
+        final list = raw
+            .whereType<Map<String, dynamic>>()
+            .map(MonthlyReportEntryDto.fromJson)
+            .toList();
         return Right(list);
       }
       // Fallback: _dataList style
@@ -161,7 +167,8 @@ class DashboardRemoteDataSourceImpl implements DashboardRemoteDataSource {
       final data = body['data'];
       if (data is Map<String, dynamic>) return data;
       // Some endpoints may return the object directly (no wrapper)
-      if (body.containsKey('productsCount') || body.containsKey('products_count')) {
+      if (body.containsKey('productsCount') ||
+          body.containsKey('products_count')) {
         return body;
       }
     }

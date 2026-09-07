@@ -14,7 +14,9 @@ abstract interface class DashboardRemoteDataSource {
   /// Primary KPI endpoint — single `GET /dashboard/stats` call.
   /// [companyId] is kept for backward-compat; tenant isolation is enforced
   /// via `x-company-id` header injected by [AuthInterceptor].
-  Future<Either<Failure, DashboardStatsModel>> getDashboardStats(String companyId);
+  Future<Either<Failure, DashboardStatsModel>> getDashboardStats(
+    String companyId,
+  );
 
   /// `GET /dashboard/sales?range=7d|30d|90d`
   Future<Either<Failure, List<WeeklySalesPointDto>>> getSales({

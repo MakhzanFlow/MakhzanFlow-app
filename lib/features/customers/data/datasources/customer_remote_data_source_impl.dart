@@ -17,7 +17,7 @@ class CustomerRemoteDataSourceImpl implements CustomerRemoteDataSource {
   final ApiClient _apiClient;
 
   CustomerRemoteDataSourceImpl({required ApiClient apiClient})
-      : _apiClient = apiClient;
+    : _apiClient = apiClient;
 
   // ──────── Phase 11: CRUD & Search ────────
 
@@ -81,9 +81,7 @@ class CustomerRemoteDataSourceImpl implements CustomerRemoteDataSource {
     String companyId,
   ) async {
     try {
-      final response = await _apiClient.dio.get(
-        ApiEndpoints.customerById(id),
-      );
+      final response = await _apiClient.dio.get(ApiEndpoints.customerById(id));
       return Right(CustomerModel.fromJson(_dataOrThrow(response)));
     } on DioException catch (e) {
       return Left(mapDioExceptionToFailure(e));
@@ -138,7 +136,8 @@ class CustomerRemoteDataSourceImpl implements CustomerRemoteDataSource {
       final formData = FormData.fromMap({
         'image': await MultipartFile.fromFile(
           filePath,
-          filename: '${DateTime.now().millisecondsSinceEpoch}_'
+          filename:
+              '${DateTime.now().millisecondsSinceEpoch}_'
               '${filePath.split(Platform.pathSeparator).last}',
         ),
       });
@@ -166,12 +165,8 @@ class CustomerRemoteDataSourceImpl implements CustomerRemoteDataSource {
     String companyId,
   ) async {
     try {
-      final response = await _apiClient.dio.get(
-        ApiEndpoints.customersSummary,
-      );
-      return Right(
-        CustomerSummaryResponseDto.fromJson(_dataOrThrow(response)),
-      );
+      final response = await _apiClient.dio.get(ApiEndpoints.customersSummary);
+      return Right(CustomerSummaryResponseDto.fromJson(_dataOrThrow(response)));
     } on DioException catch (e) {
       return Left(mapDioExceptionToFailure(e));
     } catch (e) {

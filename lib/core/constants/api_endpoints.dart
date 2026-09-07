@@ -23,8 +23,11 @@ abstract class ApiEndpoints {
   static const companiesMyJoinRequests = '$companiesBase/my-join-requests';
   static String companyJoinRequests(String id) =>
       '$companiesBase/$id/join-requests';
-  static String companyJoinRequestAction(String id, String reqId, String action) =>
-      '$companiesBase/$id/join-requests/$reqId/$action';
+  static String companyJoinRequestAction(
+    String id,
+    String reqId,
+    String action,
+  ) => '$companiesBase/$id/join-requests/$reqId/$action';
   static String companyInviteCodeRegenerate(String id) =>
       '$companiesBase/$id/invite-code/regenerate';
 
@@ -52,7 +55,7 @@ abstract class ApiEndpoints {
 
   static const dashboardBase = '/dashboard';
   static const dashboardStats = '$dashboardBase/stats';
-    static const dashboardSales = '$dashboardBase/sales';
+  static const dashboardSales = '$dashboardBase/sales';
   static const dashboardLowStock = '$dashboardBase/low-stock';
   static const dashboardMonthlyReport = '$dashboardBase/monthly-report';
   static const dashboardActivity = '$dashboardBase/activity';
