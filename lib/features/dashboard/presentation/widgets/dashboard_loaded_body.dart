@@ -177,7 +177,7 @@ class DashboardLoadedBody extends HookWidget {
         ),
       ),
       child: Column(
-        crossAxisAlignment: isArabic
+        crossAxisAlignment: !isArabic
             ? CrossAxisAlignment.end
             : CrossAxisAlignment.start,
         children: [
