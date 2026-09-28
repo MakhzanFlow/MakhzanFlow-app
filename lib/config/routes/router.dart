@@ -46,6 +46,8 @@ import '../../features/customers/presentation/pages/add_edit_customer_screen.dar
 import '../../features/customers/presentation/pages/customer_details_screen.dart';
 import '../../features/customers/presentation/pages/customer_invoices_screen.dart';
 import '../../features/invoice/presentation/cubit/invoices/invoices_cubit.dart';
+import '../../features/payments/presentation/cubit/payments_cubit.dart';
+import '../../features/payments/presentation/pages/payments_screen.dart';
 import '../../features/invoice/presentation/pages/invoices_screen.dart';
 import '../../features/invoice/presentation/pages/create_invoice_screen.dart';
 import '../../features/invoice/presentation/pages/add_payment_screen.dart';
@@ -82,6 +84,7 @@ final List<String> _protectedRoutes = [
   AppRoutes.customerEdit,
   AppRoutes.invoiceCreate,
   AppRoutes.invoiceDetails,
+  AppRoutes.payments,
   AppRoutes.customerAddPayment,
   AppRoutes.customerInvoices,
   AppRoutes.companySettings,
@@ -271,7 +274,14 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: AppRoutes.companySelect,
       parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) => const CompanySelectionScreen(),
+      builder: (context, state) {
+        final extra = state.extra;
+        final args = extra is Map<String, dynamic> ? extra : null;
+        return CompanySelectionScreen(
+          archivedCompanyId: args?['archivedCompanyId'] as String?,
+          archivedCompanyName: args?['archivedCompanyName'] as String?,
+        );
+      },
     ),
     GoRoute(
       path: AppRoutes.companyCreate,
@@ -311,6 +321,17 @@ final GoRouter appRouter = GoRouter(
           ),
         );
       },
+    ),
+    GoRoute(
+      path: AppRoutes.payments,
+      parentNavigatorKey: _rootNavigatorKey,
+      pageBuilder: (context, state) => _buildFullScreenPage(
+        state,
+        BlocProvider(
+          create: (_) => sl<PaymentsCubit>(),
+          child: const PaymentsScreen(),
+        ),
+      ),
     ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) =>

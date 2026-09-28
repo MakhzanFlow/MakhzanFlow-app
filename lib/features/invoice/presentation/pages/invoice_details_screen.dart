@@ -8,6 +8,8 @@ import 'package:makhzanflow/core/constants/app_sizes.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
 import 'package:makhzanflow/core/permissions/permission_gate.dart';
 import 'package:makhzanflow/core/permissions/permission_constants.dart';
+import 'package:makhzanflow/core/activity/activity_log_entry.dart';
+import 'package:makhzanflow/shared/widgets/activity_section.dart';
 import 'package:makhzanflow/core/widgets/app_snackbar.dart';
 import 'package:makhzanflow/features/invoice/domain/entities/invoice.dart';
 import 'package:makhzanflow/features/invoice/domain/entities/invoice_status.dart';
@@ -207,6 +209,12 @@ class _InvoiceDetailContent extends StatelessWidget {
             SizedBox(height: AppSizes.spacingMedium),
             InvoiceDetailsPaymentHistory(invoice: invoice),
           ],
+          SizedBox(height: AppSizes.spacingMedium),
+          ActivitySection(
+            entity: ActivityLogEntity.invoice,
+            entityId: invoice.id,
+            readPermission: PermissionKeys.invoicesView,
+          ),
           if (invoice.remainingAmount > 0 && !isCanceled) ...[
             SizedBox(height: AppSizes.spacingLarge),
             const InvoiceDetailsReminderFooter(),
@@ -243,7 +251,8 @@ class _InvoiceDetailContent extends StatelessWidget {
           // Destructive cancel button — good UI: full-width outlined red, hidden when canceled or no permission
           if (canCancel)
             PermissionGate(
-              permission: PermissionKeys.invoicesCancel,
+              // Backend §3: cancel is gated by `invoices.delete`.
+              permission: PermissionKeys.invoicesDelete,
               child: SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:makhzanflow/core/company/company_aware_state.dart';
+import 'package:makhzanflow/core/activity/activity_log_entry.dart';
 import '../../../../core/theme/mf_tokens.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/permissions/permission_constants.dart';
@@ -13,6 +14,7 @@ import '../widgets/product_delete_dialog.dart';
 import '../widgets/product_details_sections.dart';
 import '../widgets/product_error_view.dart';
 import '../widgets/product_loading_view.dart';
+import '../../../../shared/widgets/activity_section.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   final String productId;
@@ -98,6 +100,12 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                         ),
                       ),
                       InventoryMovementList(movements: state.recentMovements),
+                      const SizedBox(height: MFTokens.sp24),
+                      ActivitySection(
+                        entity: ActivityLogEntity.product,
+                        entityId: product.id,
+                        readPermission: PermissionKeys.productsView,
+                      ),
                     ],
                   ),
                 ),

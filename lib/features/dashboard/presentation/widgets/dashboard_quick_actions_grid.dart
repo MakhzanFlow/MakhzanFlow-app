@@ -55,6 +55,13 @@ class DashboardQuickActionsGrid extends StatelessWidget {
       onTap: () => ctx.go(AppRoutes.customers),
     ),
     QuickAction(
+      label: AppStrings.dashboardQuickPayment,
+      icon: Icons.payments_outlined,
+      iconBackground: AppColors.lightGreen,
+      iconColor: AppColors.primary,
+      onTap: () => ctx.push(AppRoutes.payments),
+    ),
+    QuickAction(
       label: AppStrings.dashboardQuickReport,
       icon: Icons.bar_chart_outlined,
       iconBackground: AppColors.lightGreen,

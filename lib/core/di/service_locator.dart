@@ -2,6 +2,7 @@ import 'package:get_it/get_it.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:makhzanflow/core/theme/app_locale_cubit.dart';
+import 'package:makhzanflow/core/activity/activity_log_data_source.dart';
 import 'package:makhzanflow/core/api/api_client.dart';
 import 'package:makhzanflow/core/storage/file_upload_service.dart';
 import 'package:makhzanflow/core/storage/token_storage.dart';
@@ -37,6 +38,7 @@ import 'package:makhzanflow/features/companies/domain/usecases/demote_owner_to_m
 import 'package:makhzanflow/features/companies/domain/usecases/get_member_permissions_usecase.dart';
 import 'package:makhzanflow/features/companies/domain/usecases/leave_company_usecase.dart';
 import 'package:makhzanflow/features/companies/domain/usecases/delete_company_usecase.dart';
+import 'package:makhzanflow/features/companies/domain/usecases/restore_company_usecase.dart';
 import 'package:makhzanflow/features/companies/presentation/cubit/join_company_cubit.dart';
 import 'package:makhzanflow/features/companies/presentation/cubit/company_members_cubit.dart';
 import 'package:makhzanflow/features/companies/presentation/cubit/company_settings_cubit.dart';
@@ -50,6 +52,7 @@ import '../../features/auth/domain/usecases/sign_in_usecase.dart';
 import '../../features/auth/domain/usecases/sign_in_with_google_usecase.dart';
 import '../../features/auth/domain/usecases/sign_up_usecase.dart';
 import '../../features/auth/domain/usecases/sign_out_usecase.dart';
+import '../../features/auth/domain/usecases/sign_out_everywhere_usecase.dart';
 import '../../features/auth/domain/usecases/verify_email_usecase.dart';
 import '../../features/auth/domain/usecases/resend_verification_email_usecase.dart';
 import '../../features/auth/presentation/cubit/auth_cubit.dart';
@@ -104,6 +107,12 @@ import '../../features/dashboard/domain/repositories/dashboard_repository.dart';
 import '../../features/dashboard/domain/usecases/get_dashboard_stats_usecase.dart';
 import '../../features/dashboard/domain/usecases/get_dashboard_sales_usecase.dart';
 import '../../features/dashboard/presentation/cubit/dashboard_cubit.dart';
+import '../../features/payments/data/datasources/payment_remote_data_source.dart';
+import '../../features/payments/data/datasources/payment_remote_data_source_impl.dart';
+import '../../features/payments/data/repositories/payment_repository_impl.dart';
+import '../../features/payments/domain/repositories/payment_repository.dart';
+import '../../features/payments/domain/usecases/get_payments_usecase.dart';
+import '../../features/payments/presentation/cubit/payments_cubit.dart';
 
 final sl = GetIt.instance;
 
@@ -158,6 +167,9 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
   sl.registerLazySingleton<SignOutUseCase>(
     () => SignOutUseCase(sl<AuthRepository>()),
   );
+  sl.registerLazySingleton<SignOutEverywhereUseCase>(
+    () => SignOutEverywhereUseCase(sl<AuthRepository>()),
+  );
   sl.registerLazySingleton<VerifyEmailUseCase>(
     () => VerifyEmailUseCase(sl<AuthRepository>()),
   );
@@ -178,6 +190,7 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
       signInWithGoogleUseCase: sl<SignInWithGoogleUseCase>(),
       signUpUseCase: sl<SignUpUseCase>(),
       signOutUseCase: sl<SignOutUseCase>(),
+      signOutEverywhereUseCase: sl<SignOutEverywhereUseCase>(),
       getCurrentUserUseCase: sl<GetCurrentUserUseCase>(),
       authStateChangesUseCase: sl<AuthStateChangesUseCase>(),
       verifyEmailUseCase: sl<VerifyEmailUseCase>(),
@@ -450,6 +463,9 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
   sl.registerLazySingleton<DeleteCompanyUseCase>(
     () => DeleteCompanyUseCase(sl<CompanyRepository>()),
   );
+  sl.registerLazySingleton<RestoreCompanyUseCase>(
+    () => RestoreCompanyUseCase(sl<CompanyRepository>()),
+  );
 
   // Join Company Cubit — must be a factory so each screen visit gets a fresh
   // instance; a singleton gets closed on screen dispose and crashes on re-entry.
@@ -485,12 +501,18 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
       regenerateCompanyJoinCodeUseCase: sl<RegenerateCompanyJoinCodeUseCase>(),
       leaveCompanyUseCase: sl<LeaveCompanyUseCase>(),
       deleteCompanyUseCase: sl<DeleteCompanyUseCase>(),
+      restoreCompanyUseCase: sl<RestoreCompanyUseCase>(),
       fileUploadService: sl<FileUploadService>(),
     ),
   );
 
   // Permission Service
   sl.registerLazySingleton<PermissionService>(() => PermissionServiceImpl());
+
+  // Activity audit trail (GET /api/activity-logs/:entity/:entityId)
+  sl.registerLazySingleton<ActivityLogDataSource>(
+    () => ActivityLogDataSource(apiClient: sl<ApiClient>()),
+  );
 
   // Company Cubit
   sl.registerLazySingleton<CompanyCubit>(
@@ -524,5 +546,19 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
       getDashboardStatsUseCase: sl<GetDashboardStatsUseCase>(),
       getDashboardSalesUseCase: sl<GetDashboardSalesUseCase>(),
     ),
+  );
+
+  // Payments: Data source → repository → use case → cubit
+  sl.registerLazySingleton<PaymentRemoteDataSource>(
+    () => PaymentRemoteDataSourceImpl(apiClient: sl<ApiClient>()),
+  );
+  sl.registerLazySingleton<PaymentRepository>(
+    () => PaymentRepositoryImpl(sl<PaymentRemoteDataSource>()),
+  );
+  sl.registerLazySingleton<GetPaymentsUseCase>(
+    () => GetPaymentsUseCase(sl<PaymentRepository>()),
+  );
+  sl.registerFactory<PaymentsCubit>(
+    () => PaymentsCubit(getPaymentsUseCase: sl<GetPaymentsUseCase>()),
   );
 }
