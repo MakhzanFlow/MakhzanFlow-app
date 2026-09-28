@@ -1,3 +1,4 @@
+import 'package:makhzanflow/core/permissions/permission_key_mapper.dart';
 import 'package:makhzanflow/core/permissions/permission_service.dart';
 
 class PermissionServiceImpl implements PermissionService {
@@ -22,6 +23,15 @@ class PermissionServiceImpl implements PermissionService {
     if (_isOwner) return true;
     if (_cachedPermissions == null) return false;
 
+    // Accept backend (`.read`) and legacy (`invoices.cancel`) spellings so
+    // roles stored under either convention keep working.
+    for (final alias in PermissionKeyMapper.aliasesFor(key)) {
+      if (_lookup(alias)) return true;
+    }
+    return false;
+  }
+
+  bool _lookup(String key) {
     final parts = key.split('.');
     dynamic current = _cachedPermissions;
 
