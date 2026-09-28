@@ -55,6 +55,10 @@ class PaginatedResponse<T> {
 }
 
 /// Maps Dio exceptions to domain Failures based on HTTP status.
+/// The backend failure envelope is `{ success:false, message, errors:[] }`
+/// where `errors` is a list of `{ field, message }` or plain strings.
+/// `errors[]` is folded into [ValidationFailure.fieldErrors] and the first
+/// entry is used as the message fallback when `message` is absent.
 Failure mapDioExceptionToFailure(DioException e) {
   switch (e.type) {
     case DioExceptionType.connectionTimeout:
@@ -71,30 +75,60 @@ Failure mapDioExceptionToFailure(DioException e) {
       return NetworkFailure(ErrorMessages.connectionFailed);
     case DioExceptionType.badResponse:
       final status = e.response?.statusCode;
-      final message = _messageFromResponse(e.response);
+      final parsed = _parseErrorBody(e.response);
       return switch (status) {
-        400 => ValidationFailure(message),
-        401 => UnauthorizedFailure(message),
-        403 => ForbiddenFailure(message),
-        404 => NotFoundFailure(message),
-        409 => ConflictFailure(message),
-        429 => RateLimitFailure(message),
-        _ => ServerFailure(message),
+        400 => ValidationFailure(parsed.message, parsed.fieldErrors),
+        401 => UnauthorizedFailure(parsed.message),
+        403 => ForbiddenFailure(parsed.message),
+        404 => NotFoundFailure(parsed.message),
+        409 => ConflictFailure(parsed.message),
+        429 => RateLimitFailure(parsed.message),
+        _ => ServerFailure(parsed.message),
       };
     case DioExceptionType.unknown:
       return NetworkFailure(ErrorMessages.connectionFailed);
   }
 }
 
-String _messageFromResponse(Response<dynamic>? response) {
+({String message, Map<String, String> fieldErrors}) _parseErrorBody(
+  Response<dynamic>? response,
+) {
+  var message = ErrorMessages.unexpectedError;
+  final fieldErrors = <String, String>{};
   try {
     final data = response?.data;
     if (data is Map<String, dynamic>) {
-      final message = data['message'];
-      if (message is String && message.isNotEmpty) return message;
+      final msg = data['message'];
+      if (msg is String && msg.isNotEmpty) message = msg;
+      final errors = data['errors'];
+      if (errors is List && errors.isNotEmpty) {
+        var firstFallback = '';
+        for (final entry in errors) {
+          if (entry is Map) {
+            final field = entry['field']?.toString();
+            final entryMsg = entry['message']?.toString();
+            if (field != null &&
+                field.isNotEmpty &&
+                entryMsg != null &&
+                entryMsg.isNotEmpty) {
+              fieldErrors[field] = entryMsg;
+              firstFallback = firstFallback.isEmpty ? entryMsg : firstFallback;
+            } else if (entryMsg != null && entryMsg.isNotEmpty) {
+              firstFallback = firstFallback.isEmpty ? entryMsg : firstFallback;
+            }
+          } else if (entry is String && entry.isNotEmpty) {
+            firstFallback = firstFallback.isEmpty ? entry : firstFallback;
+          }
+        }
+        // No top-level message — use the first detail entry.
+        if (message == ErrorMessages.unexpectedError &&
+            firstFallback.isNotEmpty) {
+          message = firstFallback;
+        }
+      }
     }
   } catch (_) {
-    // Fall through to default
+    // Fall through to defaults
   }
-  return ErrorMessages.unexpectedError;
+  return (message: message, fieldErrors: fieldErrors);
 }

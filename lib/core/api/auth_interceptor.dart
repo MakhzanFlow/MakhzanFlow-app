@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
 import '../constants/api_endpoints.dart';
 import '../storage/token_storage.dart';
+import 'session_expired_bus.dart';
 
 /// Dio interceptor that injects JWT + company headers and transparently
 /// refreshes the access token on 401, retrying the original request.
@@ -52,8 +53,11 @@ class AuthInterceptor extends Interceptor {
     }
 
     // The refresh call itself failing means the session is dead.
+    // Backend now revokes the whole session family on refresh reuse, so any
+    // 401 here means "go to login, do not retry in a loop".
     if (_isRefreshEndpoint(err.requestOptions.path)) {
       await _tokenStorage.clearAll();
+      SessionExpiredBus.instance.notifySessionExpired();
       return handler.next(err);
     }
 
@@ -63,12 +67,14 @@ class AuthInterceptor extends Interceptor {
         final refreshToken = await _tokenStorage.refreshToken;
         if (refreshToken == null || refreshToken.isEmpty) {
           await _tokenStorage.clearAll();
+          SessionExpiredBus.instance.notifySessionExpired();
           return handler.next(err);
         }
 
         final newTokens = await _refreshTokens(refreshToken);
         if (newTokens == null) {
           await _tokenStorage.clearAll();
+          SessionExpiredBus.instance.notifySessionExpired();
           return handler.next(err);
         }
 
@@ -79,16 +85,19 @@ class AuthInterceptor extends Interceptor {
           final retryResponse = await _dio.fetch(err.requestOptions);
           return handler.resolve(retryResponse);
         } on DioException catch (retryErr) {
-          // Only a 401 after a successful refresh means the session is dead.
-          // Network errors on the retry must NOT log the user out.
+          // Only a 401 after a successful refresh means the session is dead
+          // (e.g. refresh-reuse family revocation). Network errors on the
+          // retry must NOT log the user out.
           if (retryErr.response?.statusCode == 401) {
             await _tokenStorage.clearAll();
+            SessionExpiredBus.instance.notifySessionExpired();
           }
           return handler.next(retryErr);
         }
       } catch (_) {
         // The refresh call itself failed — session can't be restored.
         await _tokenStorage.clearAll();
+        SessionExpiredBus.instance.notifySessionExpired();
         return handler.next(err);
       } finally {
         _isRefreshing = false;

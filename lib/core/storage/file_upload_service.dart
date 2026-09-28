@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:fpdart/fpdart.dart';
 import '../api/api_client.dart';
+import '../api/api_response.dart';
 import '../constants/app_constants.dart';
 import '../constants/error_messages.dart';
 import '../error/failures.dart';
@@ -18,9 +19,14 @@ class FileUploadService {
   const FileUploadService({ApiClient? apiClient}) : _apiClient = apiClient;
 
   /// Converts a local image file to a `data:` URI for `logo_url`.
-  /// Validates max size via [AppConstants.maxImageSizeBytes].
+  /// Validates max size ([maxBytes], defaults to [AppConstants.maxImageSizeBytes]).
+  /// Company logos travel as base64 JSON and the backend rejects images over
+  /// ~2MB — pass [AppConstants.maxLogoSizeBytes] for logo uploads.
   /// Returns `Left(Failure)` on I/O or validation error.
-  Future<Either<Failure, String>> toDataUri(String filePath) async {
+  Future<Either<Failure, String>> toDataUri(
+    String filePath, {
+    int? maxBytes,
+  }) async {
     try {
       final file = File(filePath);
       final exists = await file.exists();
@@ -28,7 +34,7 @@ class FileUploadService {
         return Left(ServerFailure(ErrorMessages.unexpectedError));
       }
       final bytes = await file.readAsBytes();
-      if (bytes.length > AppConstants.maxImageSizeBytes) {
+      if (bytes.length > (maxBytes ?? AppConstants.maxImageSizeBytes)) {
         return Left(ValidationFailure(ErrorMessages.fileTooLarge));
       }
       final mime = _mimeFromExtension(filePath);
@@ -79,13 +85,9 @@ class FileUploadService {
       }
       return Left(ServerFailure(ErrorMessages.unexpectedError));
     } on DioException catch (e) {
-      // Reuse centralized mapper without importing api_response to avoid cycle
-      final status = e.response?.statusCode;
-      if (status == 401) return Left(UnauthorizedFailure(ErrorMessages.unauthorized));
-      if (status == 403) return Left(ForbiddenFailure(ErrorMessages.forbidden));
-      if (status == 404) return Left(NotFoundFailure(ErrorMessages.notFound));
-      if (status == 413) return Left(ValidationFailure(ErrorMessages.validationFailed));
-      return Left(ServerFailure(ErrorMessages.unexpectedError));
+      // Central mapper preserves the server message (e.g. stricter
+      // jpg/png/webp content checks) and the standardized errors[] body.
+      return Left(mapDioExceptionToFailure(e));
     } catch (_) {
       return Left(ServerFailure(ErrorMessages.unexpectedError));
     }

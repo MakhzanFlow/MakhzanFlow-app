@@ -48,6 +48,14 @@ class RateLimitFailure extends Failure {
 }
 
 class ValidationFailure extends Failure {
-  const ValidationFailure([super.message]);
+  /// Per-field server messages from `errors: [{ field, message }]`.
+  /// Keys are backend snake_case field names; use [fieldErrorsFor] helpers
+  /// in presentation to map them onto form fields.
+  final Map<String, String> fieldErrors;
+
+  const ValidationFailure([super.message, this.fieldErrors = const {}]);
+
+  @override
+  List<Object> get props => [message, fieldErrors];
 }
 

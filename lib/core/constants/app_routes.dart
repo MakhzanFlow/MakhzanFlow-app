@@ -18,6 +18,7 @@ class AppRoutes {
 
   static const String invoiceCreate = '/invoices/create';
   static const String invoiceDetails = '/invoices/:id';
+  static const String payments = '/payments';
   static const String customerAddPayment = '/customers/:id/payment';
   static const String customerInvoices = '/customers/:id/invoices';
 

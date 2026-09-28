@@ -7,12 +7,14 @@ abstract class ApiEndpoints {
   static const verifyEmailResend = '$authBase/verify-email/resend';
   static const refresh = '$authBase/refresh';
   static const logout = '$authBase/logout';
+  static const logoutAll = '$authBase/logout-all';
   static const me = '$authBase/me';
 
   static const companiesBase = '/companies';
   static const companies = '$companiesBase/';
   static const companiesPermissions = '$companiesBase/permissions';
   static String companyById(String id) => '$companiesBase/$id';
+  static String companyRestore(String id) => '$companiesBase/$id/restore';
   static String companyMembers(String id) => '$companiesBase/$id/members';
   static String companyMember(String id, String userId) =>
       '$companiesBase/$id/members/$userId';
@@ -48,6 +50,11 @@ abstract class ApiEndpoints {
   static String customerPayments(String id) => '$customersBase/$id/payments';
 
   static const invoicesBase = '/invoices';
+  static const paymentsBase = '/payments';
+  static const payments = '$paymentsBase/';
+  static const activityLogsBase = '/activity-logs';
+  static String activityLogs(String entity, String entityId) =>
+      '$activityLogsBase/$entity/$entityId';
   static const invoices = '$invoicesBase/';
   static String invoiceById(String id) => '$invoicesBase/$id';
   static String invoicePayments(String id) => '$invoicesBase/$id/payments';
