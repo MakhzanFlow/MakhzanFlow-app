@@ -150,15 +150,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   });
                                 },
                               ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return AppStrings.passwordRequired;
-                                }
-                                if (value.length < 6) {
-                                  return AppStrings.passwordMinLength;
-                                }
-                                return null;
-                              },
+                              validator: validatePassword,
                             ),
                             const SizedBox(height: MFTokens.sp16),
                             AuthTextField(
@@ -185,6 +177,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return AppStrings.passwordRequired;
+                                }
+                                if (value.length > 128) {
+                                  return AppStrings.passwordMaxLength;
                                 }
                                 if (value != _passwordController.text) {
                                   return AppStrings.passwordMismatch;

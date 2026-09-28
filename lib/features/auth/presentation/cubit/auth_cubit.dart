@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fpdart/fpdart.dart';
+import '../../../../core/api/session_expired_bus.dart';
 import '../../../../core/error/failures.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/usecases/auth_state_changes_usecase.dart';
@@ -9,6 +11,7 @@ import '../../domain/usecases/sign_in_usecase.dart';
 import '../../domain/usecases/sign_in_with_google_usecase.dart';
 import '../../domain/usecases/sign_up_usecase.dart';
 import '../../domain/usecases/sign_out_usecase.dart';
+import '../../domain/usecases/sign_out_everywhere_usecase.dart';
 import '../../domain/usecases/verify_email_usecase.dart';
 import 'auth_state.dart';
 
@@ -17,11 +20,13 @@ class AuthCubit extends Cubit<AuthState> {
   final SignInWithGoogleUseCase _signInWithGoogleUseCase;
   final SignUpUseCase _signUpUseCase;
   final SignOutUseCase _signOutUseCase;
+  final SignOutEverywhereUseCase _signOutEverywhereUseCase;
   final GetCurrentUserUseCase _getCurrentUserUseCase;
   final AuthStateChangesUseCase _authStateChangesUseCase;
   final VerifyEmailUseCase _verifyEmailUseCase;
   final ResendVerificationEmailUseCase _resendVerificationEmailUseCase;
   late final StreamSubscription<UserEntity?> _authSubscription;
+  StreamSubscription<void>? _sessionExpiredSub;
 
   String? pendingVerificationEmail;
 
@@ -30,6 +35,7 @@ class AuthCubit extends Cubit<AuthState> {
     required SignInWithGoogleUseCase signInWithGoogleUseCase,
     required SignUpUseCase signUpUseCase,
     required SignOutUseCase signOutUseCase,
+    required SignOutEverywhereUseCase signOutEverywhereUseCase,
     required GetCurrentUserUseCase getCurrentUserUseCase,
     required AuthStateChangesUseCase authStateChangesUseCase,
     required VerifyEmailUseCase verifyEmailUseCase,
@@ -38,6 +44,7 @@ class AuthCubit extends Cubit<AuthState> {
         _signInWithGoogleUseCase = signInWithGoogleUseCase,
         _signUpUseCase = signUpUseCase,
         _signOutUseCase = signOutUseCase,
+        _signOutEverywhereUseCase = signOutEverywhereUseCase,
         _getCurrentUserUseCase = getCurrentUserUseCase,
         _authStateChangesUseCase = authStateChangesUseCase,
         _verifyEmailUseCase = verifyEmailUseCase,
@@ -53,6 +60,13 @@ class AuthCubit extends Cubit<AuthState> {
       } else {
         emit(Unauthenticated());
       }
+    });
+    // Fired by AuthInterceptor when the server session is dead (rotated JWT
+    // secrets, refresh-reuse family revocation). Forces the router back to
+    // login even when no Cubit is currently observing a request.
+    _sessionExpiredSub =
+        SessionExpiredBus.instance.stream.listen((_) {
+      emit(Unauthenticated());
     });
   }
 
@@ -105,8 +119,8 @@ class AuthCubit extends Cubit<AuthState> {
     );
   }
 
-  Future<void> resendVerificationEmail(String email) async {
-    await _resendVerificationEmailUseCase.call(email);
+  Future<Either<Failure, void>> resendVerificationEmail(String email) async {
+    return _resendVerificationEmailUseCase.call(email);
   }
 
   Future<void> signInWithGoogle() async {
@@ -133,9 +147,20 @@ class AuthCubit extends Cubit<AuthState> {
     );
   }
 
+  /// Revokes all sessions (`POST /auth/logout-all`) then signs out locally.
+  Future<void> signOutEverywhere() async {
+    emit(AuthLoading());
+    final result = await _signOutEverywhereUseCase.call();
+    result.fold(
+      (failure) => emit(AuthError(failure.message)),
+      (_) => emit(Unauthenticated()),
+    );
+  }
+
   @override
   Future<void> close() {
     _authSubscription.cancel();
+    _sessionExpiredSub?.cancel();
     return super.close();
   }
 }

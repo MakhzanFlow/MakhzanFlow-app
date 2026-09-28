@@ -129,15 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   });
                                 },
                               ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return AppStrings.passwordRequired;
-                                }
-                                if (value.length < 6) {
-                                  return AppStrings.passwordMinLength;
-                                }
-                                return null;
-                              },
+                              validator: validatePassword,
                             ),
                             const SizedBox(height: MFTokens.sp16),
                             Row(

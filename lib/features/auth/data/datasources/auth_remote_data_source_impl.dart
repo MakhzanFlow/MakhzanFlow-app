@@ -133,6 +133,27 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }
 
   @override
+  Future<Either<Failure, void>> signOutEverywhere() async {
+    Failure? failure;
+    try {
+      final refreshToken = await _tokenStorage.refreshToken;
+      if (refreshToken != null) {
+        await _apiClient.dio.post(
+          ApiEndpoints.logoutAll,
+          data: RefreshTokenRequestDto(refreshToken: refreshToken).toJson(),
+        );
+      }
+    } on DioException catch (e) {
+      failure = mapDioExceptionToFailure(e);
+    } catch (e) {
+      failure = ServerFailure(e.toString());
+    }
+    // Same guarantee as signOut: local session is always cleared.
+    await _tokenStorage.clearAll();
+    return failure == null ? const Right(null) : Left(failure);
+  }
+
+  @override
   Future<Either<Failure, UserModel?>> getCurrentUser() async {
     try {
       final response = await _apiClient.dio.get(ApiEndpoints.me);

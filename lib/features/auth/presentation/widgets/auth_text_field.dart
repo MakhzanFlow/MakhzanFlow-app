@@ -1,5 +1,16 @@
 import 'package:flutter/material.dart';
+import '../../../../core/constants/app_strings.dart';
 import '../../../../core/theme/mf_tokens.dart';
+
+/// Backend password rules: min 8, max 128 chars.
+/// Shared by login / register so client validation never disagrees with the
+/// server (a 6–7 char password would otherwise pass locally then 400).
+String? validatePassword(String? value) {
+  if (value == null || value.isEmpty) return AppStrings.passwordRequired;
+  if (value.length < 8) return AppStrings.passwordMinLength;
+  if (value.length > 128) return AppStrings.passwordMaxLength;
+  return null;
+}
 
 class AuthTextField extends StatelessWidget {
   final TextEditingController controller;

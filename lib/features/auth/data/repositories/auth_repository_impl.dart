@@ -72,4 +72,9 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Either<Failure, void>> signOut() {
     return _remoteDataSource.signOut();
   }
+
+  @override
+  Future<Either<Failure, void>> signOutEverywhere() {
+    return _remoteDataSource.signOutEverywhere();
+  }
 }
