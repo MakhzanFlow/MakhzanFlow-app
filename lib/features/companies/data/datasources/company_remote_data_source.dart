@@ -22,6 +22,7 @@ abstract class CompanyRemoteDataSource {
     UpdateCompanyRequestDto dto,
   );
   Future<Either<Failure, void>> deleteCompany(String companyId);
+  Future<Either<Failure, void>> restoreCompany(String companyId);
   Future<Either<Failure, CompanyModel>> lookupCompanyByCode(String code);
 
   // Members & permissions

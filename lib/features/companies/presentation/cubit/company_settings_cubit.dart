@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:makhzanflow/core/constants/app_constants.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
 import 'package:makhzanflow/core/storage/file_upload_service.dart';
 import 'package:makhzanflow/features/companies/domain/entities/company.dart';
@@ -9,6 +10,7 @@ import 'package:makhzanflow/features/companies/domain/usecases/get_company_join_
 import 'package:makhzanflow/features/companies/domain/usecases/regenerate_company_join_code_usecase.dart';
 import 'package:makhzanflow/features/companies/domain/usecases/leave_company_usecase.dart';
 import 'package:makhzanflow/features/companies/domain/usecases/delete_company_usecase.dart';
+import 'package:makhzanflow/features/companies/domain/usecases/restore_company_usecase.dart';
 
 sealed class CompanySettingsState extends Equatable {
   const CompanySettingsState();
@@ -67,6 +69,7 @@ class CompanySettingsCubit extends Cubit<CompanySettingsState> {
   final RegenerateCompanyJoinCodeUseCase _regenerateCompanyJoinCodeUseCase;
   final LeaveCompanyUseCase _leaveCompanyUseCase;
   final DeleteCompanyUseCase _deleteCompanyUseCase;
+  final RestoreCompanyUseCase _restoreCompanyUseCase;
   final ImagePicker _picker;
   final FileUploadService _fileUploadService;
 
@@ -76,6 +79,7 @@ class CompanySettingsCubit extends Cubit<CompanySettingsState> {
     required RegenerateCompanyJoinCodeUseCase regenerateCompanyJoinCodeUseCase,
     required LeaveCompanyUseCase leaveCompanyUseCase,
     required DeleteCompanyUseCase deleteCompanyUseCase,
+    required RestoreCompanyUseCase restoreCompanyUseCase,
     ImagePicker? picker,
     FileUploadService? fileUploadService,
   })  : _updateCompanyUseCase = updateCompanyUseCase,
@@ -83,6 +87,7 @@ class CompanySettingsCubit extends Cubit<CompanySettingsState> {
         _regenerateCompanyJoinCodeUseCase = regenerateCompanyJoinCodeUseCase,
         _leaveCompanyUseCase = leaveCompanyUseCase,
         _deleteCompanyUseCase = deleteCompanyUseCase,
+        _restoreCompanyUseCase = restoreCompanyUseCase,
         _picker = picker ?? ImagePicker(),
         _fileUploadService = fileUploadService ?? const FileUploadService(),
         super(const CompanySettingsInitial());
@@ -94,6 +99,8 @@ class CompanySettingsCubit extends Cubit<CompanySettingsState> {
   Future<void> pickImageFromGallery() async {
     final file = await _picker.pickImage(
       source: ImageSource.gallery,
+      maxWidth: 1024,
+      maxHeight: 1024,
       imageQuality: 80,
     );
     if (file != null && state is CompanySettingsData) {
@@ -105,6 +112,8 @@ class CompanySettingsCubit extends Cubit<CompanySettingsState> {
   Future<void> pickImageFromCamera() async {
     final file = await _picker.pickImage(
       source: ImageSource.camera,
+      maxWidth: 1024,
+      maxHeight: 1024,
       imageQuality: 80,
     );
     if (file != null && state is CompanySettingsData) {
@@ -152,8 +161,24 @@ class CompanySettingsCubit extends Cubit<CompanySettingsState> {
       (failure) => false,
       (_) => true,
     );
-    if (success) emit(CompanySettingsSuccess(AppStrings.companyDeleted));
+    if (success) emit(CompanySettingsSuccess(AppStrings.companyArchived));
     return success;
+  }
+
+  /// Undoes an archive (`POST /companies/:id/restore`, owner only).
+  /// Returns the archived company id on success so the caller can refresh.
+  Future<bool> restoreCompany(String companyId) async {
+    final result = await _restoreCompanyUseCase.call(companyId);
+    return result.fold(
+      (failure) {
+        emit(CompanySettingsError(failure.message));
+        return false;
+      },
+      (_) {
+        emit(CompanySettingsSuccess(AppStrings.companyRestored));
+        return true;
+      },
+    );
   }
 
   Future<void> updateCompany({
@@ -172,7 +197,10 @@ class CompanySettingsCubit extends Cubit<CompanySettingsState> {
 
     String? logoUrl;
     if (imagePath != null) {
-      final uploadResult = await _fileUploadService.toDataUri(imagePath);
+      final uploadResult = await _fileUploadService.toDataUri(
+        imagePath,
+        maxBytes: AppConstants.maxLogoSizeBytes,
+      );
       final shouldAbort = uploadResult.fold(
         (failure) {
           emit(CompanySettingsError(failure.message));

@@ -3,24 +3,75 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:makhzanflow/core/company/company_cubit.dart';
 import 'package:makhzanflow/core/company/company_state.dart';
+import 'package:makhzanflow/core/di/service_locator.dart';
 import 'package:makhzanflow/core/theme/mf_tokens.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
 import 'package:makhzanflow/core/constants/app_routes.dart';
 import 'package:makhzanflow/core/widgets/app_snackbar.dart';
 import 'package:makhzanflow/features/companies/domain/entities/company.dart';
+import 'package:makhzanflow/features/companies/domain/usecases/restore_company_usecase.dart';
 
 class CompanySelectionScreen extends StatefulWidget {
-  const CompanySelectionScreen({super.key});
+  /// Set when arriving here right after an archive — offers a Restore action.
+  /// The backend has no list-archived endpoint, so this one-shot handoff is
+  /// the only restore affordance.
+  final String? archivedCompanyId;
+  final String? archivedCompanyName;
+
+  const CompanySelectionScreen({
+    super.key,
+    this.archivedCompanyId,
+    this.archivedCompanyName,
+  });
 
   @override
   State<CompanySelectionScreen> createState() => _CompanySelectionScreenState();
 }
 
 class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
+  bool _restoreShown = false;
+  bool _isRestoring = false;
+
   @override
   void initState() {
     super.initState();
     context.read<CompanyCubit>().loadCompanies();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_restoreShown && widget.archivedCompanyId != null) {
+      _restoreShown = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        AppSnackbar.successWithAction(
+          context,
+          AppStrings.companyArchived,
+          actionLabel: AppStrings.restoreCompany,
+          onAction: _restoreArchived,
+        );
+      });
+    }
+  }
+
+  Future<void> _restoreArchived() async {
+    final id = widget.archivedCompanyId;
+    if (id == null || _isRestoring) return;
+    setState(() => _isRestoring = true);
+    try {
+      final result = await sl<RestoreCompanyUseCase>().call(id);
+      if (!mounted) return;
+      result.fold(
+        (failure) => AppSnackbar.error(context, failure.message),
+        (_) {
+          AppSnackbar.success(context, AppStrings.companyRestored);
+          context.read<CompanyCubit>().loadCompanies();
+        },
+      );
+    } finally {
+      if (mounted) setState(() => _isRestoring = false);
+    }
   }
 
   Future<void> _selectCompany(Company company) async {

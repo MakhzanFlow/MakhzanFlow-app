@@ -102,6 +102,18 @@ class CompanyRemoteDataSourceImpl implements CompanyRemoteDataSource {
   }
 
   @override
+  Future<Either<Failure, void>> restoreCompany(String companyId) async {
+    try {
+      await _apiClient.dio.post(ApiEndpoints.companyRestore(companyId));
+      return const Right(null);
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, CompanyModel>> lookupCompanyByCode(String code) async {
     try {
       final response = await _apiClient.dio.get(
