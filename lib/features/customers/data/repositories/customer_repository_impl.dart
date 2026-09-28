@@ -1,4 +1,5 @@
 import 'package:fpdart/fpdart.dart';
+import 'package:makhzanflow/core/constants/error_messages.dart';
 import 'package:makhzanflow/core/error/failures.dart';
 import '../../domain/entities/customer.dart';
 import '../../domain/entities/customer_filter_counts.dart';
@@ -83,22 +84,24 @@ class CustomerRepositoryImpl implements CustomerRepository {
   @override
   Future<Either<Failure, Customer>> updateCustomer({
     required String id,
-    required String name,
+    String? name,
     String? nameOfficial,
     String? phone,
     String? address,
     String? imageUrl,
     required String companyId,
   }) async {
-    if (name.trim().isEmpty) {
-      return Left(ServerFailure('يرجى إدخال اسم العميل'));
-    }
+    // Backend §1.4: name is optional on update; image travels via
+    // POST /customers/:id/image (the imageUrl param is intentionally unused).
     final dto = UpdateCustomerRequestDto(
-      name: name,
+      name: name?.trim().isEmpty == true ? null : name,
       nameOfficial: nameOfficial,
       phone: phone,
       address: address,
     );
+    if (dto.toJson().isEmpty) {
+      return Left(ValidationFailure(ErrorMessages.nothingToUpdate));
+    }
     final result = await dataSource.updateCustomer(id, dto, companyId);
     return result.map((model) => model.toEntity());
   }

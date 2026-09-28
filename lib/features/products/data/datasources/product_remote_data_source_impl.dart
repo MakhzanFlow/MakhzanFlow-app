@@ -77,6 +77,10 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
     String userId,
     String companyId,
   ) {
+    // Backend §1.3 rejects empty updates with 400 — short-circuit locally.
+    if (dto.toJson().isEmpty) {
+      return TaskEither.left(ErrorMessages.nothingToUpdate);
+    }
     return TaskEither.tryCatch(() async {
       final response = await _apiClient.dio.put(
         ApiEndpoints.productById(id),

@@ -16,6 +16,8 @@ class AddEditCustomerState extends Equatable {
   final Failure? failure;
   final String? successMessage;
   final bool isEditMode;
+  /// Server per-field errors (`errors[].field`) keyed by backend field name.
+  final Map<String, String> fieldErrors;
 
   const AddEditCustomerState({
     this.status = AddEditCustomerStatus.initial,
@@ -30,6 +32,7 @@ class AddEditCustomerState extends Equatable {
     this.failure,
     this.successMessage,
     this.isEditMode = false,
+    this.fieldErrors = const {},
   });
 
   AddEditCustomerState copyWith({
@@ -45,6 +48,7 @@ class AddEditCustomerState extends Equatable {
     Failure? failure,
     String? successMessage,
     bool? isEditMode,
+    Map<String, String>? fieldErrors,
   }) {
     return AddEditCustomerState(
       status: status ?? this.status,
@@ -59,6 +63,7 @@ class AddEditCustomerState extends Equatable {
       failure: failure ?? this.failure,
       successMessage: successMessage ?? this.successMessage,
       isEditMode: isEditMode ?? this.isEditMode,
+      fieldErrors: fieldErrors ?? this.fieldErrors,
     );
   }
 
@@ -76,5 +81,6 @@ class AddEditCustomerState extends Equatable {
     failure,
     successMessage,
     isEditMode,
+    fieldErrors,
   ];
 }

@@ -51,11 +51,14 @@ class AddEditCustomerCubit extends Cubit<AddEditCustomerState> {
     );
   }
 
-  void updateName(String value) => emit(state.copyWith(name: value));
+  void updateName(String value) =>
+      emit(state.copyWith(name: value, fieldErrors: _without(state.fieldErrors, 'name')));
   void updateNameOfficial(String value) =>
-      emit(state.copyWith(nameOfficial: value));
-  void updatePhone(String value) => emit(state.copyWith(phone: value));
-  void updateAddress(String value) => emit(state.copyWith(address: value));
+      emit(state.copyWith(nameOfficial: value, fieldErrors: _without(state.fieldErrors, 'name_official')));
+  void updatePhone(String value) =>
+      emit(state.copyWith(phone: value, fieldErrors: _without(state.fieldErrors, 'phone')));
+  void updateAddress(String value) =>
+      emit(state.copyWith(address: value, fieldErrors: _without(state.fieldErrors, 'address')));
   void updateDebt(String value) => emit(state.copyWith(debtText: value));
 
   void setImagePath(String path) {
@@ -67,7 +70,9 @@ class AddEditCustomerCubit extends Cubit<AddEditCustomerState> {
   }
 
   Future<bool> save(String companyId) async {
-    if (state.name.trim().isEmpty) {
+    // Name is required on create, optional on edit (backend §1.4 validates
+    // phone/email/address lengths instead).
+    if (!state.isEditMode && state.name.trim().isEmpty) {
       emit(
         state.copyWith(
           status: AddEditCustomerStatus.error,
@@ -77,7 +82,7 @@ class AddEditCustomerCubit extends Cubit<AddEditCustomerState> {
       return false;
     }
 
-    emit(state.copyWith(status: AddEditCustomerStatus.loading));
+    emit(state.copyWith(status: AddEditCustomerStatus.loading, fieldErrors: {}));
 
     final debt = double.tryParse(state.debtText) ?? 0;
 
@@ -108,7 +113,7 @@ class AddEditCustomerCubit extends Cubit<AddEditCustomerState> {
 
       final result = await _updateCustomerUseCase(
         id: _customerId!,
-        name: state.name,
+        name: state.name.trim().isEmpty ? null : state.name,
         nameOfficial: state.nameOfficial.isNotEmpty ? state.nameOfficial : null,
         phone: state.phone.isNotEmpty ? state.phone : null,
         address: state.address.isNotEmpty ? state.address : null,
@@ -131,6 +136,7 @@ class AddEditCustomerCubit extends Cubit<AddEditCustomerState> {
             state.copyWith(
               status: AddEditCustomerStatus.error,
               failure: failure,
+              fieldErrors: _fieldErrorsOf(failure),
             ),
           );
           return false;
@@ -185,6 +191,7 @@ class AddEditCustomerCubit extends Cubit<AddEditCustomerState> {
           state.copyWith(
             status: AddEditCustomerStatus.error,
             failure: failure,
+            fieldErrors: _fieldErrorsOf(failure),
           ),
         );
         return false;
@@ -207,7 +214,17 @@ class AddEditCustomerCubit extends Cubit<AddEditCustomerState> {
         status: AddEditCustomerStatus.initial,
         failure: null,
         successMessage: null,
+        fieldErrors: {},
       ),
     );
+  }
+
+  static Map<String, String> _fieldErrorsOf(Failure failure) =>
+      failure is ValidationFailure ? failure.fieldErrors : const {};
+
+  static Map<String, String> _without(Map<String, String> map, String key) {
+    if (!map.containsKey(key)) return map;
+    final copy = Map<String, String>.from(map)..remove(key);
+    return copy;
   }
 }

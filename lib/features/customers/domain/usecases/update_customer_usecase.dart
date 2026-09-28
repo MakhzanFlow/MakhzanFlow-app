@@ -10,7 +10,7 @@ class UpdateCustomerUseCase {
 
   Future<Either<Failure, Customer>> call({
     required String id,
-    required String name,
+    String? name,
     String? nameOfficial,
     String? phone,
     String? address,
