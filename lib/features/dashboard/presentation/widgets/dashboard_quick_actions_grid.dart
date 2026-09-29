@@ -4,7 +4,10 @@ import 'package:makhzanflow/core/constants/app_colors.dart';
 import 'package:makhzanflow/core/constants/app_routes.dart';
 import 'package:makhzanflow/core/constants/app_sizes.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
+import 'package:makhzanflow/core/di/service_locator.dart';
+import 'package:makhzanflow/core/sync/sync_cubit.dart';
 import 'package:makhzanflow/core/widgets/app_snackbar.dart';
+import 'package:makhzanflow/shared/widgets/sync_status_tile.dart';
 import '../models/quick_action.dart';
 import 'quick_action_card.dart';
 
@@ -20,14 +23,16 @@ class DashboardQuickActionsGrid extends StatelessWidget {
       child: Wrap(
         spacing: AppSizes.spacingSmall,
         runSpacing: AppSizes.spacingSmall,
-        children: _buildActions(context)
-            .map(
-              (a) => SizedBox(
-                width: actionWidth,
-                child: QuickActionCard(action: a),
-              ),
-            )
-            .toList(),
+        children: [
+          ..._buildActions(context).map(
+            (a) => SizedBox(
+              width: actionWidth,
+              child: QuickActionCard(action: a),
+            ),
+          ),
+          if (sl.isRegistered<SyncCubit>())
+            SizedBox(width: actionWidth, child: const SyncStatusTile()),
+        ],
       ),
     );
   }

@@ -3,6 +3,14 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:makhzanflow/core/theme/app_locale_cubit.dart';
 import 'package:makhzanflow/core/activity/activity_log_data_source.dart';
+import 'package:makhzanflow/core/sync/connectivity_monitor.dart';
+import 'package:makhzanflow/core/api/offline_cache_interceptor.dart';
+import 'package:makhzanflow/core/sync/create_image_uploader.dart';
+import 'package:makhzanflow/core/sync/pending_ops_queue.dart';
+import 'package:makhzanflow/features/customers/domain/services/customer_create_image_uploader.dart';
+import 'package:makhzanflow/features/products/domain/services/product_create_image_uploader.dart';
+import 'package:makhzanflow/core/sync/sync_cubit.dart';
+import 'package:makhzanflow/core/sync/sync_service.dart';
 import 'package:makhzanflow/core/api/api_client.dart';
 import 'package:makhzanflow/core/storage/file_upload_service.dart';
 import 'package:makhzanflow/core/storage/token_storage.dart';
@@ -129,13 +137,25 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
   if (sp != null) {
     sl.registerLazySingleton<SharedPreferences>(() => sp!);
     sl.registerLazySingleton<AppLocaleCubit>(() => AppLocaleCubit(prefs: sp));
+    // Offline mutation queue (SharedPreferences JSON FIFO). Cubits take it as
+    // an optional dep and skip enqueue when absent (tests / no-prefs platforms).
+    sl.registerLazySingleton<PendingOpsQueue>(
+      () => PendingOpsQueue(prefs: sp!),
+    );
+    // Stale-while-offline GET cache (company-scoped keys).
+    sl.registerLazySingleton<SharedPrefsGetCache>(
+      () => SharedPrefsGetCache(prefs: sp!),
+    );
   } else {
     sl.registerLazySingleton<AppLocaleCubit>(() => AppLocaleCubit());
   }
   // Core: Token storage + API client + file upload
   sl.registerLazySingleton<TokenStorage>(() => TokenStorage());
   sl.registerLazySingleton<ApiClient>(
-    () => ApiClient(tokenStorage: sl<TokenStorage>()),
+    () => ApiClient(
+      tokenStorage: sl<TokenStorage>(),
+      getCache: _optional<SharedPrefsGetCache>(),
+    ),
   );
   sl.registerLazySingleton<FileUploadService>(
     () => FileUploadService(apiClient: sl<ApiClient>()),
@@ -146,6 +166,7 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
     () => AuthRemoteDataSourceImpl(
       apiClient: sl<ApiClient>(),
       tokenStorage: sl<TokenStorage>(),
+      prefs: _optional<SharedPreferences>(),
     ),
   );
 
@@ -237,7 +258,10 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
 
   // Products: Cubits
   sl.registerFactory<ProductsCubit>(
-    () => ProductsCubit(getProductsUseCase: sl<GetProductsUseCase>()),
+    () => ProductsCubit(
+      getProductsUseCase: sl<GetProductsUseCase>(),
+      pendingOpsQueue: _optional<PendingOpsQueue>(),
+    ),
   );
 
   sl.registerFactory<AddEditProductCubit>(
@@ -246,6 +270,7 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
       uploadImageUseCase: sl<UploadProductImageUseCase>(),
       getProductUseCase: sl<GetProductUseCase>(),
       updateProductUseCase: sl<UpdateProductUseCase>(),
+      pendingOpsQueue: _optional<PendingOpsQueue>(),
     ),
   );
 
@@ -255,6 +280,7 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
       deleteProductUseCase: sl<DeleteProductUseCase>(),
       updateQuantityUseCase: sl<UpdateProductQuantityUseCase>(),
       getMovementsUseCase: sl<GetInventoryMovementsUseCase>(),
+      pendingOpsQueue: _optional<PendingOpsQueue>(),
     ),
   );
 
@@ -293,6 +319,7 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
     () => CustomersCubit(
       getCustomersUseCase: sl<GetCustomersUseCase>(),
       getCustomerFilterCountsUseCase: sl<GetCustomerFilterCountsUseCase>(),
+      pendingOpsQueue: _optional<PendingOpsQueue>(),
     ),
   );
 
@@ -302,6 +329,7 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
       uploadImageUseCase: sl<UploadCustomerImageUseCase>(),
       getCustomerUseCase: sl<GetCustomerUseCase>(),
       updateCustomerUseCase: sl<UpdateCustomerUseCase>(),
+      pendingOpsQueue: _optional<PendingOpsQueue>(),
     ),
   );
 
@@ -519,6 +547,7 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
     () => CompanyCubit(
       getUserCompaniesUseCase: sl<GetUserCompaniesUseCase>(),
       secureStorage: const FlutterSecureStorage(),
+      prefs: _optional<SharedPreferences>(),
     ),
   );
 
@@ -561,4 +590,39 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
   sl.registerFactory<PaymentsCubit>(
     () => PaymentsCubit(getPaymentsUseCase: sl<GetPaymentsUseCase>()),
   );
+
+  // Offline sync engine (prefs-backed queue required; otherwise skipped and
+  // cubits degrade to online-only behavior via _optional<PendingOpsQueue>()).
+  sl.registerLazySingleton<ConnectivityMonitor>(
+    () => ConnectivityPlusMonitor(),
+  );
+  if (sl.isRegistered<PendingOpsQueue>()) {
+    sl.registerLazySingleton<SyncService>(
+      () => SyncService(
+        queue: sl<PendingOpsQueue>(),
+        dio: sl<ApiClient>().dio,
+        monitor: sl<ConnectivityMonitor>(),
+        imageUploaders: [
+          ProductCreateImageUploader(
+            upload: sl<UploadProductImageUseCase>(),
+          ),
+          CustomerCreateImageUploader(
+            upload: sl<UploadCustomerImageUseCase>(),
+          ),
+        ],
+      ),
+    );
+    sl.registerFactory<SyncCubit>(
+      () => SyncCubit(
+        queue: sl<PendingOpsQueue>(),
+        service: sl<SyncService>(),
+      ),
+    );
+    // Connectivity events flow service → cubit (single wiring point).
+    sl<SyncService>().onSyncRequested = () => sl<SyncCubit>().syncNow();
+  }
 }
+
+/// Resolves [T] when registered (e.g. prefs-backed services absent in tests),
+/// otherwise null so dependents can degrade gracefully instead of crashing.
+T? _optional<T extends Object>() => sl.isRegistered<T>() ? sl<T>() : null;

@@ -1,7 +1,7 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan at E:\makhzan\stockflow-app\specs\009-owner-controlled-permissions\plan.md.
-The full implementation tasks are in E:\makhzan\stockflow-app\specs\009-owner-controlled-permissions\tasks.md.
+shell commands, and other important information, read the current plan at E:\makhzan\makhzanflow-app\specs\011-offline-queue-sync-conflicts\plan.md.
+The full implementation tasks are in E:\makhzan\makhzanflow-app\specs\011-offline-queue-sync-conflicts\tasks.md.
 <!-- SPECKIT END -->
 
 ## Anchored Summary
