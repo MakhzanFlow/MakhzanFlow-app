@@ -172,6 +172,7 @@ class AuthInterceptor extends Interceptor {
         path == ApiEndpoints.register ||
         path == ApiEndpoints.verifyEmail ||
         path == ApiEndpoints.verifyEmailResend ||
+        path == ApiEndpoints.google ||
         path == ApiEndpoints.refresh;
   }
 

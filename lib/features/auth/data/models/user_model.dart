@@ -6,6 +6,8 @@ class UserModel extends UserEntity {
     required super.email,
     super.name,
     super.isVerified,
+    super.avatarUrl,
+    super.authProvider,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -15,6 +17,8 @@ class UserModel extends UserEntity {
       email: email,
       name: json['name'] as String? ?? email.split('@').first,
       isVerified: json['is_verified'] as bool? ?? false,
+      avatarUrl: json['avatar_url'] as String?,
+      authProvider: json['auth_provider'] as String?,
     );
   }
 
@@ -23,5 +27,7 @@ class UserModel extends UserEntity {
         'email': email,
         'name': name,
         'is_verified': isVerified,
+        if (avatarUrl != null) 'avatar_url': avatarUrl,
+        if (authProvider != null) 'auth_provider': authProvider,
       };
 }

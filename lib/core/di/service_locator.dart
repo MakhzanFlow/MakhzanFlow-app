@@ -1,6 +1,8 @@
 import 'package:get_it/get_it.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:makhzanflow/core/env.dart';
 import 'package:makhzanflow/core/theme/app_locale_cubit.dart';
 import 'package:makhzanflow/core/activity/activity_log_data_source.dart';
 import 'package:makhzanflow/core/sync/connectivity_monitor.dart';
@@ -162,11 +164,20 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
   );
 
   // Auth: Data sources
+  // Single shared GoogleSignIn so the native SDK keeps one session; the
+  // serverClientId makes the returned idToken target our backend audience.
+  sl.registerLazySingleton<GoogleSignIn>(
+    () => GoogleSignIn(
+      scopes: const ['email', 'profile'],
+      serverClientId: MakhzanFlowEnv.googleWebClientId,
+    ),
+  );
   sl.registerLazySingleton<AuthRemoteDataSource>(
     () => AuthRemoteDataSourceImpl(
       apiClient: sl<ApiClient>(),
       tokenStorage: sl<TokenStorage>(),
       prefs: _optional<SharedPreferences>(),
+      googleSignIn: sl<GoogleSignIn>(),
     ),
   );
 

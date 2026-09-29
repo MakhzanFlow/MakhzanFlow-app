@@ -1,4 +1,5 @@
 import 'package:fpdart/fpdart.dart';
+import '../../../../core/error/exceptions.dart';
 import '../../../../core/error/failures.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/repositories/auth_repository.dart';
@@ -33,10 +34,7 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, UserEntity>> verifyEmail(
-    String email,
-    String token,
-  ) {
+  Future<Either<Failure, UserEntity>> verifyEmail(String email, String token) {
     return _remoteDataSource.verifyEmail(
       VerifyEmailRequestDto(email: email, token: token),
     );
@@ -61,9 +59,10 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Either<Failure, UserEntity>> signInWithGoogle() async {
     try {
       return _remoteDataSource.signInWithGoogle();
+    } on GoogleSignInCancelledException {
+      // User dismissed the account picker — not an error, no toast.
+      return Left(GoogleSignInCancelledFailure());
     } catch (e) {
-      // Backend /auth/google is not ready yet — surface a controlled failure
-      // instead of letting the stub crash the UI.
       return Left(ServerFailure(e.toString()));
     }
   }

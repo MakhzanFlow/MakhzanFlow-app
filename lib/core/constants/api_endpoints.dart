@@ -8,6 +8,7 @@ abstract class ApiEndpoints {
   static const refresh = '$authBase/refresh';
   static const logout = '$authBase/logout';
   static const logoutAll = '$authBase/logout-all';
+  static const google = '$authBase/google';
   static const me = '$authBase/me';
 
   static const companiesBase = '/companies';

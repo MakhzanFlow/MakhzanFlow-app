@@ -57,7 +57,10 @@ class _LoginScreenState extends State<LoginScreen> {
           if (state is Authenticated) {
             context.read<CompanyCubit>().loadCompanies();
           } else if (state is AuthError) {
-            AppSnackbar.error(context, state.message);
+            // Google-only account attempting password login: point at the
+            // Google button instead of a generic "wrong password" error.
+            AppSnackbar.error(
+                context, AppStrings.googleAuthErrorMessage(state.message));
           }
         },
         builder: (context, state) {

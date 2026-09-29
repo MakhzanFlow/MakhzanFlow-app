@@ -89,6 +89,36 @@ class AppStrings {
   static String get orContinueWith => _tr('أو', 'or');
   static String get googleSignInCancelled => _tr('تم إلغاء تسجيل الدخول', 'Sign-in cancelled');
   static String get googleSignInError => _tr('حدث خطأ أثناء تسجيل الدخول باستخدام Google', 'Error signing in with Google');
+  /// Shown when password login hits a Google-only account (backend 401 `errors.useGoogleSignIn`).
+  static String get useGoogleSignIn => _tr(
+      'هذا الحساب يستخدم تسجيل الدخول عبر Google. يرجى المتابعة باستخدام Google.',
+      'This account uses Google sign-in. Please continue with Google.');
+  static String get googleEmailNotVerified =>
+      _tr('يرجى تأكيد عنوان Gmail الخاص بك أولاً ثم حاول مجدداً', 'Please verify your Gmail address first, then try again');
+  /// Backend marker echoed in the 401 message for Google-only accounts.
+  static const String useGoogleSignInMarker = 'useGoogleSignIn';
+  static const String googleEmailNotVerifiedMarker = 'googleEmailNotVerified';
+
+  /// Maps backend Google-auth failures to friendly localized text.
+  ///
+  /// The backend error envelope carries only the *translated* message (no
+  /// messageKey), so matching is on the known server wordings (English
+  /// fallback + Arabic locale), kept in sync with the backend's
+  /// `locales/{en,ar}/auth.json`. Wrong-password 401s never mention Google,
+  /// so a Google mention on the auth screens unambiguously means one of these.
+  static String googleAuthErrorMessage(String raw) {
+    if (raw.contains(useGoogleSignInMarker) ||
+        raw.contains('uses Google sign-in') ||
+        raw.contains('يستخدم تسجيل الدخول عبر Google')) {
+      return useGoogleSignIn;
+    }
+    if (raw.contains(googleEmailNotVerifiedMarker) ||
+        raw.contains('email is not verified') ||
+        raw.contains('غير مؤكد')) {
+      return googleEmailNotVerified;
+    }
+    return raw;
+  }
 
   // ── Shell & Navigation ────────────────────────────────────────────────
   static String get navDashboard => _tr('الرئيسية', 'Home');

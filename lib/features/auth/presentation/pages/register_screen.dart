@@ -64,7 +64,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           } else if (state is EmailVerificationPending) {
             context.push(AppRoutes.emailVerification, extra: state.email);
           } else if (state is AuthError) {
-            AppSnackbar.error(context, state.message);
+            AppSnackbar.error(
+                context, AppStrings.googleAuthErrorMessage(state.message));
           }
         },
         builder: (context, state) {
