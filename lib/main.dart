@@ -59,8 +59,9 @@ class MyApp extends StatelessWidget {
           final localeState = context.watch<AppLocaleCubit>().state;
 
           // Keep AppStrings in sync with the cubit so static lookups work.
-          context.read<AppLocaleCubit>().stream
-              .forEach((state) => AppStrings.setLocale(state.locale));
+          context.read<AppLocaleCubit>().stream.forEach(
+            (state) => AppStrings.setLocale(state.locale),
+          );
 
           return MaterialApp.router(
             title: 'MakhzanFlow',
@@ -71,10 +72,7 @@ class MyApp extends StatelessWidget {
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,
             ],
-            supportedLocales: const [
-              Locale('ar', 'EG'),
-              Locale('en', 'US'),
-            ],
+            supportedLocales: const [Locale('ar', 'EG'), Locale('en', 'US')],
             locale: localeState.locale,
             debugShowCheckedModeBanner: false,
           );

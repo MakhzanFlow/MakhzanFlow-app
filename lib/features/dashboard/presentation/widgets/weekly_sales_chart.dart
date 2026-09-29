@@ -80,7 +80,6 @@ class _WeeklySalesChartState extends State<WeeklySalesChart>
     final mutedGrid = isDark ? MFTokens.borderDark : MFTokens.borderLight;
     final tooltipBg = isDark ? MFTokens.surfaceDark : MFTokens.primaryDark;
     final cardBg = isDark ? MFTokens.cardDark : MFTokens.cardLight;
-    final textPrimary = isDark ? MFTokens.textPrimaryDark : MFTokens.textPrimaryLight;
     final textSecondary = isDark ? MFTokens.textSecondaryDark : MFTokens.textSecondaryLight;
 
     final activePoint = (_touchedIndex >= 0 && _touchedIndex < widget.points.length)
@@ -89,82 +88,50 @@ class _WeeklySalesChartState extends State<WeeklySalesChart>
 
     final numberFormat = NumberFormat('#,##0', localeCode);
 
-    return Container(
-      padding: const EdgeInsets.all(MFTokens.sp16),
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(MFTokens.radiusLG),
-        border: Border.all(
-          color: isDark ? MFTokens.borderDark : MFTokens.borderLight,
-        ),
-        boxShadow: MFTokens.shadowSM,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Dynamic Header Summary / Touch Badge
+    // Content only — the parent FCard owns the card surface + header
+    // (ui-skills: one depth strategy, no nested cards, no duplicate headers).
+    // The touch-aware total pill stays here: it is driven by chart state.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+          // Touch-aware total readout, end-aligned under the card header
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(MFTokens.sp6),
-                    decoration: BoxDecoration(
-                      color: primary.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(MFTokens.radiusSM),
-                    ),
-                    child: Icon(
-                      Icons.show_chart_rounded,
-                      size: 18,
-                      color: primary,
-                    ),
-                  ),
-                  const SizedBox(width: MFTokens.sp8),
-                  Text(
-                    AppStrings.dashboardWeeklySales,
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: MFTokens.fontMD,
-                      fontWeight: FontWeight.w700,
-                      color: textPrimary,
-                    ),
-                  ),
-                ],
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(
+                horizontal: MFTokens.sp12,
+                vertical: MFTokens.sp6,
               ),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: MFTokens.sp12,
-                  vertical: MFTokens.sp6,
-                ),
-                decoration: BoxDecoration(
+              decoration: BoxDecoration(
+                color: activePoint != null
+                    ? accentColor.withValues(alpha: 0.15)
+                    : primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(MFTokens.radiusMD),
+                border: Border.all(
                   color: activePoint != null
-                      ? accentColor.withValues(alpha: 0.15)
-                      : primary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(MFTokens.radiusMD),
-                  border: Border.all(
-                    color: activePoint != null
-                        ? accentColor.withValues(alpha: 0.3)
-                        : Colors.transparent,
-                  ),
-                ),
-                child: Text(
-                  activePoint != null
-                      ? '${_getLocalizedDayLabel(activePoint, localeCode)} (${DateFormat('d/M', localeCode).format(activePoint.date)}): ${numberFormat.format(activePoint.amount)} $currencySymbol'
-                      : '${isArabic ? 'الإجمالي' : 'Total'}: ${numberFormat.format(totalSum)} $currencySymbol',
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: MFTokens.fontSM,
-                    fontWeight: FontWeight.w700,
-                    color: activePoint != null ? accentColor : primary,
-                  ),
+                      ? accentColor.withValues(alpha: 0.3)
+                      : Colors.transparent,
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: MFTokens.sp16),
+              child: Text(
+                activePoint != null
+                    ? '${_getLocalizedDayLabel(activePoint, localeCode)} (${DateFormat('d/M', localeCode).format(activePoint.date)}): ${numberFormat.format(activePoint.amount)} $currencySymbol'
+                    : '${isArabic ? 'الإجمالي' : 'Total'}: ${numberFormat.format(totalSum)} $currencySymbol',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: MFTokens.fontSM,
+                  fontWeight: FontWeight.w700,
+                  color: activePoint != null ? accentColor : primary,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+          ],
+        ),
+          const SizedBox(height: MFTokens.sp12),
           LayoutBuilder(
             builder: (context, constraints) => AnimatedBuilder(
               animation: _anim,
@@ -401,7 +368,6 @@ class _WeeklySalesChartState extends State<WeeklySalesChart>
             ),
           ),
         ],
-      ),
     );
   }
 }

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_sizes.dart';
-import '../../../../core/constants/app_strings.dart';
+import 'package:makhzanflow/core/constants/app_strings.dart';
+import 'package:makhzanflow/core/theme/mf_tokens.dart';
+import 'package:makhzanflow/shared/widgets/mf_button.dart';
 
-/// Full-screen error state for the dashboard with a retry button.
+/// Full-screen error state for the dashboard with a retry action.
+///
+/// ui-skills: token-only surfaces, 4-level type hierarchy (title 18/bold →
+/// message 14/secondary), one accent (retry button), 64px status medallion,
+/// 44px+ hit area via [MFButton].
 class DashboardErrorWidget extends StatelessWidget {
   const DashboardErrorWidget({
     super.key,
@@ -17,38 +20,48 @@ class DashboardErrorWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary =
+        isDark ? MFTokens.textPrimaryDark : MFTokens.textPrimaryLight;
+    final textSecondary =
+        isDark ? MFTokens.textSecondaryDark : MFTokens.textSecondaryLight;
+
     return Center(
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: AppSizes.spacingXLarge),
+        padding: const EdgeInsets.symmetric(
+          horizontal: MFTokens.contentPaddingTablet,
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Decorative icon container
+            // Status medallion — 64px circle, semantic error tint
             Container(
-              width: 80.w,
-              height: 80.w,
+              width: 64,
+              height: 64,
               decoration: BoxDecoration(
-                color: AppColors.lightRed,
-                borderRadius: BorderRadius.circular(AppSizes.radiusXLarge),
+                color: isDark ? MFTokens.errorBgDark : MFTokens.errorBg,
+                shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.wifi_off_rounded,
-                size: 36.w,
-                color: AppColors.trendDown,
+                size: 28,
+                color: isDark
+                    ? MFTokens.errorTextDark
+                    : MFTokens.errorText,
               ),
             ),
-            SizedBox(height: AppSizes.spacingMedium),
+            const SizedBox(height: MFTokens.sp16),
             Text(
               AppStrings.dashboardErrorTitle,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: 'Cairo',
-                fontSize: AppSizes.fontXLarge,
+                fontSize: MFTokens.fontXL,
                 fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+                color: textPrimary,
               ),
             ),
-            SizedBox(height: AppSizes.spacingSmall),
+            const SizedBox(height: MFTokens.sp8),
             Text(
               message,
               textAlign: TextAlign.center,
@@ -56,36 +69,16 @@ class DashboardErrorWidget extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontFamily: 'Cairo',
-                fontSize: AppSizes.fontMedium,
-                color: AppColors.textSecondary,
-                height: 1.5,
+                fontSize: MFTokens.fontMD,
+                color: textSecondary,
+                height: MFTokens.lineHeightRelaxed,
               ),
             ),
-            SizedBox(height: AppSizes.spacingLarge),
-            // Retry button
-            SizedBox(
-              width: double.infinity,
-              height: AppSizes.buttonHeight,
-              child: ElevatedButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh_rounded, color: Colors.white),
-                label: Text(
-                  AppStrings.retry,
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: AppSizes.fontLarge,
-                    color: AppColors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
-                  ),
-                ),
-              ),
+            const SizedBox(height: MFTokens.sp24),
+            MFButton(
+              label: AppStrings.retry,
+              icon: Icons.refresh_rounded,
+              onPressed: onRetry,
             ),
           ],
         ),

@@ -9,6 +9,7 @@ import 'package:makhzanflow/features/dashboard/domain/entities/dashboard_stats.d
 import 'package:makhzanflow/features/dashboard/domain/entities/weekly_sales_point.dart';
 import 'package:makhzanflow/features/dashboard/domain/entities/activity_entry.dart';
 import 'package:makhzanflow/features/dashboard/presentation/widgets/dashboard_loaded_body.dart';
+import 'package:makhzanflow/features/dashboard/presentation/widgets/recent_invoices_card.dart';
 
 Company _company() => Company(
       id: 'c1',
@@ -58,6 +59,10 @@ Widget _wrap(Widget child, {AppLocaleCubit? localeCubit}) {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  /// Flushes [MFEntrance] stagger delays (fake timers must not leak past teardown).
+  Future<void> flushEntrances(WidgetTester tester) =>
+      tester.pump(const Duration(milliseconds: 600));
+
   group('DashboardLoadedBody — quiet SaaS, ForUI tokens, no hardcode (long)', () {
     setUp(() => SharedPreferences.setMockInitialValues({}));
 
@@ -71,10 +76,10 @@ void main() {
       // greeting contains Hazem and localized subtitle
       expect(find.textContaining('Hazem'), findsOneWidget);
       expect(find.text('إليك ملخص نشاطك اليوم'), findsOneWidget);
-      // header uses sidebarBg token (verify via Container color)
+      // light-minimal header: first container is the tinted avatar
       final headerContainer = tester.widget<Container>(find.byType(Container).first);
-      // first container is header with sidebarBg color
-      expect((headerContainer.decoration as BoxDecoration).color, MFTokens.sidebarBg);
+      expect((headerContainer.decoration as BoxDecoration).color, MFTokens.primarySubtle);
+      await flushEntrances(tester);
       await localeCubit.close();
     });
 
@@ -82,13 +87,13 @@ void main() {
       SharedPreferences.setMockInitialValues({'mf_locale_code': 'en'});
       final sp = await SharedPreferences.getInstance();
       final localeCubit = AppLocaleCubit(prefs: sp);
-      await Future.delayed(const Duration(milliseconds: 30));
       await tester.pumpWidget(_wrap(
         DashboardLoadedBody(userName: 'Hazem', company: _company(), stats: _stats(), isRefreshing: false, onRefresh: () {}),
         localeCubit: localeCubit,
       ));
       await tester.pump();
       expect(find.text("Here's today's summary"), findsOneWidget);
+      await flushEntrances(tester);
       await localeCubit.close();
     });
 
@@ -101,18 +106,25 @@ void main() {
         onRefresh: () {},
       )));
       await tester.pump();
-      // titles
-      expect(find.text('المبيعات'), findsOneWidget);
+      // titles ('المبيعات' lives in metric + chart header)
+      expect(find.text('المبيعات'), findsWidgets);
       expect(find.text('الأرباح'), findsOneWidget);
       expect(find.text('الفواتير'), findsOneWidget);
       expect(find.text('المتأخرات'), findsOneWidget);
       // currency suffix
       expect(find.text('ج.م'), findsNWidgets(3)); // sales, profit, overdue
-      // icons
+      // icons (receipt icon scoped to metrics grid — invoices header reuses it)
       expect(find.byIcon(Icons.trending_up_rounded), findsOneWidget);
       expect(find.byIcon(Icons.account_balance_wallet_outlined), findsOneWidget);
-      expect(find.byIcon(Icons.receipt_long_outlined), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(GridView),
+          matching: find.byIcon(Icons.receipt_long_outlined),
+        ),
+        findsOneWidget,
+      );
       expect(find.byIcon(Icons.warning_amber_outlined), findsOneWidget);
+      await flushEntrances(tester);
     });
 
     testWidgets('metrics grid uses tokens for card Bg and borders', (tester) async {
@@ -131,9 +143,10 @@ void main() {
         return d?.color == MFTokens.cardLight;
       });
       expect(hasCardLight, isTrue);
+      await flushEntrances(tester);
     });
 
-    testWidgets('chart card has Sales title + Today/Week/Month tabs', (tester) async {
+    testWidgets('chart card has Sales title + range tabs', (tester) async {
       await tester.pumpWidget(_wrap(DashboardLoadedBody(
         userName: 'Hazem',
         company: _company(),
@@ -143,9 +156,10 @@ void main() {
       )));
       await tester.pump();
       expect(find.text('المبيعات'), findsWidgets); // metric + chart title
-      expect(find.text('اليوم'), findsOneWidget);
-      expect(find.text('الأسبوع'), findsOneWidget);
-      expect(find.text('الشهر'), findsOneWidget);
+      expect(find.text('آخر 7 أيام'), findsWidgets); // tab + header subtitle
+      expect(find.text('آخر 30 يوم'), findsOneWidget);
+      expect(find.text('آخر 3 أشهر'), findsOneWidget);
+      await flushEntrances(tester);
     });
 
     testWidgets('tapping chart tabs switches selected index', (tester) async {
@@ -157,12 +171,13 @@ void main() {
         onRefresh: () {},
       )));
       await tester.pump();
-      await tester.tap(find.text('الأسبوع'));
+      await tester.tap(find.text('آخر 30 يوم'));
       await tester.pump();
-      expect(find.text('الأسبوع'), findsOneWidget);
-      await tester.tap(find.text('الشهر'));
+      expect(find.text('آخر 30 يوم'), findsWidgets); // tab + subtitle follow
+      await tester.tap(find.text('آخر 3 أشهر'));
       await tester.pump();
-      expect(find.text('الشهر'), findsOneWidget);
+      expect(find.text('آخر 3 أشهر'), findsWidgets);
+      await flushEntrances(tester);
     });
 
     testWidgets('recent invoices shows empty state when no activities', (tester) async {
@@ -176,6 +191,7 @@ void main() {
       await tester.pump();
       expect(find.text('آخر الفواتير'), findsOneWidget);
       expect(find.text('لا توجد فواتير'), findsOneWidget);
+      await flushEntrances(tester);
     });
 
     testWidgets('recent invoices lists up to 5 activities with badge + name + amount', (tester) async {
@@ -205,8 +221,15 @@ void main() {
       expect(find.text('عميل 1'), findsOneWidget);
       expect(find.text('عميل 4'), findsOneWidget);
       expect(find.text('عميل 5'), findsNothing);
-      // also check that at least 5 rows exist via amount texts
-      expect(find.textContaining('ج.م'), findsNWidgets(5));
+      // 5 invoice amounts inside the card (scoped: metrics grid also shows ج.م)
+      expect(
+        find.descendant(
+          of: find.byType(RecentInvoicesCard),
+          matching: find.textContaining('ج.م'),
+        ),
+        findsNWidgets(5),
+      );
+      await flushEntrances(tester);
     });
 
     testWidgets('pull to refresh indicator exists', (tester) async {
@@ -219,6 +242,7 @@ void main() {
       )));
       await tester.pump();
       expect(find.byType(RefreshIndicator), findsOneWidget);
+      await flushEntrances(tester);
     });
 
     testWidgets('isRefreshing shows LinearProgressIndicator', (tester) async {
@@ -231,6 +255,7 @@ void main() {
       )));
       await tester.pump();
       expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      await flushEntrances(tester);
     });
 
     testWidgets('uses hide TextDirection conflict fix (intl hide) — no crash', (tester) async {
@@ -244,6 +269,7 @@ void main() {
       )));
       await tester.pump();
       expect(tester.takeException(), isNull);
+      await flushEntrances(tester);
     });
   });
 }
