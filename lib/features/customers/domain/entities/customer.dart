@@ -16,6 +16,9 @@ class Customer extends Equatable {
   final double totalPurchases;
   final double totalPaid;
   final List<CustomerTransaction> transactions;
+  /// Informational LWW cursor from GET responses. Never sent on update —
+  /// customer writes are last-write-wins by server `updated_at`.
+  final int? version;
 
   const Customer({
     required this.id,
@@ -32,6 +35,7 @@ class Customer extends Equatable {
     this.totalPurchases = 0,
     this.totalPaid = 0,
     this.transactions = const [],
+    this.version,
   });
 
   Customer copyWith({
@@ -49,6 +53,7 @@ class Customer extends Equatable {
     double? totalPurchases,
     double? totalPaid,
     List<CustomerTransaction>? transactions,
+    int? version,
   }) {
     return Customer(
       id: id ?? this.id,
@@ -65,6 +70,7 @@ class Customer extends Equatable {
       totalPurchases: totalPurchases ?? this.totalPurchases,
       totalPaid: totalPaid ?? this.totalPaid,
       transactions: transactions ?? this.transactions,
+      version: version ?? this.version,
     );
   }
 
@@ -84,5 +90,6 @@ class Customer extends Equatable {
     totalPurchases,
     totalPaid,
     transactions,
+    version,
   ];
 }

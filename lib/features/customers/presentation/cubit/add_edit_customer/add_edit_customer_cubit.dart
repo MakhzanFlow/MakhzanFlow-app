@@ -1,7 +1,12 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:makhzanflow/core/constants/api_endpoints.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
 import 'package:makhzanflow/core/error/failures.dart';
+import 'package:makhzanflow/core/sync/enqueue_guard.dart';
+import 'package:makhzanflow/core/sync/pending_op.dart';
+import 'package:makhzanflow/core/sync/pending_ops_queue.dart';
+import '../../../data/models/create_customer_request_dto.dart';
 import '../../../domain/usecases/create_customer_usecase.dart';
 import '../../../domain/usecases/upload_customer_image_usecase.dart';
 import '../../../domain/usecases/get_customer_usecase.dart';
@@ -15,6 +20,7 @@ class AddEditCustomerCubit extends Cubit<AddEditCustomerState> {
   final UploadCustomerImageUseCase _uploadImageUseCase;
   final GetCustomerUseCase? _getCustomerUseCase;
   final UpdateCustomerUseCase? _updateCustomerUseCase;
+  final PendingOpsQueue? _pendingOpsQueue;
   String? _customerId;
 
   AddEditCustomerCubit({
@@ -22,10 +28,12 @@ class AddEditCustomerCubit extends Cubit<AddEditCustomerState> {
     required UploadCustomerImageUseCase uploadImageUseCase,
     GetCustomerUseCase? getCustomerUseCase,
     UpdateCustomerUseCase? updateCustomerUseCase,
+    PendingOpsQueue? pendingOpsQueue,
   }) : _createCustomerUseCase = createCustomerUseCase,
        _uploadImageUseCase = uploadImageUseCase,
        _getCustomerUseCase = getCustomerUseCase,
        _updateCustomerUseCase = updateCustomerUseCase,
+       _pendingOpsQueue = pendingOpsQueue,
        super(const AddEditCustomerState());
 
   Future<void> loadForEdit(String customerId, String companyId) async {
@@ -120,6 +128,18 @@ class AddEditCustomerCubit extends Cubit<AddEditCustomerState> {
         imageUrl: imageUrl,
         companyId: companyId,
       );
+      // Offline edits are not allowed (add-new-only policy): existing
+      // customers can only be edited online. Creates still queue.
+      final updateFailure = result.fold((f) => f, (_) => null);
+      if (updateFailure != null && shouldEnqueueFailure(updateFailure)) {
+        emit(
+          state.copyWith(
+            status: AddEditCustomerStatus.error,
+            failure: ServerFailure(AppStrings.offlineEditOnlyNew),
+          ),
+        );
+        return false;
+      }
       return _handleResult(result, AppStrings.customerSaveSuccess);
     } else {
       final result = await _createCustomerUseCase(
@@ -131,7 +151,39 @@ class AddEditCustomerCubit extends Cubit<AddEditCustomerState> {
         companyId: companyId,
       );
       return result.fold(
-        (failure) {
+        (failure) async {
+          // Offline create: queued — report success so the form pops and the
+          // record appears in the list with a pending badge until sync.
+          if (shouldEnqueueFailure(failure) && _pendingOpsQueue != null) {
+            final dto = CreateCustomerRequestDto(
+              name: state.name,
+              nameOfficial:
+                  state.nameOfficial.isNotEmpty ? state.nameOfficial : null,
+              phone: state.phone.isNotEmpty ? state.phone : null,
+              address: state.address.isNotEmpty ? state.address : null,
+              openingBalance: debt > 0 ? debt : null,
+            );
+            final dropped = await tryEnqueue(
+              _pendingOpsQueue,
+              PendingOp.createNew(
+                opType: PendingOpType.customerCreate,
+                method: 'POST',
+                path: ApiEndpoints.customers,
+                body: dto.toJson(),
+                companyId: companyId,
+                imageLocalPath: state.imageLocalPath,
+              ),
+            );
+            emit(
+              state.copyWith(
+                status: AddEditCustomerStatus.success,
+                successMessage: dropped
+                    ? AppStrings.queueOverflow
+                    : AppStrings.queuedWillSync,
+              ),
+            );
+            return true;
+          }
           emit(
             state.copyWith(
               status: AddEditCustomerStatus.error,
@@ -184,8 +236,7 @@ class AddEditCustomerCubit extends Cubit<AddEditCustomerState> {
     }
   }
 
-  bool _handleResult(Either<Failure, void> result, String message) {
-    return result.fold(
+  bool _handleResult(Either<Failure, void> result, String message) {    return result.fold(
       (failure) {
         emit(
           state.copyWith(

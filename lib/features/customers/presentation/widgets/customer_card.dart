@@ -7,8 +7,15 @@ import '../../domain/entities/customer.dart';
 class CustomerCard extends StatelessWidget {
   final Customer customer;
   final VoidCallback? onTap;
+  /// Unsynced optimistic create — shows the pending badge.
+  final bool isPending;
 
-  const CustomerCard({super.key, required this.customer, this.onTap});
+  const CustomerCard({
+    super.key,
+    required this.customer,
+    this.onTap,
+    this.isPending = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -62,6 +69,25 @@ class CustomerCard extends StatelessWidget {
             ],
           ),
         ),
+        if (isPending) ...[
+          const SizedBox(width: MFTokens.sp8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: primarySubtle,
+              borderRadius: BorderRadius.circular(MFTokens.radiusSM),
+            ),
+            child: Text(
+              AppStrings.pendingSync,
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: MFTokens.fontXS,
+                fontWeight: FontWeight.w600,
+                color: primary,
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

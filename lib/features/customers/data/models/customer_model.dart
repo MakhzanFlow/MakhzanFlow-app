@@ -17,6 +17,8 @@ class CustomerModel {
   final double totalPurchases;
   final double totalPaid;
   final List<CustomerTransaction> transactions;
+  /// Informational LWW cursor. Parsed from GET, never serialized on update.
+  final int? version;
 
   const CustomerModel({
     required this.id,
@@ -33,6 +35,7 @@ class CustomerModel {
     this.totalPurchases = 0,
     this.totalPaid = 0,
     this.transactions = const [],
+    this.version,
   });
 
   factory CustomerModel.fromJson(Map<String, dynamic> json) {
@@ -177,6 +180,7 @@ class CustomerModel {
       totalPurchases: totalPurchases,
       totalPaid: totalPaid,
       transactions: transactions,
+      version: (json['version'] as num?)?.toInt(),
     );
   }
 
@@ -234,6 +238,7 @@ class CustomerModel {
       totalPurchases: totalPurchases,
       totalPaid: totalPaid,
       transactions: transactions,
+      version: version,
     );
   }
 
@@ -253,6 +258,7 @@ class CustomerModel {
       totalPurchases: entity.totalPurchases,
       totalPaid: entity.totalPaid,
       transactions: entity.transactions,
+      version: entity.version,
     );
   }
 }
