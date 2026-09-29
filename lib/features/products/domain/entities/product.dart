@@ -13,6 +13,9 @@ class Product extends Equatable {
   final DateTime? expirationDate;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  /// Optimistic-locking cursor for finance/stock writes (price/stock).
+  /// Bumped by the backend on each gated write; defaults to 1.
+  final int version;
 
   const Product({
     required this.id,
@@ -27,6 +30,7 @@ class Product extends Equatable {
     this.expirationDate,
     this.createdAt,
     this.updatedAt,
+    this.version = 1,
   });
 
   Product copyWith({
@@ -42,6 +46,7 @@ class Product extends Equatable {
     DateTime? expirationDate,
     DateTime? createdAt,
     DateTime? updatedAt,
+    int? version,
   }) {
     return Product(
       id: id ?? this.id,
@@ -56,6 +61,7 @@ class Product extends Equatable {
       expirationDate: expirationDate ?? this.expirationDate,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      version: version ?? this.version,
     );
   }
 
@@ -73,5 +79,6 @@ class Product extends Equatable {
     expirationDate,
     createdAt,
     updatedAt,
+    version,
   ];
 }

@@ -12,6 +12,8 @@ class ProductsState extends Equatable {
   final int totalCount;
   final bool hasMore;
   final bool isLoadingMore;
+  /// Ids of optimistic (unsynced) creates prepended from the offline queue.
+  final Set<String> pendingIds;
 
   const ProductsState({
     this.status = ProductsStatus.initial,
@@ -21,6 +23,7 @@ class ProductsState extends Equatable {
     this.totalCount = 0,
     this.hasMore = true,
     this.isLoadingMore = false,
+    this.pendingIds = const {},
   });
 
   ProductsState copyWith({
@@ -31,6 +34,7 @@ class ProductsState extends Equatable {
     int? totalCount,
     bool? hasMore,
     bool? isLoadingMore,
+    Set<String>? pendingIds,
   }) {
     return ProductsState(
       status: status ?? this.status,
@@ -40,6 +44,7 @@ class ProductsState extends Equatable {
       totalCount: totalCount ?? this.totalCount,
       hasMore: hasMore ?? this.hasMore,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      pendingIds: pendingIds ?? this.pendingIds,
     );
   }
 
@@ -52,5 +57,6 @@ class ProductsState extends Equatable {
     totalCount,
     hasMore,
     isLoadingMore,
+    pendingIds,
   ];
 }

@@ -7,7 +7,10 @@ import 'package:makhzanflow/core/constants/app_strings.dart';
 import 'package:makhzanflow/core/permissions/permission_constants.dart';
 import 'package:makhzanflow/core/permissions/permission_service.dart';
 import 'package:makhzanflow/core/di/service_locator.dart';
+import 'package:makhzanflow/core/error/merge_retry.dart';
+import 'package:makhzanflow/core/error/failures.dart';
 import 'package:makhzanflow/core/widgets/app_snackbar.dart';
+import 'package:makhzanflow/shared/widgets/version_conflict_dialog.dart';
 import '../../../../features/auth/presentation/cubit/auth_cubit.dart';
 import '../../../../features/auth/presentation/cubit/auth_state.dart';
 import '../cubit/add_edit_product/add_edit_product_cubit.dart';
@@ -82,6 +85,10 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
           }
           if (state.status == AddEditProductStatus.error &&
               state.errorMessage != null) {
+            if (state.conflict != null) {
+              _onConflict(state.conflict!);
+              return;
+            }
             AppSnackbar.error(context, state.errorMessage!);
             _cubit.resetStatus();
           }
@@ -147,5 +154,36 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
     final userId = authState is Authenticated ? authState.user.id : '';
     if (userId.isEmpty) return;
     await _cubit.save(userId, companyId);
+  }
+
+  /// Merge UI (guide §5): server vs attempted price/stock. Keep mine retries
+  /// with the fresh server version; Use server discards and refreshes.
+  Future<void> _onConflict(VersionConflictFailure conflict) async {
+    final state = _cubit.state;
+    final current = conflict.current ?? const {};
+    final rows = [
+      ConflictFieldRow(
+        label: AppStrings.productPriceLabel,
+        mine: state.priceText,
+        server: '${current['price'] ?? '—'}',
+      ),
+      ConflictFieldRow(
+        label: AppStrings.productQuantityLabel,
+        mine: state.quantityText,
+        server: '${current['stock'] ?? current['quantity'] ?? '—'}',
+      ),
+    ];
+    final choice = await showVersionConflictDialog(context, rows: rows);
+    if (!mounted) return;
+    if (choice == MergeChoice.mine) {
+      _cubit.applyServerVersion(serverVersionOf(conflict));
+      await _save();
+    } else {
+      if (widget.productId != null) {
+        await _cubit.loadForEdit(widget.productId!, companyId);
+      } else {
+        _cubit.resetStatus();
+      }
+    }
   }
 }

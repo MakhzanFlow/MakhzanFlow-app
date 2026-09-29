@@ -13,6 +13,7 @@ class ProductModel {
   final DateTime? expirationDate;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final int version;
 
   const ProductModel({
     required this.id,
@@ -27,6 +28,7 @@ class ProductModel {
     this.expirationDate,
     this.createdAt,
     this.updatedAt,
+    this.version = 1,
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
@@ -43,6 +45,7 @@ class ProductModel {
       expirationDate: _parseDate(json, 'expiry_date', 'expiration_date'),
       createdAt: _parseDate(json, 'created_at'),
       updatedAt: _parseDate(json, 'updated_at'),
+      version: (json['version'] as num?)?.toInt() ?? 1,
     );
   }
 
@@ -119,6 +122,7 @@ class ProductModel {
       expirationDate: expirationDate,
       createdAt: createdAt,
       updatedAt: updatedAt,
+      version: version,
     );
   }
 
@@ -136,6 +140,7 @@ class ProductModel {
       expirationDate: entity.expirationDate,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
+      version: entity.version,
     );
   }
 }

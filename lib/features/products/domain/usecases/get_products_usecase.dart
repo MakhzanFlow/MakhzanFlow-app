@@ -1,4 +1,5 @@
 import 'package:fpdart/fpdart.dart';
+import 'package:makhzanflow/core/error/failures.dart';
 import '../entities/product.dart';
 import '../repositories/product_repository.dart';
 
@@ -7,7 +8,7 @@ class GetProductsUseCase {
 
   GetProductsUseCase(this.repository);
 
-  TaskEither<String, List<Product>> call({
+  Future<Either<Failure, List<Product>>> call({
     required String companyId,
     String? query,
     int? limit,

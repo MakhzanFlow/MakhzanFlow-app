@@ -1,4 +1,5 @@
 import 'package:fpdart/fpdart.dart';
+import 'package:makhzanflow/core/error/failures.dart';
 import '../repositories/product_repository.dart';
 
 class UploadProductImageUseCase {
@@ -6,7 +7,7 @@ class UploadProductImageUseCase {
 
   UploadProductImageUseCase(this.repository);
 
-  TaskEither<String, String> call(String filePath, String productId) {
+  Future<Either<Failure, String>> call(String filePath, String productId) {
     return repository.uploadProductImage(filePath, productId);
   }
 }

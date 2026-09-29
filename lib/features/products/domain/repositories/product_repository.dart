@@ -1,10 +1,11 @@
 import 'package:fpdart/fpdart.dart';
+import 'package:makhzanflow/core/error/failures.dart';
 import '../entities/product.dart';
 import '../entities/inventory_movement.dart';
 import '../entities/product_input.dart';
 
 abstract class ProductRepository {
-  TaskEither<String, List<Product>> listProducts({
+  Future<Either<Failure, List<Product>>> listProducts({
     required String companyId,
     String? query,
     int? limit,
@@ -13,40 +14,47 @@ abstract class ProductRepository {
     bool ascending = false,
   });
 
-  TaskEither<String, Product> getProduct(
+  Future<Either<Failure, Product>> getProduct(
     String id,
     String companyId,
   );
 
-  TaskEither<String, Product> createProduct(
+  Future<Either<Failure, Product>> createProduct(
     ProductInput input,
     String userId,
     String companyId,
   );
 
-  TaskEither<String, Product> updateProduct(
+  /// Gated write: [version] (from the last GET) is sent when price/stock
+  /// keys are present. Null version = metadata-only LWW edit.
+  Future<Either<Failure, Product>> updateProduct(
     String id,
     ProductInput input,
     String userId,
-    String companyId,
-  );
+    String companyId, {
+    int? version,
+  });
 
-  TaskEither<String, void> deleteProduct(
+  Future<Either<Failure, void>> deleteProduct(
     String id,
     String companyId,
   );
 
-  TaskEither<String, String> uploadProductImage(String filePath, String productId);
+  Future<Either<Failure, String>> uploadProductImage(
+    String filePath,
+    String productId,
+  );
 
-  TaskEither<String, Product> updateQuantity({
+  Future<Either<Failure, Product>> updateQuantity({
     required String productId,
     required int delta,
     String? note,
     required String userId,
     required String companyId,
+    int? version,
   });
 
-  TaskEither<String, List<InventoryMovement>> getMovements(
+  Future<Either<Failure, List<InventoryMovement>>> getMovements(
     String productId,
     String companyId,
   );
