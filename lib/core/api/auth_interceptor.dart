@@ -38,7 +38,9 @@ class AuthInterceptor extends Interceptor {
 
     final companyId = await _tokenStorage.companyId;
     if (companyId != null && companyId.isNotEmpty) {
-      options.headers['x-company-id'] = companyId;
+      // putIfAbsent: explicit per-request values (e.g. offline-queue replay
+      // for a previously selected company) win over the current company.
+      options.headers.putIfAbsent('x-company-id', () => companyId);
     }
 
     handler.next(options);

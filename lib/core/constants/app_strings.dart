@@ -150,6 +150,28 @@ class AppStrings {
   static String get noPermission => _tr('ليس لديك صلاحية للوصول', 'You do not have permission to access');
   static String get unknownCustomer => _tr('عميل غير معروف', 'Unknown customer');
 
+  // ── Offline queue & sync ──────────────────────────────────────────
+  static String get queuedWillSync => _tr('تم الحفظ، ستتم المزامنة عند عودة الاتصال', 'Saved, will sync when back online');
+  static String get onlineRequired => _tr('هذه العملية مالية وتتطلب اتصالاً بالإنترنت', 'This money-related action requires an internet connection');
+  static String get offlineEditOnlyNew => _tr('لا يمكن التعديل دون اتصال — يمكنك إضافة جديد فقط', 'Cannot edit offline — you can only add new records');
+  static String get queueOverflow => _tr('القائمة ممتلئة — تم إسقاط أقدم عملية', 'Queue is full — oldest operation dropped');
+  static String syncedCount(int n) => _tr('تمت مزامنة $n', 'Synced $n');
+  static String syncFailedCount(int n) => _tr('فشل $n', 'Failed $n');
+  static String get syncTitle => _tr('المزامنة', 'Sync');
+  static String get pendingSync => _tr('بانتظار المزامنة', 'Pending sync');
+  static String get syncNeedsReview => _tr('عمليات تحتاج مراجعة', 'Operations need review');
+  static String get needsReviewTitle => _tr('تحتاج مراجعة', 'Needs review');
+  static String get needsReviewEmpty => _tr('لا توجد عمليات معلقة للمراجعة', 'No operations awaiting review');
+  static String get offlineMode => _tr('وضع عدم الاتصال — تعرض بيانات مخزنة', 'Offline — showing saved data');
+
+  // ── Merge (version conflict) ──────────────────────────────────────
+  static String get conflictTitle => _tr('تعارض في البيانات', 'Changed by someone else');
+  static String get conflictMine => _tr('قيمتك', 'Your value');
+  static String get conflictServer => _tr('قيمة الخادم', 'Server value');
+  static String get keepMine => _tr('الاحتفاظ بقيمتي', 'Keep mine');
+  static String get useServer => _tr('استخدام الخادم', 'Use server');
+  static String get retryManually => _tr('تعذر الحفظ — حاول مرة أخرى يدوياً', 'Could not save — please retry manually');
+
   // ── Payments ────────────────────────────────────────────────────────
   static String get paymentsTitle => _tr('المدفوعات', 'Payments');
   static String get paymentsSearchHint => _tr('بحث برقم الفاتورة أو العميل...', 'Search by invoice number or customer...');

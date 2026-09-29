@@ -38,6 +38,7 @@ dependencies:
   forui_hooks: ^0.25.0
   flutter_hooks: ^0.21.3+1
   shared_preferences: ^2.5.5
+  connectivity_plus: ^7.3.1
 
 dev_dependencies:
   sentry_dart_plugin: ^3.4.0

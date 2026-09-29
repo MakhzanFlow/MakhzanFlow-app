@@ -22,6 +22,12 @@ class NetworkFailure extends Failure {
   const NetworkFailure([super.message]);
 }
 
+/// Connectivity was lost (timeouts / connection errors). Mutations failing
+/// with this type are eligible for the offline queue (see enqueue_guard).
+class ConnectionLostFailure extends NetworkFailure {
+  const ConnectionLostFailure([super.message]);
+}
+
 class GoogleSignInCancelledFailure extends Failure {
   GoogleSignInCancelledFailure()
       : super(AppStrings.googleSignInCancelled);
@@ -41,6 +47,27 @@ class NotFoundFailure extends Failure {
 
 class ConflictFailure extends Failure {
   const ConflictFailure([super.message]);
+}
+
+/// 409 with `code == VERSION_CONFLICT`: the record moved on server-side.
+/// [current] is the fresh server copy, [attempted] what we tried to save.
+/// Produced ONLY by the central Dio mapper — never constructed in UI code.
+class VersionConflictFailure extends Failure {
+  final String entity;
+  final String id;
+  final Map<String, dynamic>? current;
+  final Map<String, dynamic>? attempted;
+
+  const VersionConflictFailure(
+    super.message, {
+    this.entity = 'record',
+    this.id = '',
+    this.current,
+    this.attempted,
+  });
+
+  @override
+  List<Object> get props => [message, entity, id, current ?? {}, attempted ?? {}];
 }
 
 class RateLimitFailure extends Failure {
