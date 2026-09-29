@@ -12,6 +12,7 @@ class AddPaymentLoaded extends AddPaymentState {
   final String? selectedInvoiceId;
   final String amount;
   final String customerName;
+  final String companyId;
   final double? maxAmount;
   final String? amountError;
 
@@ -20,6 +21,7 @@ class AddPaymentLoaded extends AddPaymentState {
     this.selectedInvoiceId,
     this.amount = '',
     required this.customerName,
+    required this.companyId,
     this.maxAmount,
     this.amountError,
   });
@@ -31,6 +33,7 @@ class AddPaymentLoaded extends AddPaymentState {
     String? selectedInvoiceId,
     String? amount,
     String? customerName,
+    String? companyId,
     double? maxAmount,
     Object? amountError = _sentinel,
     bool clearSelection = false,
@@ -41,6 +44,7 @@ class AddPaymentLoaded extends AddPaymentState {
       selectedInvoiceId: clearSelection ? null : (selectedInvoiceId ?? this.selectedInvoiceId),
       amount: amount ?? this.amount,
       customerName: customerName ?? this.customerName,
+      companyId: companyId ?? this.companyId,
       maxAmount: clearMax ? null : (maxAmount ?? this.maxAmount),
       amountError: amountError == _sentinel ? this.amountError : amountError as String?,
     );

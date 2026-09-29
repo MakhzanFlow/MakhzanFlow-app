@@ -1,5 +1,4 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:makhzanflow/core/error/failures.dart' show ServerFailure;
 import 'package:makhzanflow/features/products/domain/entities/product.dart';
 import 'package:makhzanflow/features/products/domain/usecases/get_products_usecase.dart';
 import 'product_picker_state.dart';
@@ -27,10 +26,10 @@ class ProductPickerCubit extends Cubit<ProductPickerState> {
       query: _searchQuery.isNotEmpty ? _searchQuery : null,
       limit: 50,
       offset: 0,
-    ).run();
+    );
 
     result.fold(
-      (error) => emit(ProductPickerError(failure: ServerFailure(error))),
+      (failure) => emit(ProductPickerError(failure: failure)),
       (products) => emit(
         ProductPickerLoaded(
           products: products,

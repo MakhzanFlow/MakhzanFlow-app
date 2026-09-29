@@ -23,6 +23,7 @@ class InvoiceModel {
   final DateTime? dueDate;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final int version;
 
   const InvoiceModel({
     required this.id,
@@ -44,6 +45,7 @@ class InvoiceModel {
     this.dueDate,
     this.createdAt,
     this.updatedAt,
+    this.version = 1,
   });
 
   factory InvoiceModel.fromJson(Map<String, dynamic> json) {
@@ -147,6 +149,7 @@ class InvoiceModel {
       updatedAt: json['updated_at'] != null
           ? DateTime.tryParse(json['updated_at'] as String)
           : null,
+      version: (json['version'] as num?)?.toInt() ?? 1,
     );
   }
 
@@ -219,6 +222,7 @@ class InvoiceModel {
       remainingAmount: remainingAmount,
       paymentStatus: _parseStatus(paymentStatus),
       createdAt: createdAt,
+      version: version,
     );
   }
 
@@ -255,6 +259,7 @@ class InvoiceModel {
       remainingAmount: entity.remainingAmount,
       paymentStatus: entity.paymentStatus.name,
       createdAt: entity.createdAt,
+      version: entity.version,
     );
   }
 }

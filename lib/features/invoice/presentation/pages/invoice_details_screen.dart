@@ -10,7 +10,9 @@ import 'package:makhzanflow/core/permissions/permission_gate.dart';
 import 'package:makhzanflow/core/permissions/permission_constants.dart';
 import 'package:makhzanflow/core/activity/activity_log_entry.dart';
 import 'package:makhzanflow/shared/widgets/activity_section.dart';
+import 'package:makhzanflow/core/error/failures.dart';
 import 'package:makhzanflow/core/widgets/app_snackbar.dart';
+import 'package:makhzanflow/shared/widgets/version_conflict_dialog.dart';
 import 'package:makhzanflow/features/invoice/domain/entities/invoice.dart';
 import 'package:makhzanflow/features/invoice/domain/entities/invoice_status.dart';
 import 'package:makhzanflow/features/invoice/presentation/cubit/invoice_details/invoice_details_cubit.dart';
@@ -74,6 +76,32 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen>
     }
   }
 
+  /// Merge UI for a stale invoice version on cancel (guide §5): attempted
+  /// cancel vs server state. Keep mine reloads + retries with the fresh
+  /// version; Use server reloads (discards the cancel).
+  Future<void> _onConflict(VersionConflictFailure conflict) async {
+    final current = conflict.current ?? const {};
+    final rows = [
+      ConflictFieldRow(
+        label: AppStrings.status,
+        mine: AppStrings.cancelInvoice,
+        server: '${current['status'] ?? current['payment_status'] ?? '—'}',
+      ),
+      ConflictFieldRow(
+        label: AppStrings.remainingDebt,
+        mine: '—',
+        server: '${current['remaining_amount'] ?? '—'}',
+      ),
+    ];
+    final choice = await showVersionConflictDialog(context, rows: rows);
+    if (!mounted) return;
+    if (choice == MergeChoice.mine) {
+      await _cubit.retryCancel(companyId);
+    } else {
+      await _cubit.loadInvoice(widget.invoiceId, companyId);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -119,7 +147,11 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen>
             AppSnackbar.success(context, AppStrings.cancelInvoiceSuccess);
           }
           if (state is InvoiceDetailsError) {
-            AppSnackbar.error(context, state.failure.message);
+            if (state.failure is VersionConflictFailure) {
+              _onConflict(state.failure as VersionConflictFailure);
+            } else {
+              AppSnackbar.error(context, state.failure.message);
+            }
           }
         },
         buildWhen: (prev, curr) =>

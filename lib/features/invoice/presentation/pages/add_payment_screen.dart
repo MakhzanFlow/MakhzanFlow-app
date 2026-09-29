@@ -6,7 +6,10 @@ import 'package:makhzanflow/core/constants/app_colors.dart';
 import 'package:makhzanflow/core/constants/app_sizes.dart';
 import 'package:makhzanflow/core/constants/app_routes.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
+import 'package:makhzanflow/core/error/failures.dart';
+import 'package:makhzanflow/core/error/merge_retry.dart';
 import 'package:makhzanflow/core/widgets/app_snackbar.dart';
+import 'package:makhzanflow/shared/widgets/version_conflict_dialog.dart';
 import '../cubit/add_payment/add_payment_cubit.dart';
 import '../widgets/add_payment_amount_card.dart';
 import '../widgets/add_payment_header.dart';
@@ -68,6 +71,43 @@ class _AddPaymentScreenState extends State<AddPaymentScreen>
     super.dispose();
   }
 
+  /// Merge UI for a stale invoice version (guide §5): attempted amount vs
+  /// server remaining. Keep mine refreshes the version and resubmits;
+  /// Use server reloads the unpaid list (discards the attempt).
+  Future<void> _onConflict(VersionConflictFailure conflict) async {
+    final loaded = _lastLoaded;
+    final invoiceId = loaded?.selectedInvoiceId;
+    if (invoiceId == null) {
+      if (mounted) AppSnackbar.error(context, conflict.message);
+      return;
+    }
+    final current = conflict.current ?? const {};
+    final rows = [
+      ConflictFieldRow(
+        label: AppStrings.paymentsSortAmount,
+        mine: loaded?.amount ?? '',
+        server: '${current['remaining_amount'] ?? current['total_amount'] ?? '—'}',
+      ),
+      ConflictFieldRow(
+        label: AppStrings.status,
+        mine: AppStrings.remainingDebt,
+        server: '${current['status'] ?? current['payment_status'] ?? '—'}',
+      ),
+    ];
+    final choice = await showVersionConflictDialog(context, rows: rows);
+    if (!mounted) return;
+    if (choice == MergeChoice.mine) {
+      _cubit.refreshInvoiceVersion(invoiceId, serverVersionOf(conflict));
+      await _cubit.submit();
+    } else {
+      _cubit.loadUnpaidInvoices(
+        customerId: widget.customerId,
+        customerName: widget.customerName ?? '',
+        companyId: companyId,
+      );
+    }
+  }
+
   void _syncAmountController(String stateAmount) {
     if (_amountController.text != stateAmount) {
       _amountController.text = stateAmount;
@@ -87,7 +127,11 @@ class _AddPaymentScreenState extends State<AddPaymentScreen>
           listener: (context, state) {
             switch (state) {
               case AddPaymentError(:final failure):
-                AppSnackbar.error(context, failure.message);
+                if (failure is VersionConflictFailure) {
+                  _onConflict(failure);
+                } else {
+                  AppSnackbar.error(context, failure.message);
+                }
               case AddPaymentSuccess(:final invoiceId):
                 AppSnackbar.success(context, AppStrings.addPaymentSuccess);
                 context.go(AppRoutes.invoiceDetailsPath(invoiceId));

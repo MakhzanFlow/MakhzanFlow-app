@@ -13,6 +13,7 @@ class AddPaymentUseCase {
     String method = 'cash',
     String? referenceNumber,
     String? notes,
+    int? version,
   }) {
     return repository.addPayment(
       invoiceId: invoiceId,
@@ -20,6 +21,7 @@ class AddPaymentUseCase {
       method: method,
       referenceNumber: referenceNumber,
       notes: notes,
+      version: version,
     );
   }
 }

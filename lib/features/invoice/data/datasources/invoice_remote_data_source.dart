@@ -34,5 +34,6 @@ abstract class InvoiceRemoteDataSource {
   Future<Either<Failure, InvoiceModel>> cancelInvoice(
     String id,
     String companyId,
+    int version,
   );
 }
