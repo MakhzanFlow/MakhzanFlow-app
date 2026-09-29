@@ -84,6 +84,7 @@ class InvoiceRepositoryImpl implements InvoiceRepository {
     String method = 'cash',
     String? referenceNumber,
     String? notes,
+    int? version,
   }) async {
     if (invoiceId.trim().isEmpty)
       return Left(ValidationFailure(ErrorMessages.selectInvoice));
@@ -95,6 +96,7 @@ class InvoiceRepositoryImpl implements InvoiceRepository {
       method: method,
       referenceNumber: referenceNumber,
       notes: notes,
+      version: version,
     );
     final result = await dataSource.addPayment(dto);
     return result.map((model) => model.id);
@@ -131,8 +133,9 @@ class InvoiceRepositoryImpl implements InvoiceRepository {
   Future<Either<Failure, Invoice>> cancelInvoice(
     String id,
     String companyId,
+    int version,
   ) async {
-    final result = await dataSource.cancelInvoice(id, companyId);
+    final result = await dataSource.cancelInvoice(id, companyId, version);
     return result.map((model) => model.toEntity());
   }
 }

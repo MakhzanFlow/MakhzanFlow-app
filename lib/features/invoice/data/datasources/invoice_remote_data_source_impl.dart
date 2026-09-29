@@ -194,11 +194,13 @@ class InvoiceRemoteDataSourceImpl implements InvoiceRemoteDataSource {
   Future<Either<Failure, InvoiceModel>> cancelInvoice(
     String id,
     String companyId,
+    int version,
   ) async {
     assert(companyId.isNotEmpty, 'cancelInvoice called with empty companyId');
     try {
       final response = await _apiClient.dio.post(
         ApiEndpoints.invoiceCancel(id),
+        data: {'version': version},
       );
       final data = _dataOrThrow(response);
       return Right(InvoiceModel.fromJson(data));
@@ -235,6 +237,9 @@ class InvoiceRemoteDataSourceImpl implements InvoiceRemoteDataSource {
 
   Failure _mapDioError(DioException e) {
     final base = mapDioExceptionToFailure(e);
+    // Conflict payloads (current/attempted) must survive translation —
+    // the Merge UI and replay parking depend on them.
+    if (base is VersionConflictFailure) return base;
     final backendMessage = _messageFromResponse(e.response);
     final translated = _translateBackendMessage(backendMessage ?? '');
     if (translated != null) {

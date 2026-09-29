@@ -12,6 +12,8 @@ import 'core/company/company_cubit.dart';
 import 'core/di/service_locator.dart';
 import 'core/theme/app_locale_cubit.dart';
 import 'features/auth/presentation/cubit/auth_cubit.dart';
+import 'core/sync/sync_cubit.dart';
+import 'core/sync/sync_service.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 void main() async {
@@ -20,6 +22,9 @@ void main() async {
 
   await initServiceLocator();
   await loadOnboardingStatus();
+
+  // Offline replay engine (registered only when prefs-backed queue exists).
+  if (sl.isRegistered<SyncService>()) sl<SyncService>().start();
 
   if (kReleaseMode) {
     await SentryFlutter.init((options) {
@@ -43,6 +48,8 @@ class MyApp extends StatelessWidget {
         BlocProvider<AuthCubit>.value(value: sl<AuthCubit>()),
         BlocProvider<CompanyCubit>.value(value: sl<CompanyCubit>()),
         BlocProvider<AppLocaleCubit>.value(value: sl<AppLocaleCubit>()),
+        if (sl.isRegistered<SyncCubit>())
+          BlocProvider<SyncCubit>(create: (_) => sl<SyncCubit>()),
       ],
       child: ScreenUtilInit(
         designSize: const Size(375, 812),

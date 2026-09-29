@@ -9,8 +9,11 @@ class CustomerTextInput extends StatelessWidget {
   final TextInputType keyboardType;
   final String? Function(String?)? validator;
   final ValueChanged<String>? onChanged;
+  /// Server-side field error (`errors[].field`) shown below the input and
+  /// forced via validator so it appears even before interaction.
+  final String? serverError;
 
-  const CustomerTextInput({super.key, required this.controller, required this.label, required this.hintText, required this.iconData, this.keyboardType = TextInputType.text, this.validator, this.onChanged});
+  const CustomerTextInput({super.key, required this.controller, required this.label, required this.hintText, required this.iconData, this.keyboardType = TextInputType.text, this.validator, this.onChanged, this.serverError});
 
   @override
   Widget build(BuildContext context) {
@@ -19,6 +22,14 @@ class CustomerTextInput extends StatelessWidget {
     final primary = isDark ? MFTokens.primaryDarkMode : MFTokens.primary;
     final inputBg = isDark ? MFTokens.inputBgDark : MFTokens.inputBgLight;
     final border = isDark ? MFTokens.borderDark : MFTokens.borderLight;
+    final errorColor = isDark ? MFTokens.errorTextDark : MFTokens.errorText;
+
+    String? effectiveValidator(String? value) {
+      final local = validator?.call(value);
+      if (local != null) return local;
+      if (serverError != null && serverError!.isNotEmpty) return serverError;
+      return null;
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -30,12 +41,14 @@ class CustomerTextInput extends StatelessWidget {
           keyboardType: keyboardType,
           textDirection: TextDirection.rtl,
           textAlign: TextAlign.right,
-          validator: validator,
+          validator: effectiveValidator,
           onChanged: onChanged,
           style: TextStyle(fontFamily: 'Cairo', fontSize: MFTokens.fontMD, color: textPrimary),
           decoration: InputDecoration(
             hintText: hintText,
             hintTextDirection: TextDirection.rtl,
+            errorText: (serverError != null && serverError!.isNotEmpty) ? serverError : null,
+            errorStyle: TextStyle(fontFamily: 'Cairo', color: errorColor),
             prefixIcon: Icon(iconData, color: primary, size: MFTokens.sp24),
             filled: true,
             fillColor: inputBg,

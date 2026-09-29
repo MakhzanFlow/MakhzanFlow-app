@@ -46,6 +46,24 @@ class CompanyMemberModel extends CompanyMember {
     );
   }
 
+  factory CompanyMemberModel.fromEntity(CompanyMember entity) {
+    return CompanyMemberModel(
+      id: entity.id,
+      companyId: entity.companyId,
+      userId: entity.userId,
+      isOwner: entity.isOwner,
+      permissions: Map<String, dynamic>.from(entity.permissions),
+      joinedAt: entity.joinedAt,
+      userName: entity.userName,
+      userEmail: entity.userEmail,
+      status: entity.status,
+      deactivatedAt: entity.deactivatedAt,
+      deactivatedBy: entity.deactivatedBy,
+      removedAt: entity.removedAt,
+      removedBy: entity.removedBy,
+    );
+  }
+
   Map<String, dynamic> toJson() => {
     'id': id,
     'company_id': companyId,

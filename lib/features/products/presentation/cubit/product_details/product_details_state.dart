@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:makhzanflow/core/error/failures.dart';
 import '../../../domain/entities/product.dart';
 import '../../../domain/entities/inventory_movement.dart';
 
@@ -13,6 +14,8 @@ class ProductDetailsState extends Equatable {
   final String? errorMessage;
   final bool isDeleting;
   final bool isUpdatingQuantity;
+  /// Set when the last stock write hit `409 VERSION_CONFLICT` — Merge UI.
+  final VersionConflictFailure? conflict;
 
   const ProductDetailsState({
     this.status = ProductDetailsStatus.initial,
@@ -21,6 +24,7 @@ class ProductDetailsState extends Equatable {
     this.errorMessage,
     this.isDeleting = false,
     this.isUpdatingQuantity = false,
+    this.conflict,
   });
 
   ProductDetailsState copyWith({
@@ -30,6 +34,8 @@ class ProductDetailsState extends Equatable {
     String? errorMessage,
     bool? isDeleting,
     bool? isUpdatingQuantity,
+    VersionConflictFailure? conflict,
+    bool clearConflict = false,
   }) {
     return ProductDetailsState(
       status: status ?? this.status,
@@ -38,6 +44,7 @@ class ProductDetailsState extends Equatable {
       errorMessage: errorMessage ?? this.errorMessage,
       isDeleting: isDeleting ?? this.isDeleting,
       isUpdatingQuantity: isUpdatingQuantity ?? this.isUpdatingQuantity,
+      conflict: clearConflict ? null : (conflict ?? this.conflict),
     );
   }
 
@@ -49,5 +56,6 @@ class ProductDetailsState extends Equatable {
     errorMessage,
     isDeleting,
     isUpdatingQuantity,
+    conflict,
   ];
 }

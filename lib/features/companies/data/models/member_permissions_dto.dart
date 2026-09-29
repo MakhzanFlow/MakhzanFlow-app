@@ -1,3 +1,5 @@
+import 'package:makhzanflow/core/permissions/permission_key_mapper.dart';
+
 /// Response for `GET /companies/:id/members/:userId/permissions`:
 /// `{ role, permissions: [ "products.create", ... ] }`
 class MemberPermissionsDto {
@@ -17,9 +19,12 @@ class MemberPermissionsDto {
 
   /// Converts the flat permission keys into the nested map shape
   /// (`{ section: { action: true } }`) expected by the UI.
+  /// Backend spellings (`.read`, `invoices.delete`) are normalized to the
+  /// client vocabulary (`.view`) on the way in.
   Map<String, dynamic> toPermissionMap() {
     final result = <String, dynamic>{};
-    for (final key in permissions) {
+    for (final rawKey in permissions) {
+      final key = PermissionKeyMapper.toClientKey(rawKey);
       final parts = key.split('.');
       if (parts.length == 1) {
         result[parts[0]] = true;

@@ -17,4 +17,11 @@ class UserModel extends UserEntity {
       isVerified: json['is_verified'] as bool? ?? false,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'email': email,
+        'name': name,
+        'is_verified': isVerified,
+      };
 }

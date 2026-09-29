@@ -87,6 +87,7 @@ class JoinCompanyCubit extends Cubit<JoinCompanyState> {
   final CheckJoinRequestStatusUseCase _checkJoinRequestStatusUseCase;
   final CancelJoinRequestUseCase _cancelJoinRequestUseCase;
   Timer? _pollTimer;
+  int _consecutivePollFailures = 0;
 
   JoinCompanyCubit({
     required JoinCompanyByCodeUseCase joinCompanyByCodeUseCase,
@@ -129,9 +130,22 @@ class JoinCompanyCubit extends Cubit<JoinCompanyState> {
 
   void _startPolling(String requestId, String companyId) {
     _pollTimer?.cancel();
+    _consecutivePollFailures = 0;
     _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
       final result = await _checkJoinRequestStatusUseCase.call(requestId);
-      result.fold((failure) => null, (data) {
+      result.fold(
+        (failure) {
+          // Status checks are rate-limited server-side — back off instead of
+          // spinning forever: after 5 consecutive failures (e.g. 429),
+          // surface the server message and stop.
+          _consecutivePollFailures++;
+          if (_consecutivePollFailures >= 5) {
+            _pollTimer?.cancel();
+            emit(JoinCompanyError(failure.message));
+          }
+        },
+        (data) {
+          _consecutivePollFailures = 0;
         final status = data['status'] as String;
         if (status == 'approved') {
           _pollTimer?.cancel();

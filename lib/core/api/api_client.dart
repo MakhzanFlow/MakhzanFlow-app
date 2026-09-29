@@ -4,6 +4,7 @@ import '../constants/app_constants.dart';
 import '../env.dart';
 import '../storage/token_storage.dart';
 import 'auth_interceptor.dart';
+import 'offline_cache_interceptor.dart';
 
 /// Dio wrapper configured from `MakhzanFlowEnv` and `AppConstants`.
 /// The refresh call uses a separate, interceptor-free Dio to avoid recursion.
@@ -11,9 +12,9 @@ class ApiClient {
   final Dio dio;
   final Dio _refreshDio;
 
-  ApiClient({required TokenStorage tokenStorage})
-      : _refreshDio = Dio(),
-        dio = Dio() {
+  ApiClient({required TokenStorage tokenStorage, SharedPrefsGetCache? getCache})
+    : _refreshDio = Dio(),
+      dio = Dio() {
     final baseUrl = MakhzanFlowEnv.apiBaseUrl;
     final timeout = Duration(milliseconds: AppConstants.receiveTimeoutMs);
 
@@ -37,5 +38,9 @@ class ApiClient {
     );
 
     dio.interceptors.add(AuthInterceptor(tokenStorage, _refreshDio));
+    // Stale-while-offline read cache (GET only, company-scoped keys).
+    if (getCache != null) {
+      dio.interceptors.add(OfflineCacheInterceptor(cache: getCache));
+    }
   }
 }

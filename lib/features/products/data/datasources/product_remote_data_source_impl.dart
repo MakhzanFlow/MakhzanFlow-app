@@ -5,6 +5,7 @@ import 'package:makhzanflow/core/api/api_client.dart';
 import 'package:makhzanflow/core/api/api_response.dart';
 import 'package:makhzanflow/core/constants/api_endpoints.dart';
 import 'package:makhzanflow/core/constants/error_messages.dart';
+import 'package:makhzanflow/core/error/failures.dart';
 import 'package:makhzanflow/features/products/data/datasources/product_remote_data_source.dart';
 import 'package:makhzanflow/features/products/data/models/adjust_stock_request_dto.dart';
 import 'package:makhzanflow/features/products/data/models/create_product_request_dto.dart';
@@ -13,6 +14,8 @@ import 'package:makhzanflow/features/products/data/models/product_model.dart';
 import 'package:makhzanflow/features/products/data/models/update_product_request_dto.dart';
 
 /// REST implementation of [ProductRemoteDataSource] backed by the Express API.
+/// Errors surface as domain [Failure]s via the central Dio mapper, so 409
+/// `VERSION_CONFLICT` payloads reach callers as [VersionConflictFailure].
 class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
   final ApiClient _apiClient;
 
@@ -20,15 +23,15 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
     : _apiClient = apiClient;
 
   @override
-  TaskEither<String, List<ProductModel>> listProducts({
+  Future<Either<Failure, List<ProductModel>>> listProducts({
     required String companyId,
     String? query,
     int? limit,
     int? offset,
     String? sortColumn,
     bool ascending = false,
-  }) {
-    return TaskEither.tryCatch(() async {
+  }) async {
+    try {
       final page = offset != null && offset > 0 && limit != null
           ? (offset ~/ limit) + 1
           : 1;
@@ -43,59 +46,99 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
         },
       );
       final data = _dataList(response);
-      return data.map(ProductModel.fromJson).toList();
-    }, (error, stackTrace) => _toMessage(error, stackTrace));
+      return Right(data.map(ProductModel.fromJson).toList());
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (_) {
+      return Left(ServerFailure(ErrorMessages.unexpectedError));
+    }
   }
 
   @override
-  TaskEither<String, ProductModel> getProduct(String id, String companyId) {
-    return TaskEither.tryCatch(() async {
+  Future<Either<Failure, ProductModel>> getProduct(
+    String id,
+    String companyId,
+  ) async {
+    try {
       final response = await _apiClient.dio.get(ApiEndpoints.productById(id));
-      return ProductModel.fromJson(_dataOrThrow(response));
-    }, (error, stackTrace) => _toMessage(error, stackTrace));
+      return Right(ProductModel.fromJson(_dataOrThrow(response)));
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } on StateError catch (e) {
+      return Left(ServerFailure(e.message));
+    } catch (_) {
+      return Left(ServerFailure(ErrorMessages.unexpectedError));
+    }
   }
 
   @override
-  TaskEither<String, ProductModel> createProduct(
+  Future<Either<Failure, ProductModel>> createProduct(
     CreateProductRequestDto dto,
     String userId,
     String companyId,
-  ) {
-    return TaskEither.tryCatch(() async {
+  ) async {
+    try {
       final response = await _apiClient.dio.post(
         ApiEndpoints.products,
         data: dto.toJson(),
       );
-      return ProductModel.fromJson(_dataOrThrow(response));
-    }, (error, stackTrace) => _toMessage(error, stackTrace));
+      return Right(ProductModel.fromJson(_dataOrThrow(response)));
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } on StateError catch (e) {
+      return Left(ServerFailure(e.message));
+    } catch (_) {
+      return Left(ServerFailure(ErrorMessages.unexpectedError));
+    }
   }
 
   @override
-  TaskEither<String, ProductModel> updateProduct(
+  Future<Either<Failure, ProductModel>> updateProduct(
     String id,
     UpdateProductRequestDto dto,
     String userId,
     String companyId,
-  ) {
-    return TaskEither.tryCatch(() async {
+  ) async {
+    // Backend §1.3 rejects empty updates with 400 — short-circuit locally.
+    if (dto.toJson().isEmpty) {
+      return Left(ValidationFailure(ErrorMessages.nothingToUpdate));
+    }
+    try {
       final response = await _apiClient.dio.put(
         ApiEndpoints.productById(id),
         data: dto.toJson(),
       );
-      return ProductModel.fromJson(_dataOrThrow(response));
-    }, (error, stackTrace) => _toMessage(error, stackTrace));
+      return Right(ProductModel.fromJson(_dataOrThrow(response)));
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } on StateError catch (e) {
+      return Left(ServerFailure(e.message));
+    } catch (_) {
+      return Left(ServerFailure(ErrorMessages.unexpectedError));
+    }
   }
 
   @override
-  TaskEither<String, void> deleteProduct(String id, String companyId) {
-    return TaskEither.tryCatch(() async {
+  Future<Either<Failure, void>> deleteProduct(
+    String id,
+    String companyId,
+  ) async {
+    try {
       await _apiClient.dio.delete(ApiEndpoints.productById(id));
-    }, (error, stackTrace) => _toMessage(error, stackTrace));
+      return const Right(null);
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (_) {
+      return Left(ServerFailure(ErrorMessages.unexpectedError));
+    }
   }
 
   @override
-  TaskEither<String, String> uploadImage(String filePath, String productId) {
-    return TaskEither.tryCatch(() async {
+  Future<Either<Failure, String>> uploadImage(
+    String filePath,
+    String productId,
+  ) async {
+    try {
       final formData = FormData.fromMap({
         'image': await MultipartFile.fromFile(
           filePath,
@@ -110,36 +153,55 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
       final data = _dataOrThrow(response);
       final url = data['image_url'] as String?;
       if (url == null || url.isEmpty) {
-        throw StateError(ErrorMessages.unexpectedError);
+        return Left(ServerFailure(ErrorMessages.unexpectedError));
       }
-      return url;
-    }, (error, stackTrace) => _toMessage(error, stackTrace));
+      return Right(url);
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } on StateError catch (e) {
+      return Left(ServerFailure(e.message));
+    } catch (_) {
+      return Left(ServerFailure(ErrorMessages.unexpectedError));
+    }
   }
 
   @override
-  TaskEither<String, Map<String, dynamic>> updateQuantityTransaction(
+  Future<Either<Failure, Map<String, dynamic>>> updateQuantityTransaction(
     AdjustStockRequestDto dto, {
     required String productId,
     required String companyId,
-  }) {
-    return getProduct(productId, companyId).flatMap((model) {
-      final newStock = model.quantity + dto.quantityChange;
-      return TaskEither.tryCatch(() async {
-        final response = await _apiClient.dio.put(
-          ApiEndpoints.productById(productId),
-          data: {'stock': newStock},
-        );
-        return _dataOrThrow(response);
-      }, (error, stackTrace) => _toMessage(error, stackTrace));
-    });
+  }) async {
+    final current = await getProduct(productId, companyId);
+    return current.fold(
+      (failure) async => Left<Failure, Map<String, dynamic>>(failure),
+      (model) async {
+        final newStock = model.quantity + dto.quantityChange;
+        try {
+          final response = await _apiClient.dio.put(
+            ApiEndpoints.productById(productId),
+            data: {
+              'stock': newStock,
+              if (dto.version != null) 'version': dto.version,
+            },
+          );
+          return Right(_dataOrThrow(response));
+        } on DioException catch (e) {
+          return Left(mapDioExceptionToFailure(e));
+        } on StateError catch (e) {
+          return Left(ServerFailure(e.message));
+        } catch (_) {
+          return Left(ServerFailure(ErrorMessages.unexpectedError));
+        }
+      },
+    );
   }
 
   @override
-  TaskEither<String, List<InventoryMovementModel>> getMovements(
+  Future<Either<Failure, List<InventoryMovementModel>>> getMovements(
     String productId,
     String companyId,
-  ) {
-    return TaskEither.tryCatch(() async {
+  ) async {
+    try {
       final response = await _apiClient.dio.get(
         ApiEndpoints.productActivity(productId),
         queryParameters: {'page': 1, 'limit': 20},
@@ -174,21 +236,15 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
               : null,
         ));
       }
-      return movements;
-    }, (error, stackTrace) => _toMessage(error, stackTrace));
+      return Right(movements);
+    } on DioException catch (e) {
+      return Left(mapDioExceptionToFailure(e));
+    } catch (_) {
+      return Left(ServerFailure(ErrorMessages.unexpectedError));
+    }
   }
 
   // ======================= Helpers =======================
-
-  String _toMessage(Object error, StackTrace stackTrace) {
-    if (error is DioException) {
-      return mapDioExceptionToFailure(error).message;
-    }
-    if (error is StateError) {
-      return error.message;
-    }
-    return error.toString();
-  }
 
   Map<String, dynamic> _dataOrThrow(Response<dynamic> response) {
     final data = _data(response);
@@ -203,6 +259,9 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
     if (body is Map<String, dynamic>) {
       final data = body['data'];
       if (data is Map<String, dynamic>) return data;
+      if (data is List && data.isNotEmpty && data.first is Map) {
+        return Map<String, dynamic>.from(data.first as Map);
+      }
     }
     return null;
   }
@@ -212,9 +271,11 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
     if (body is Map<String, dynamic>) {
       final data = body['data'];
       if (data is List) {
-        return data.whereType<Map<String, dynamic>>().toList();
+        return data
+            .whereType<Map<String, dynamic>>()
+            .toList();
       }
     }
-    throw StateError(ErrorMessages.unexpectedError);
+    return const [];
   }
 }

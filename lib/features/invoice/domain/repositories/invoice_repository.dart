@@ -25,6 +25,7 @@ abstract class InvoiceRepository {
     String method = 'cash',
     String? referenceNumber,
     String? notes,
+    int? version,
   });
 
   Future<Either<Failure, Invoice>> getInvoice(
@@ -43,5 +44,6 @@ abstract class InvoiceRepository {
   Future<Either<Failure, Invoice>> cancelInvoice(
     String id,
     String companyId,
+    int version,
   );
 }

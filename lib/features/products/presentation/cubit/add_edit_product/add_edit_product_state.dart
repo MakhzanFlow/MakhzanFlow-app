@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:makhzanflow/core/error/failures.dart';
 import '../../../domain/entities/product_input.dart';
 
 enum AddEditProductStatus { initial, loading, uploading, success, error }
@@ -18,6 +19,8 @@ class AddEditProductState extends Equatable {
   final String? errorMessage;
   final String? successMessage;
   final bool isEditMode;
+  /// Set when the last save hit `409 VERSION_CONFLICT` — drives the Merge UI.
+  final VersionConflictFailure? conflict;
 
   const AddEditProductState({
     this.status = AddEditProductStatus.initial,
@@ -36,6 +39,7 @@ class AddEditProductState extends Equatable {
     this.errorMessage,
     this.successMessage,
     this.isEditMode = false,
+    this.conflict,
   });
 
   AddEditProductState copyWith({
@@ -53,6 +57,8 @@ class AddEditProductState extends Equatable {
     String? errorMessage,
     String? successMessage,
     bool? isEditMode,
+    VersionConflictFailure? conflict,
+    bool clearConflict = false,
   }) {
     return AddEditProductState(
       status: status ?? this.status,
@@ -69,6 +75,7 @@ class AddEditProductState extends Equatable {
       errorMessage: errorMessage ?? this.errorMessage,
       successMessage: successMessage ?? this.successMessage,
       isEditMode: isEditMode ?? this.isEditMode,
+      conflict: clearConflict ? null : (conflict ?? this.conflict),
     );
   }
 
@@ -88,5 +95,6 @@ class AddEditProductState extends Equatable {
     errorMessage,
     successMessage,
     isEditMode,
+    conflict,
   ];
 }

@@ -17,7 +17,11 @@ class PermissionKeys {
   static const String invoicesCreate = 'invoices.create';
   static const String invoicesEdit = 'invoices.edit';
   static const String invoicesDelete = 'invoices.delete';
-  static const String invoicesCancel = 'invoices.cancel';
+  // Backend §3: cancel is gated by `invoices.delete` (was `invoices.cancel`).
+  // Kept as a deprecated alias so old call sites fail loudly at review, not
+  // silently at runtime — do not use in new code.
+  @Deprecated('Use invoicesDelete instead (backend now gates cancel by invoices.delete)')
+  static const String invoicesCancel = invoicesDelete;
 
   static const String paymentsView = 'payments.view';
   static const String paymentsCreate = 'payments.create';
@@ -40,7 +44,6 @@ class PermissionKeys {
     invoicesCreate,
     invoicesEdit,
     invoicesDelete,
-    invoicesCancel,
     paymentsView,
     paymentsCreate,
     reportsView,

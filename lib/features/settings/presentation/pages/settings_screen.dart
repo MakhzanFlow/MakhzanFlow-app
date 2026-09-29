@@ -21,7 +21,42 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _isLoggingOut = false;
+  bool _isLoggingOutEverywhere = false;
 
+  Future<void> _handleSignOutEverywhere() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(AppStrings.signOutEverywhere),
+        content: Text(AppStrings.signOutEverywhereConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(AppStrings.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(AppStrings.signOut),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _isLoggingOutEverywhere = true);
+    final companyCubit = context.read<CompanyCubit>();
+    final authCubit = context.read<AuthCubit>();
+    final router = GoRouter.of(context);
+    try {
+      await companyCubit.clearCompany();
+      sl<PermissionService>().clear();
+      await authCubit.signOutEverywhere();
+      if (mounted) router.go(AppRoutes.login);
+    } catch (_) {
+      if (mounted) router.go(AppRoutes.login);
+    } finally {
+      if (mounted) setState(() => _isLoggingOutEverywhere = false);
+    }
+  }
   Future<void> _handleSignOut() async {
     if (_isLoggingOut) return;
     setState(() => _isLoggingOut = true);
@@ -126,22 +161,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
               borderRadius: BorderRadius.circular(MFTokens.radiusLG),
               border: Border.all(color: border),
             ),
-            child: ListTile(
-              leading: Icon(Icons.logout, color: isDark ? MFTokens.errorTextDark : MFTokens.errorText),
-              title: Text(
-                AppStrings.signOut,
-                style: TextStyle(color: textPrimary, fontFamily: 'Cairo', fontSize: MFTokens.fontMD, fontWeight: FontWeight.w600),
-              ),
-              trailing: _isLoggingOut
-                  ? SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: isDark ? MFTokens.errorTextDark : MFTokens.errorText),
-                    )
-                  : null,
-              enabled: !_isLoggingOut,
-              onTap: _isLoggingOut ? null : _handleSignOut,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(MFTokens.radiusLG)),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: Icon(Icons.logout, color: isDark ? MFTokens.errorTextDark : MFTokens.errorText),
+                  title: Text(
+                    AppStrings.signOut,
+                    style: TextStyle(color: textPrimary, fontFamily: 'Cairo', fontSize: MFTokens.fontMD, fontWeight: FontWeight.w600),
+                  ),
+                  trailing: _isLoggingOut
+                      ? SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: isDark ? MFTokens.errorTextDark : MFTokens.errorText),
+                        )
+                      : null,
+                  enabled: !_isLoggingOut && !_isLoggingOutEverywhere,
+                  onTap: (_isLoggingOut || _isLoggingOutEverywhere) ? null : _handleSignOut,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(MFTokens.radiusLG)),
+                ),
+                Divider(height: 1, color: border),
+                ListTile(
+                  leading: Icon(Icons.devices_other_outlined, color: isDark ? MFTokens.errorTextDark : MFTokens.errorText),
+                  title: Text(
+                    AppStrings.signOutEverywhere,
+                    style: TextStyle(color: textPrimary, fontFamily: 'Cairo', fontSize: MFTokens.fontMD, fontWeight: FontWeight.w600),
+                  ),
+                  trailing: _isLoggingOutEverywhere
+                      ? SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: isDark ? MFTokens.errorTextDark : MFTokens.errorText),
+                        )
+                      : null,
+                  enabled: !_isLoggingOut && !_isLoggingOutEverywhere,
+                  onTap: (_isLoggingOut || _isLoggingOutEverywhere) ? null : _handleSignOutEverywhere,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(MFTokens.radiusLG)),
+                ),
+              ],
             ),
           ),
         ],

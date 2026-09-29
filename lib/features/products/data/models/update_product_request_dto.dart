@@ -1,4 +1,6 @@
 /// Request body for `PUT /products/:id` — all fields optional.
+/// `version` is sent only for gated price/stock writes (optimistic locking);
+/// LWW metadata edits omit it.
 class UpdateProductRequestDto {
   final String? name;
   final String? sku;
@@ -8,6 +10,7 @@ class UpdateProductRequestDto {
   final int? minStock;
   final DateTime? expiryDate;
   final bool? isActive;
+  final int? version;
 
   const UpdateProductRequestDto({
     this.name,
@@ -18,6 +21,7 @@ class UpdateProductRequestDto {
     this.minStock,
     this.expiryDate,
     this.isActive,
+    this.version,
   });
 
   Map<String, dynamic> toJson() => {
@@ -29,6 +33,7 @@ class UpdateProductRequestDto {
         if (minStock != null) 'min_stock': minStock,
         if (expiryDate != null) 'expiry_date': _dateKey(expiryDate!),
         if (isActive != null) 'is_active': isActive,
+        if (version != null) 'version': version,
       };
 
   static String _dateKey(DateTime d) =>

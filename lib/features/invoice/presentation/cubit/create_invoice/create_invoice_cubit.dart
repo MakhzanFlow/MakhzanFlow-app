@@ -1,6 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:makhzanflow/core/constants/app_strings.dart';
 import 'package:makhzanflow/core/constants/error_messages.dart';
 import 'package:makhzanflow/core/error/failures.dart';
+import 'package:makhzanflow/core/sync/enqueue_guard.dart';
 import 'package:makhzanflow/features/customers/domain/entities/customer.dart';
 import 'package:makhzanflow/features/invoice/domain/constants/invoice_constants.dart';
 import 'package:makhzanflow/features/invoice/domain/usecases/create_invoice_usecase.dart';
@@ -158,18 +160,33 @@ class CreateInvoiceCubit extends Cubit<CreateInvoiceState> {
       discountType: current.discountValue > 0 ? current.discountType : InvoiceConstants.discountFixed,
       discountValue: current.discountValue,
     );
-
-    result.fold(
-      (failure) => emit(CreateInvoiceError(
-        failure: failure,
-        selectedCustomer: current.selectedCustomer,
-        products: current.products,
-        discountType: current.discountType,
-        discountValue: current.discountValue,
-        paymentMethod: current.paymentMethod,
-        paidNow: current.paidNow,
-      )),
-      (invoiceId) => emit(CreateInvoiceSuccess(invoiceId: invoiceId)),
+    await result.fold(
+      (failure) async {
+        // Invoice creation opens debt: online-only, never queued. Surface a
+        // clear message instead of the raw connection error.
+        if (shouldEnqueueFailure(failure)) {
+          emit(CreateInvoiceError(
+            failure: ServerFailure(AppStrings.onlineRequired),
+            selectedCustomer: current.selectedCustomer,
+            products: current.products,
+            discountType: current.discountType,
+            discountValue: current.discountValue,
+            paymentMethod: current.paymentMethod,
+            paidNow: current.paidNow,
+          ));
+          return;
+        }
+        emit(CreateInvoiceError(
+          failure: failure,
+          selectedCustomer: current.selectedCustomer,
+          products: current.products,
+          discountType: current.discountType,
+          discountValue: current.discountValue,
+          paymentMethod: current.paymentMethod,
+          paidNow: current.paidNow,
+        ));
+      },
+      (invoiceId) async => emit(CreateInvoiceSuccess(invoiceId: invoiceId)),
     );
   }
 

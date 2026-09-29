@@ -8,7 +8,11 @@ class CancelInvoiceUseCase {
 
   CancelInvoiceUseCase(this.repository);
 
-  Future<Either<Failure, Invoice>> call(String id, String companyId) {
-    return repository.cancelInvoice(id, companyId);
+  Future<Either<Failure, Invoice>> call(
+    String id,
+    String companyId,
+    int version,
+  ) {
+    return repository.cancelInvoice(id, companyId, version);
   }
 }

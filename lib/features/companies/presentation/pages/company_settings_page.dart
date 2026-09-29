@@ -89,13 +89,34 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: BlocConsumer<CompanySettingsCubit, CompanySettingsState>(
-        listener: (context, state) {
+        listener: (context, state) async {
           if (state is CompanySettingsSuccess) {
-            AppSnackbar.success(context, state.message);
-            if (state.message == AppStrings.companyDeleted ||
+            if (state.message == AppStrings.companyArchived ||
+                state.message == AppStrings.companyDeleted ||
                 state.message == AppStrings.companyLeft) {
-              context.go(AppRoutes.companySelect);
+              // Archive is a soft-delete: data is preserved and the owner can
+              // restore. Capture the id before clearing, then offer Restore
+              // on the company-selection screen.
+              final companyState = context.read<CompanyCubit>().state;
+              final archivedId = companyState is CompanySelected
+                  ? companyState.company.id
+                  : null;
+              final archivedName = companyState is CompanySelected
+                  ? companyState.company.name
+                  : null;
+              await context.read<CompanyCubit>().clearCompany();
+              if (!context.mounted) return;
+              context.go(
+                AppRoutes.companySelect,
+                extra: archivedId == null
+                    ? null
+                    : {
+                        'archivedCompanyId': archivedId,
+                        'archivedCompanyName': archivedName,
+                      },
+              );
             } else {
+              AppSnackbar.success(context, state.message);
               context.pop();
             }
           } else if (state is CompanySettingsError) {
@@ -303,8 +324,8 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
           _buildSectionTitle(AppStrings.dangerZone, color: AppColors.error),
           SizedBox(height: AppSizes.spacingSmall),
           _buildDangerButton(
-            label: AppStrings.deleteCompany,
-            icon: Icons.delete_forever,
+            label: AppStrings.archiveCompany,
+            icon: Icons.archive_outlined,
             onTap: () => _confirmDeleteCompany(company.id),
           ),
           SizedBox(height: AppSizes.spacingSmall),
@@ -402,11 +423,11 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
       context: context,
       builder: (_) => AlertDialog(
         title: Text(
-          AppStrings.deleteCompany,
+          AppStrings.archiveCompany,
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         content: Text(
-          AppStrings.deleteCompanyConfirm,
+          AppStrings.archiveCompanyConfirm,
         ),
         actions: [
           TextButton(
@@ -422,7 +443,7 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
               backgroundColor: AppColors.error,
               foregroundColor: AppColors.white,
             ),
-            child: Text(AppStrings.deleteAction),
+            child: Text(AppStrings.archiveAction),
           ),
         ],
       ),

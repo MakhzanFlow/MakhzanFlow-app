@@ -3,19 +3,30 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:makhzanflow/core/company/company_aware_state.dart';
 import '../../../../core/theme/mf_tokens.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/app_routes.dart';
 import '../../../../core/constants/app_strings.dart';
+import 'package:makhzanflow/core/activity/activity_log_entry.dart';
+import 'package:makhzanflow/core/permissions/permission_constants.dart';
 import '../../../../core/widgets/app_snackbar.dart';
+import '../../../../shared/widgets/activity_section.dart';
 import '../cubit/customer_details/customer_details_cubit.dart';
 import '../widgets/customer_action_buttons.dart';
 import '../widgets/customer_debt_summary_card.dart';
 import '../widgets/customer_details_header.dart';
 import '../widgets/customer_transaction_list.dart';
+import '../../domain/entities/customer.dart';
 
 class CustomerDetailsScreen extends StatefulWidget {
   final String customerId;
+  /// List snapshot used as details when offline with no cached response.
+  final Customer? fallbackCustomer;
 
-  const CustomerDetailsScreen({super.key, required this.customerId});
+  const CustomerDetailsScreen({
+    super.key,
+    required this.customerId,
+    this.fallbackCustomer,
+  });
 
   @override
   State<CustomerDetailsScreen> createState() => _CustomerDetailsScreenState();
@@ -32,14 +43,22 @@ class _CustomerDetailsScreenState extends State<CustomerDetailsScreen>
     super.didChangeDependencies();
     if (!_initialized) {
       _cubit = context.read<CustomerDetailsCubit>();
-      _cubit.loadCustomer(widget.customerId, companyId);
+      _cubit.loadCustomer(
+        widget.customerId,
+        companyId,
+        fallback: widget.fallbackCustomer,
+      );
       _initialized = true;
     }
   }
 
   @override
   void onCompanyChanged(String companyId) {
-    _cubit.loadCustomer(widget.customerId, companyId);
+    _cubit.loadCustomer(
+      widget.customerId,
+      companyId,
+      fallback: widget.fallbackCustomer,
+    );
   }
 
   @override
@@ -82,6 +101,8 @@ class _CustomerDetailsScreenState extends State<CustomerDetailsScreen>
               );
             case CustomerDetailsStatus.success:
               final customer = state.customer!;
+              final isPending = customer.id
+                  .startsWith(AppConstants.pendingIdPrefix);
               return SafeArea(
                 child: NestedScrollView(
                   headerSliverBuilder: (context, innerBoxScrolled) => [
@@ -91,12 +112,20 @@ class _CustomerDetailsScreenState extends State<CustomerDetailsScreen>
                         address: customer.address,
                         phone: customer.phone,
                         imageUrl: customer.imageUrl,
-                        onPressed: () async {
-                          final updated = await context.push<bool>(AppRoutes.customerEditPath(widget.customerId));
-                          if (updated == true && mounted) {
-                            _cubit.loadCustomer(widget.customerId, companyId);
-                          }
-                        },
+                        onPressed: isPending
+                            ? () => AppSnackbar.info(
+                                  context,
+                                  AppStrings.pendingSync,
+                                )
+                            : () async {
+                                final updated = await context.push<bool>(
+                                    AppRoutes.customerEditPath(
+                                        widget.customerId));
+                                if (updated == true && mounted) {
+                                  _cubit.loadCustomer(
+                                      widget.customerId, companyId);
+                                }
+                              },
                       ),
                     ),
                   ],
@@ -111,35 +140,51 @@ class _CustomerDetailsScreenState extends State<CustomerDetailsScreen>
                           totalPaid: customer.totalPaid,
                         ),
                         const SizedBox(height: MFTokens.sp16),
-                        CustomerActionButtons(
-                          onNewInvoice: () {
-                            context.push(AppRoutes.invoiceCreate, extra: {
-                              'customerId': widget.customerId,
-                              'customerName': customer.name,
-                            });
-                          },
-                          onRecordPayment: () async {
-                            final result = await context.push<bool>(
-                              AppRoutes.customerAddPaymentPath(widget.customerId),
-                              extra: customer.name,
-                            );
-                            if (result == true && mounted) {
-                              _cubit.loadCustomer(widget.customerId, companyId);
-                            }
-                          },
-                        ),
-                        const SizedBox(height: MFTokens.sp16),
+                        if (!isPending)
+                          CustomerActionButtons(
+                            onNewInvoice: () {
+                              context.push(AppRoutes.invoiceCreate, extra: {
+                                'customerId': widget.customerId,
+                                'customerName': customer.name,
+                              });
+                            },
+                            onRecordPayment: () async {
+                              final result = await context.push<bool>(
+                                AppRoutes.customerAddPaymentPath(
+                                    widget.customerId),
+                                extra: customer.name,
+                              );
+                              if (result == true && mounted) {
+                                _cubit.loadCustomer(
+                                    widget.customerId, companyId);
+                              }
+                            },
+                          ),
+                        if (!isPending)
+                          const SizedBox(height: MFTokens.sp16),
                         _tabBar(),
                         const SizedBox(height: MFTokens.sp8),
-                        CustomerTransactionList(
-                          selectedTab: _selectedTab,
-                          transactions: customer.transactions,
-                          onViewAll: () => context.push(
-                            AppRoutes.customerInvoicesPath(widget.customerId),
-                            extra: customer.name,
+                        if (_selectedTab == 3)
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 16),
+                            child: ActivitySection(
+                              entity: ActivityLogEntity.customer,
+                              entityId: widget.customerId,
+                              readPermission:
+                                  PermissionKeys.customersView,
+                            ),
+                          )
+                        else
+                          CustomerTransactionList(
+                            selectedTab: _selectedTab,
+                            transactions: customer.transactions,
+                            onViewAll: () => context.push(
+                              AppRoutes.customerInvoicesPath(widget.customerId),
+                              extra: customer.name,
+                            ),
+                            onInvoiceTap: (invoiceId) => context.push(AppRoutes.invoiceDetailsPath(invoiceId)),
                           ),
-                          onInvoiceTap: (invoiceId) => context.push(AppRoutes.invoiceDetailsPath(invoiceId)),
-                        ),
                         const SizedBox(height: MFTokens.sp24),
                       ],
                     ),
@@ -174,6 +219,8 @@ class _CustomerDetailsScreenState extends State<CustomerDetailsScreen>
             _tabItem(label: AppStrings.customerInvoicesTab, index: 1, primary: primary, muted: muted),
             const SizedBox(width: MFTokens.sp4),
             _tabItem(label: AppStrings.customerPaymentsTab, index: 2, primary: primary, muted: muted),
+            const SizedBox(width: MFTokens.sp4),
+            _tabItem(label: AppStrings.activityTitle, index: 3, primary: primary, muted: muted),
           ],
         ),
       ),

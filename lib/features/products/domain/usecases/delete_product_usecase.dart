@@ -1,4 +1,5 @@
 import 'package:fpdart/fpdart.dart';
+import 'package:makhzanflow/core/error/failures.dart';
 import '../repositories/product_repository.dart';
 
 class DeleteProductUseCase {
@@ -6,7 +7,7 @@ class DeleteProductUseCase {
 
   DeleteProductUseCase(this.repository);
 
-  TaskEither<String, void> call(String id, String companyId) {
+  Future<Either<Failure, void>> call(String id, String companyId) {
     return repository.deleteProduct(id, companyId);
   }
 }

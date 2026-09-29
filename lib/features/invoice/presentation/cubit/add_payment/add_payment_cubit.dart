@@ -1,5 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:makhzanflow/core/constants/app_strings.dart';
 import 'package:makhzanflow/core/error/failures.dart';
+import 'package:makhzanflow/core/sync/enqueue_guard.dart';
 import 'package:makhzanflow/features/invoice/domain/usecases/add_payment_usecase.dart';
 import 'package:makhzanflow/features/invoice/domain/usecases/get_invoices_usecase.dart';
 import 'add_payment_state.dart';
@@ -36,6 +38,7 @@ class AddPaymentCubit extends Cubit<AddPaymentState> {
         AddPaymentLoaded(
           invoices: invoices,
           customerName: customerName,
+          companyId: companyId,
         ),
       ),
     );
@@ -60,7 +63,6 @@ class AddPaymentCubit extends Cubit<AddPaymentState> {
       amountError: error,
     ));
   }
-
   void updateAmount(String amount) {
     final current = state;
     if (current is! AddPaymentLoaded) return;
@@ -72,6 +74,18 @@ class AddPaymentCubit extends Cubit<AddPaymentState> {
     }
 
     emit(current.copyWith(amount: amount, amountError: error));
+  }
+
+  /// Adopts the fresh server version for one invoice after a Merge "Keep mine"
+  /// choice, so the next [submit] retries against current data (guide §5).
+  void refreshInvoiceVersion(String invoiceId, int version) {
+    final current = state;
+    if (current is! AddPaymentLoaded) return;
+    emit(current.copyWith(
+      invoices: current.invoices
+          .map((i) => i.id == invoiceId ? i.copyWith(version: version) : i)
+          .toList(),
+    ));
   }
 
   bool get canSubmit {
@@ -109,17 +123,31 @@ class AddPaymentCubit extends Cubit<AddPaymentState> {
       ));
       return;
     }
-
     emit(AddPaymentSubmitting());
 
+    final invoiceId = current.selectedInvoiceId!;
     final result = await _addPaymentUseCase(
-      invoiceId: current.selectedInvoiceId!,
+      invoiceId: invoiceId,
       amount: parsed,
+      version: current.invoices
+          .where((i) => i.id == invoiceId)
+          .firstOrNull
+          ?.version,
     );
 
-    result.fold(
-      (failure) => emit(AddPaymentError(failure: failure)),
-      (_) => emit(AddPaymentSuccess(invoiceId: current.selectedInvoiceId!)),
+    await result.fold(
+      (failure) async {
+        // Payments move money: online-only, never queued. Surface a clear
+        // message instead of the raw connection error.
+        if (shouldEnqueueFailure(failure)) {
+          emit(AddPaymentError(
+            failure: ServerFailure(AppStrings.onlineRequired),
+          ));
+          return;
+        }
+        emit(AddPaymentError(failure: failure));
+      },
+      (_) async => emit(AddPaymentSuccess(invoiceId: current.selectedInvoiceId!)),
     );
   }
 

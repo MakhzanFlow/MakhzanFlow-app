@@ -1,4 +1,11 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:makhzanflow/core/constants/api_endpoints.dart';
+import 'package:makhzanflow/core/constants/app_strings.dart';
+import 'package:makhzanflow/core/error/failures.dart';
+import 'package:makhzanflow/core/sync/enqueue_guard.dart';
+import 'package:makhzanflow/core/sync/pending_op.dart';
+import 'package:makhzanflow/core/sync/pending_ops_queue.dart';
+import '../../../data/models/create_product_request_dto.dart';
 import '../../../domain/entities/product_input.dart';
 import '../../../domain/usecases/create_product_usecase.dart';
 import '../../../domain/usecases/upload_product_image_usecase.dart';
@@ -13,29 +20,35 @@ class AddEditProductCubit extends Cubit<AddEditProductState> {
   final UploadProductImageUseCase _uploadImageUseCase;
   final GetProductUseCase? _getProductUseCase;
   final UpdateProductUseCase? _updateProductUseCase;
+  final PendingOpsQueue? _pendingOpsQueue;
   String? _productId;
+  int _loadedVersion = 1;
 
   AddEditProductCubit({
     required CreateProductUseCase createProductUseCase,
     required UploadProductImageUseCase uploadImageUseCase,
     GetProductUseCase? getProductUseCase,
     UpdateProductUseCase? updateProductUseCase,
+    PendingOpsQueue? pendingOpsQueue,
   })  : _createProductUseCase = createProductUseCase,
         _uploadImageUseCase = uploadImageUseCase,
         _getProductUseCase = getProductUseCase,
         _updateProductUseCase = updateProductUseCase,
+        _pendingOpsQueue = pendingOpsQueue,
         super(const AddEditProductState());
 
   Future<void> loadForEdit(String productId, String companyId) async {
     _productId = productId;
     emit(state.copyWith(status: AddEditProductStatus.loading));
-    final result = await _getProductUseCase!(productId, companyId).run();
+    final result = await _getProductUseCase!(productId, companyId);
     result.fold(
-      (error) => emit(state.copyWith(
+      (failure) => emit(state.copyWith(
         status: AddEditProductStatus.error,
-        errorMessage: error,
+        errorMessage: failure.message,
       )),
-      (product) => emit(state.copyWith(
+      (product) {
+        _loadedVersion = product.version;
+        emit(state.copyWith(
         status: AddEditProductStatus.initial,
         isEditMode: true,
         input: ProductInput(
@@ -53,7 +66,8 @@ class AddEditProductCubit extends Cubit<AddEditProductState> {
         minStockText: product.minStock.toString(),
         expirationDate: product.expirationDate,
         imageUploadUrl: product.imageUrl,
-      )),
+      ));
+      },
     );
   }
 
@@ -139,7 +153,10 @@ class AddEditProductCubit extends Cubit<AddEditProductState> {
       return false;
     }
 
-    emit(state.copyWith(status: AddEditProductStatus.loading));
+    emit(state.copyWith(
+      status: AddEditProductStatus.loading,
+      clearConflict: true,
+    ));
 
     final input = ProductInput(
       name: state.input.name,
@@ -159,12 +176,12 @@ class AddEditProductCubit extends Cubit<AddEditProductState> {
       final uploadResult = await _uploadImageUseCase(
         state.imageLocalPath!,
         productId,
-      ).run();
+      );
       return uploadResult.fold(
-        (error) {
+        (failure) {
           emit(state.copyWith(
             status: AddEditProductStatus.error,
-            errorMessage: error,
+            errorMessage: failure.message,
             isImageUploading: false,
           ));
           return false;
@@ -178,13 +195,30 @@ class AddEditProductCubit extends Cubit<AddEditProductState> {
 
     if (state.isEditMode && _updateProductUseCase != null) {
       final result = await _updateProductUseCase(
-        _productId!, input, userId, companyId,
-      ).run();
+        _productId!,
+        input,
+        userId,
+        companyId,
+        version: _loadedVersion,
+      );
       return result.fold(
-        (error) {
+        (failure) async {
+          // Offline edits are not allowed (add-new-only policy): existing
+          // products can only be edited online. Creates still queue.
+          if (shouldEnqueueFailure(failure)) {
+            emit(state.copyWith(
+              status: AddEditProductStatus.error,
+              errorMessage: AppStrings.offlineEditOnlyNew,
+              clearConflict: true,
+            ));
+            return false;
+          }
           emit(state.copyWith(
             status: AddEditProductStatus.error,
-            errorMessage: error,
+            errorMessage: failure.message,
+            conflict:
+                failure is VersionConflictFailure ? failure : null,
+            clearConflict: failure is! VersionConflictFailure,
           ));
           return false;
         },
@@ -196,17 +230,49 @@ class AddEditProductCubit extends Cubit<AddEditProductState> {
           emit(state.copyWith(
             status: AddEditProductStatus.success,
             successMessage: 'تم حفظ المنتج بنجاح',
+            clearConflict: true,
           ));
           return true;
         },
       );
     } else {
-      final result = await _createProductUseCase(input, userId, companyId).run();
+      final result = await _createProductUseCase(input, userId, companyId);
       return result.fold(
-        (error) {
+        (failure) async {
+          // Offline create: queued — report success so the form pops and the
+          // record appears in the list with a pending badge until sync.
+          if (shouldEnqueueFailure(failure) && _pendingOpsQueue != null) {
+            final dto = CreateProductRequestDto(
+              name: input.name,
+              sku: input.sku,
+              barcode: input.barcode,
+              price: input.price,
+              stock: input.quantity,
+              minStock: input.minStock,
+              expiryDate: input.expirationDate,
+            );
+            final dropped = await tryEnqueue(
+              _pendingOpsQueue,
+              PendingOp.createNew(
+                opType: PendingOpType.productCreate,
+                method: 'POST',
+                path: ApiEndpoints.products,
+                body: dto.toJson(),
+                companyId: companyId,
+                imageLocalPath: state.imageLocalPath,
+              ),
+            );
+            emit(state.copyWith(
+              status: AddEditProductStatus.success,
+              successMessage: dropped
+                  ? AppStrings.queueOverflow
+                  : AppStrings.queuedWillSync,
+            ));
+            return true;
+          }
           emit(state.copyWith(
             status: AddEditProductStatus.error,
-            errorMessage: error,
+            errorMessage: failure.message,
           ));
           return false;
         },
@@ -230,6 +296,13 @@ class AddEditProductCubit extends Cubit<AddEditProductState> {
       status: AddEditProductStatus.initial,
       errorMessage: null,
       successMessage: null,
+      clearConflict: true,
     ));
+  }
+
+  /// Adopts the fresh server version after a Merge "Keep mine" choice so the
+  /// next [save] retries against current data (see guide §5).
+  void applyServerVersion(int version) {
+    _loadedVersion = version;
   }
 }

@@ -37,6 +37,23 @@ class CompanyModel extends Company {
     );
   }
 
+  factory CompanyModel.fromEntity(Company entity) {
+    return CompanyModel(
+      id: entity.id,
+      name: entity.name,
+      address: entity.address,
+      phone: entity.phone,
+      subscriptionPlan: entity.subscriptionPlan,
+      subscriptionPlanName: entity.subscriptionPlanName,
+      status: entity.status,
+      businessType: entity.businessType,
+      logoUrl: entity.logoUrl,
+      inviteCode: entity.inviteCode,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
+    );
+  }
+
   Map<String, dynamic> toJson() => {
     'id': id,
     'name': name,

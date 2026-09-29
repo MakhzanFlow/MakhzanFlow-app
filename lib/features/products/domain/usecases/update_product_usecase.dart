@@ -1,4 +1,5 @@
 import 'package:fpdart/fpdart.dart';
+import 'package:makhzanflow/core/error/failures.dart';
 import '../entities/product.dart';
 import '../entities/product_input.dart';
 import '../repositories/product_repository.dart';
@@ -8,12 +9,14 @@ class UpdateProductUseCase {
 
   UpdateProductUseCase(this.repository);
 
-  TaskEither<String, Product> call(
+  Future<Either<Failure, Product>> call(
     String id,
     ProductInput input,
     String userId,
-    String companyId,
-  ) {
-    return repository.updateProduct(id, input, userId, companyId);
+    String companyId, {
+    int? version,
+  }) {
+    return repository.updateProduct(id, input, userId, companyId,
+        version: version);
   }
 }

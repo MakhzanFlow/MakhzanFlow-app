@@ -11,6 +11,7 @@ import 'package:makhzanflow/features/companies/presentation/cubit/company_member
 import 'package:makhzanflow/features/companies/presentation/cubit/company_settings_cubit.dart';
 import 'package:makhzanflow/features/customers/presentation/cubit/add_edit_customer/add_edit_customer_cubit.dart';
 import 'package:makhzanflow/features/customers/presentation/cubit/customer_details/customer_details_cubit.dart';
+import 'package:makhzanflow/features/customers/domain/entities/customer.dart';
 import 'package:makhzanflow/features/customers/presentation/cubit/customer_invoices/customer_invoices_cubit.dart';
 import 'package:makhzanflow/features/customers/presentation/cubit/customers/customers_cubit.dart';
 import 'package:makhzanflow/features/dashboard/presentation/cubit/dashboard_cubit.dart';
@@ -19,6 +20,7 @@ import 'package:makhzanflow/features/invoice/presentation/cubit/add_payment/add_
 import 'package:makhzanflow/features/invoice/presentation/cubit/create_invoice/create_invoice_cubit.dart';
 import 'package:makhzanflow/features/invoice/presentation/cubit/invoice_details/invoice_details_cubit.dart';
 import 'package:makhzanflow/features/products/presentation/cubit/add_edit_product/add_edit_product_cubit.dart';
+import 'package:makhzanflow/features/products/domain/entities/product.dart';
 import 'package:makhzanflow/features/products/presentation/cubit/product_details/product_details_cubit.dart';
 import 'package:makhzanflow/features/products/presentation/cubit/products/products_cubit.dart';
 import '../../core/constants/app_routes.dart';
@@ -46,6 +48,8 @@ import '../../features/customers/presentation/pages/add_edit_customer_screen.dar
 import '../../features/customers/presentation/pages/customer_details_screen.dart';
 import '../../features/customers/presentation/pages/customer_invoices_screen.dart';
 import '../../features/invoice/presentation/cubit/invoices/invoices_cubit.dart';
+import '../../features/payments/presentation/cubit/payments_cubit.dart';
+import '../../features/payments/presentation/pages/payments_screen.dart';
 import '../../features/invoice/presentation/pages/invoices_screen.dart';
 import '../../features/invoice/presentation/pages/create_invoice_screen.dart';
 import '../../features/invoice/presentation/pages/add_payment_screen.dart';
@@ -53,6 +57,7 @@ import '../../features/invoice/presentation/pages/invoice_details_screen.dart';
 import '../../features/companies/presentation/pages/company_settings_page.dart';
 import '../../features/companies/presentation/pages/members_page.dart';
 import '../../features/settings/presentation/pages/settings_screen.dart';
+import '../../core/sync/presentation/needs_review_screen.dart';
 import '../../features/shell/presentation/pages/app_shell.dart';
 import '../../features/onboarding/presentation/pages/language_selection_screen.dart';
 
@@ -82,6 +87,8 @@ final List<String> _protectedRoutes = [
   AppRoutes.customerEdit,
   AppRoutes.invoiceCreate,
   AppRoutes.invoiceDetails,
+  AppRoutes.payments,
+  AppRoutes.syncReview,
   AppRoutes.customerAddPayment,
   AppRoutes.customerInvoices,
   AppRoutes.companySettings,
@@ -271,7 +278,14 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: AppRoutes.companySelect,
       parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) => const CompanySelectionScreen(),
+      builder: (context, state) {
+        final extra = state.extra;
+        final args = extra is Map<String, dynamic> ? extra : null;
+        return CompanySelectionScreen(
+          archivedCompanyId: args?['archivedCompanyId'] as String?,
+          archivedCompanyName: args?['archivedCompanyName'] as String?,
+        );
+      },
     ),
     GoRoute(
       path: AppRoutes.companyCreate,
@@ -311,6 +325,25 @@ final GoRouter appRouter = GoRouter(
           ),
         );
       },
+    ),
+    GoRoute(
+      path: AppRoutes.payments,
+      parentNavigatorKey: _rootNavigatorKey,
+      pageBuilder: (context, state) => _buildFullScreenPage(
+        state,
+        BlocProvider(
+          create: (_) => sl<PaymentsCubit>(),
+          child: const PaymentsScreen(),
+        ),
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.syncReview,
+      parentNavigatorKey: _rootNavigatorKey,
+      pageBuilder: (context, state) => _buildFullScreenPage(
+        state,
+        const NeedsReviewScreen(),
+      ),
     ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) =>
@@ -352,11 +385,15 @@ final GoRouter appRouter = GoRouter(
                   parentNavigatorKey: _rootNavigatorKey,
                   pageBuilder: (context, state) {
                     final id = state.pathParameters['id']!;
+                    final fallback = state.extra;
                     return _buildFullScreenPage(
                       state,
                       BlocProvider(
                         create: (_) => sl<ProductDetailsCubit>(),
-                        child: ProductDetailsScreen(productId: id),
+                        child: ProductDetailsScreen(
+                          productId: id,
+                          fallbackProduct: fallback is Product ? fallback : null,
+                        ),
                       ),
                     );
                   },
@@ -406,11 +443,16 @@ final GoRouter appRouter = GoRouter(
                   parentNavigatorKey: _rootNavigatorKey,
                   pageBuilder: (context, state) {
                     final id = state.pathParameters['id']!;
+                    final fallback = state.extra;
                     return _buildFullScreenPage(
                       state,
                       BlocProvider(
                         create: (_) => sl<CustomerDetailsCubit>(),
-                        child: CustomerDetailsScreen(customerId: id),
+                        child: CustomerDetailsScreen(
+                          customerId: id,
+                          fallbackCustomer:
+                              fallback is Customer ? fallback : null,
+                        ),
                       ),
                     );
                   },

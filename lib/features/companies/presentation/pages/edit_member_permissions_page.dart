@@ -4,6 +4,7 @@ import 'package:makhzanflow/core/constants/app_colors.dart';
 import 'package:makhzanflow/core/constants/app_sizes.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
 import 'package:makhzanflow/core/constants/permission_labels.dart';
+import 'package:makhzanflow/core/permissions/permission_key_mapper.dart';
 import 'package:makhzanflow/core/widgets/app_snackbar.dart';
 import 'package:makhzanflow/features/companies/domain/entities/company_member.dart';
 import 'package:makhzanflow/features/companies/presentation/cubit/company_members_cubit.dart';
@@ -73,7 +74,9 @@ class _EditMemberPermissionsPageState
   Map<String, dynamic> _buildPermissionsJson() {
     final result = <String, dynamic>{};
     for (final entry in _permissions.entries) {
-      final parts = entry.key.split('.');
+      // Persist backend canonical keys (`.read`, `invoices.delete`) so saved
+      // roles match what the server enforces.
+      final parts = PermissionKeyMapper.toBackendKey(entry.key).split('.');
       if (parts.length == 1) {
         result[parts[0]] = entry.value;
       } else {

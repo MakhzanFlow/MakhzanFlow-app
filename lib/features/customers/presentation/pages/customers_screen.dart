@@ -169,9 +169,11 @@ class _CustomersScreenState extends State<CustomersScreen>
                             ),
                             child: CustomerCard(
                               customer: customer,
+                              isPending: state.pendingIds.contains(customer.id),
                               onTap: () async {
                                 final updated = await context.push<bool>(
                                   AppRoutes.customerDetailsPath(customer.id),
+                                  extra: customer,
                                 );
                                 if (updated == true && mounted) {
                                   _cubit.refresh(companyId);

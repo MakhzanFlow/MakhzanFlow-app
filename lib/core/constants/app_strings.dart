@@ -63,7 +63,8 @@ class AppStrings {
   static String get emailRequired => _tr('يرجى إدخال البريد الإلكتروني', 'Please enter your email');
   static String get emailInvalid => _tr('البريد الإلكتروني غير صالح', 'Invalid email address');
   static String get passwordRequired => _tr('يرجى إدخال كلمة المرور', 'Please enter your password');
-  static String get passwordMinLength => _tr('كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'Password must be at least 6 characters');
+  static String get passwordMinLength => _tr('كلمة المرور يجب أن تكون 8 أحرف على الأقل', 'Password must be at least 8 characters');
+  static String get passwordMaxLength => _tr('كلمة المرور يجب ألا تتجاوز 128 حرفاً', 'Password must not exceed 128 characters');
 
   static String get userDataNotFound => _tr('بيانات المستخدم غير موجودة', 'User data not found');
   static const String unexpectedError = 'حدث خطأ غير متوقع';
@@ -146,6 +147,48 @@ class AppStrings {
   static String get status => _tr('الحالة', 'Status');
   static String get save => _tr('حفظ', 'Save');
   static String get retry => _tr('إعادة المحاولة', 'Retry');
+  static String get noPermission => _tr('ليس لديك صلاحية للوصول', 'You do not have permission to access');
+  static String get unknownCustomer => _tr('عميل غير معروف', 'Unknown customer');
+
+  // ── Offline queue & sync ──────────────────────────────────────────
+  static String get queuedWillSync => _tr('تم الحفظ، ستتم المزامنة عند عودة الاتصال', 'Saved, will sync when back online');
+  static String get onlineRequired => _tr('هذه العملية مالية وتتطلب اتصالاً بالإنترنت', 'This money-related action requires an internet connection');
+  static String get offlineEditOnlyNew => _tr('لا يمكن التعديل دون اتصال — يمكنك إضافة جديد فقط', 'Cannot edit offline — you can only add new records');
+  static String get queueOverflow => _tr('القائمة ممتلئة — تم إسقاط أقدم عملية', 'Queue is full — oldest operation dropped');
+  static String syncedCount(int n) => _tr('تمت مزامنة $n', 'Synced $n');
+  static String syncFailedCount(int n) => _tr('فشل $n', 'Failed $n');
+  static String get syncTitle => _tr('المزامنة', 'Sync');
+  static String get pendingSync => _tr('بانتظار المزامنة', 'Pending sync');
+  static String get syncNeedsReview => _tr('عمليات تحتاج مراجعة', 'Operations need review');
+  static String get needsReviewTitle => _tr('تحتاج مراجعة', 'Needs review');
+  static String get needsReviewEmpty => _tr('لا توجد عمليات معلقة للمراجعة', 'No operations awaiting review');
+  static String get offlineMode => _tr('وضع عدم الاتصال — تعرض بيانات مخزنة', 'Offline — showing saved data');
+
+  // ── Merge (version conflict) ──────────────────────────────────────
+  static String get conflictTitle => _tr('تعارض في البيانات', 'Changed by someone else');
+  static String get conflictMine => _tr('قيمتك', 'Your value');
+  static String get conflictServer => _tr('قيمة الخادم', 'Server value');
+  static String get keepMine => _tr('الاحتفاظ بقيمتي', 'Keep mine');
+  static String get useServer => _tr('استخدام الخادم', 'Use server');
+  static String get retryManually => _tr('تعذر الحفظ — حاول مرة أخرى يدوياً', 'Could not save — please retry manually');
+
+  // ── Payments ────────────────────────────────────────────────────────
+  static String get paymentsTitle => _tr('المدفوعات', 'Payments');
+  static String get paymentsSearchHint => _tr('بحث برقم الفاتورة أو العميل...', 'Search by invoice number or customer...');
+  static String get paymentsDateRange => _tr('الفترة الزمنية', 'Date range');
+  static String get paymentsSort => _tr('ترتيب', 'Sort');
+  static String get paymentsSortNewest => _tr('الأحدث', 'Newest');
+  static String get paymentsSortAmount => _tr('المبلغ', 'Amount');
+  static String get paymentsEmpty => _tr('لا توجد مدفوعات بعد', 'No payments yet');
+  static String paymentsTotal(String total) => _tr('إجمالي المعروض: $total', 'Shown total: $total');
+
+  // ── Activity log ────────────────────────────────────────────────────
+  static String get activityTitle => _tr('سجل النشاط', 'Activity');
+  static String get activityEmpty => _tr('لا يوجد نشاط مسجل بعد', 'No activity recorded yet');
+  static String get activityCreated => _tr('إنشاء', 'Created');
+  static String get activityUpdated => _tr('تعديل', 'Updated');
+  static String get activityDeleted => _tr('حذف', 'Deleted');
+  static String get activityCanceled => _tr('إلغاء', 'Canceled');
   static String get companyUpdated => _tr('تم تحديث الشركة بنجاح', 'Company updated successfully');
   static String get teamMembers => _tr('فريق العمل', 'Team Members');
   static String get noMembersYet => _tr('لا يوجد أعضاء بعد', 'No members yet');
@@ -187,6 +230,7 @@ class AppStrings {
   static String get remove => _tr('حذف', 'Remove');
   static String get companyLeft => _tr('تم الخروج من الشركة بنجاح', 'Left company successfully');
   static String get companyDeleted => _tr('تم حذف الشركة بنجاح', 'Company deleted successfully');
+  static String get companyArchived => _tr('تمت أرشفة الشركة بنجاح', 'Company archived successfully');
   static String get sectionProducts => _tr('المنتجات', 'Products');
   static String get sectionCustomers => _tr('العملاء', 'Customers');
   static String get sectionInvoices => _tr('الفواتير', 'Invoices');
@@ -230,6 +274,9 @@ class AppStrings {
   static String get members => _tr('الأعضاء', 'Members');
   static String get switchCompany => _tr('تغيير الشركة', 'Switch Company');
   static String get signOut => _tr('تسجيل الخروج', 'Sign Out');
+  static String get signOutEverywhere => _tr('تسجيل الخروج من كل الأجهزة', 'Log out of all devices');
+  static String get signOutEverywhereConfirm => _tr('سيتم إنهاء الجلسة على كل الأجهزة بما فيها هذا الجهاز. هل تريد المتابعة؟', 'This will end your session on all devices, including this one. Continue?');
+  static String get signOutEverywhereDone => _tr('تم تسجيل الخروج من كل الأجهزة', 'Signed out of all devices');
 
   // ── Onboarding / Welcome ──────────────────────────────────────────────
   static String get welcomeTitle => _tr('مرحباً بك في\nMakhzanFlow', 'Welcome to\nMakhzanFlow');
@@ -272,6 +319,7 @@ class AppStrings {
   static String get dashboardRecentActivity => _tr('آخر النشاطات', 'Recent Activity');
   static String get dashboardRecentActivitySubtitle => _tr('آخر ٥ عمليات تمت في النشاط', 'Last 5 activity operations');
   static String get dashboardQuickCustomer => _tr('عميل', 'Customer');
+  static String get dashboardQuickPayment => _tr('مدفوعات', 'Payments');
   static String get activityJustNow => _tr('الآن', 'Just now');
   static String get activityMinutes => _tr('دقيقة', 'minutes');
   static String get activityHours => _tr('ساعة', 'hours');
@@ -526,6 +574,11 @@ class AppStrings {
   static String get deleteCompany => _tr('حذف الشركة', 'Delete Company');
   static String get deleteCompanyConfirm => _tr('هل أنت متأكد من حذف الشركة؟ لا يمكن التراجع عن هذا الإجراء.', 'Are you sure you want to delete the company? This action cannot be undone.');
   static String get deleteAction => _tr('حذف', 'Delete');
+  static String get archiveCompany => _tr('أرشفة الشركة', 'Archive Company');
+  static String get archiveCompanyConfirm => _tr('سيتم إخفاء الشركة من القوائم مع الاحتفاظ بكل البيانات. يمكنك استعادتها لاحقاً.', 'The company will be hidden from lists but all data is kept. You can restore it later.');
+  static String get archiveAction => _tr('أرشفة', 'Archive');
+  static String get restoreCompany => _tr('استعادة الشركة', 'Restore Company');
+  static String get companyRestored => _tr('تمت استعادة الشركة بنجاح', 'Company restored successfully');
   static String get leaveCompany => _tr('مغادرة الشركة', 'Leave Company');
   static String get leaveCompanyConfirm => _tr('هل أنت متأكد من مغادرة هذه الشركة؟', 'Are you sure you want to leave this company?');
   static String get leaveAction => _tr('مغادرة', 'Leave');

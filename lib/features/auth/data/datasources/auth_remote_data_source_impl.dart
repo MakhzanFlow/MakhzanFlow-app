@@ -1,9 +1,14 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:fpdart/fpdart.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/api/api_client.dart';
 import '../../../../core/api/api_response.dart';
 import '../../../../core/constants/api_endpoints.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/error_messages.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/storage/token_storage.dart';
@@ -23,12 +28,15 @@ import 'auth_remote_data_source.dart';
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   final ApiClient _apiClient;
   final TokenStorage _tokenStorage;
+  final SharedPreferences? _prefs;
 
   AuthRemoteDataSourceImpl({
     required ApiClient apiClient,
     required TokenStorage tokenStorage,
+    SharedPreferences? prefs,
   })  : _apiClient = apiClient,
-        _tokenStorage = tokenStorage;
+        _tokenStorage = tokenStorage,
+        _prefs = prefs;
 
   @override
   Future<Either<Failure, UserModel>> register(RegisterRequestDto dto) async {
@@ -63,7 +71,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         return Left(ServerFailure(ErrorMessages.unexpectedError));
       }
       // The verify-email endpoint issues the first session tokens.
-      return Right(_saveSession(data));
+      return Right(await _saveSession(data));
     } on DioException catch (e) {
       return Left(mapDioExceptionToFailure(e));
     } catch (e) {
@@ -97,7 +105,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       if (data == null) {
         return Left(ServerFailure(ErrorMessages.unexpectedError));
       }
-      return Right(_saveSession(data));
+      return Right(await _saveSession(data));
     } on DioException catch (e) {
       return Left(mapDioExceptionToFailure(e));
     } catch (e) {
@@ -133,6 +141,27 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }
 
   @override
+  Future<Either<Failure, void>> signOutEverywhere() async {
+    Failure? failure;
+    try {
+      final refreshToken = await _tokenStorage.refreshToken;
+      if (refreshToken != null) {
+        await _apiClient.dio.post(
+          ApiEndpoints.logoutAll,
+          data: RefreshTokenRequestDto(refreshToken: refreshToken).toJson(),
+        );
+      }
+    } on DioException catch (e) {
+      failure = mapDioExceptionToFailure(e);
+    } catch (e) {
+      failure = ServerFailure(e.toString());
+    }
+    // Same guarantee as signOut: local session is always cleared.
+    await _tokenStorage.clearAll();
+    return failure == null ? const Right(null) : Left(failure);
+  }
+
+  @override
   Future<Either<Failure, UserModel?>> getCurrentUser() async {
     try {
       final response = await _apiClient.dio.get(ApiEndpoints.me);
@@ -142,6 +171,21 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       }
       return Right(UserModel.fromJson(data));
     } on DioException catch (e) {
+      // Offline launch with stored tokens: restore the last signed-in user
+      // instead of dropping to login. The session re-validates on reconnect.
+      if (isConnectionLossError(e)) {
+        final hasRefresh = await _tokenStorage.refreshToken != null;
+        final cached = await _cachedUser();
+        if (kDebugMode) {
+          debugPrint(
+            '[auth] offline restore: hasRefresh=$hasRefresh '
+            'hasSnapshot=${cached != null}',
+          );
+        }
+        if (cached != null && hasRefresh) {
+          return Right(cached);
+        }
+      }
       return Left(mapDioExceptionToFailure(e));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -160,12 +204,30 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     return null;
   }
 
-  UserModel _saveSession(Map<String, dynamic> data) {
+  Future<UserModel> _saveSession(Map<String, dynamic> data) async {
     final auth = AuthResponseDto.fromJson(data);
-    _tokenStorage.saveTokens(
+    // Awaited: killing the app right after login must not lose the session.
+    await _tokenStorage.saveTokens(
       accessToken: auth.accessToken,
       refreshToken: auth.refreshToken,
     );
+    await _prefs?.setString(
+      AppConstants.lastUserKey,
+      jsonEncode(auth.user.toJson()),
+    );
     return auth.user;
+  }
+
+  Future<UserModel?> _cachedUser() async {
+    try {
+      final raw = _prefs?.getString(AppConstants.lastUserKey);
+      if (raw == null || raw.isEmpty) return null;
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return null;
+      final user = UserModel.fromJson(decoded);
+      return user.id.isEmpty ? null : user;
+    } catch (_) {
+      return null;
+    }
   }
 }

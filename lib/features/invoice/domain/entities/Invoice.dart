@@ -19,6 +19,9 @@ class Invoice extends Equatable {
   final double remainingAmount;
   final InvoiceStatus paymentStatus;
   final DateTime? createdAt;
+  /// Optimistic-locking cursor for payment/cancel writes.
+  /// Bumped by the backend on each gated write; defaults to 1.
+  final int version;
 
   const Invoice({
     required this.id,
@@ -36,6 +39,7 @@ class Invoice extends Equatable {
     this.remainingAmount = 0,
     this.paymentStatus = InvoiceStatus.debt,
     this.createdAt,
+    this.version = 1,
   });
 
   Invoice copyWith({
@@ -54,6 +58,7 @@ class Invoice extends Equatable {
     double? remainingAmount,
     InvoiceStatus? paymentStatus,
     DateTime? createdAt,
+    int? version,
   }) {
     return Invoice(
       id: id ?? this.id,
@@ -71,6 +76,7 @@ class Invoice extends Equatable {
       remainingAmount: remainingAmount ?? this.remainingAmount,
       paymentStatus: paymentStatus ?? this.paymentStatus,
       createdAt: createdAt ?? this.createdAt,
+      version: version ?? this.version,
     );
   }
 
@@ -91,5 +97,6 @@ class Invoice extends Equatable {
     remainingAmount,
     paymentStatus,
     createdAt,
+    version,
   ];
 }

@@ -41,10 +41,15 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   Future<void> _resend() async {
     setState(() => _isResending = true);
     final cubit = context.read<AuthCubit>();
-    await cubit.resendVerificationEmail(widget.email);
+    final result = await cubit.resendVerificationEmail(widget.email);
     if (mounted) {
       setState(() => _isResending = false);
-      AppSnackbar.success(context, AppStrings.verificationCodeResent);
+      result.fold(
+        // 429 (5 OTP attempts / 15 min) surfaces the server message:
+        // "too many attempts, request a new code".
+        (failure) => AppSnackbar.error(context, failure.message),
+        (_) => AppSnackbar.success(context, AppStrings.verificationCodeResent),
+      );
     }
   }
 

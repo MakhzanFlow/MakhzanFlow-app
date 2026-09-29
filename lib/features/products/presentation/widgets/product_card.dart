@@ -9,12 +9,15 @@ class ProductCard extends StatelessWidget {
   final Product product;
   final VoidCallback? onTap;
   final int lowStockThreshold;
+  /// Unsynced optimistic create — shows the pending badge.
+  final bool isPending;
 
   const ProductCard({
     super.key,
     required this.product,
     this.onTap,
     this.lowStockThreshold = 5,
+    this.isPending = false,
   });
 
   bool get _isLowStock => product.quantity <= lowStockThreshold && product.quantity > 0;
@@ -49,9 +52,12 @@ class ProductCard extends StatelessWidget {
             Expanded(flex: 3, child: Stack(
               children: [
                 _buildImage(isDark),
-                if (_isOutOfStock) _buildBadge(
-                  AppStrings.productOutOfStock, errorColor,
-                ),
+                if (isPending)
+                  _buildBadge(AppStrings.pendingSync, accent)
+                else if (_isOutOfStock)
+                  _buildBadge(
+                    AppStrings.productOutOfStock, errorColor,
+                  ),
                 if (_isLowStock) _buildBadge(
                   AppStrings.productLowStock, accent,
                 ),

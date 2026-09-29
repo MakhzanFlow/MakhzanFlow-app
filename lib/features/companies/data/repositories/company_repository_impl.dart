@@ -76,6 +76,11 @@ class CompanyRepositoryImpl implements CompanyRepository {
   }
 
   @override
+  Future<Either<Failure, void>> restoreCompany(String companyId) {
+    return _dataSource.restoreCompany(companyId);
+  }
+
+  @override
   Future<Either<Failure, List<CompanyMember>>> getCompanyMembers(
     String companyId,
   ) {

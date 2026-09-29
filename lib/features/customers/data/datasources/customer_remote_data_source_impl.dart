@@ -114,6 +114,10 @@ class CustomerRemoteDataSourceImpl implements CustomerRemoteDataSource {
     UpdateCustomerRequestDto dto,
     String companyId,
   ) async {
+    // Backend §1.3 rejects empty updates with 400 — short-circuit locally.
+    if (dto.toJson().isEmpty) {
+      return Left(ValidationFailure(ErrorMessages.nothingToUpdate));
+    }
     try {
       final response = await _apiClient.dio.put(
         ApiEndpoints.customerById(id),

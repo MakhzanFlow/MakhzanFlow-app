@@ -38,4 +38,5 @@ abstract class CompanyRepository {
   Future<Either<Failure, Map<String, dynamic>>> getMemberPermissions(String companyId, String userId);
   Future<Either<Failure, void>> leaveCompany();
   Future<Either<Failure, void>> deleteCompany(String companyId);
+  Future<Either<Failure, void>> restoreCompany(String companyId);
 }

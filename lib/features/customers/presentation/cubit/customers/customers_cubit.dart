@@ -1,5 +1,10 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:makhzanflow/core/sync/enqueue_guard.dart';
+import 'package:makhzanflow/core/sync/pending_op.dart';
+import 'package:makhzanflow/core/sync/pending_ops_queue.dart';
+import '../../../data/models/pending_entity_mapper.dart';
+import '../../../domain/entities/customer.dart';
 import '../../../domain/usecases/get_customer_filter_counts_usecase.dart';
 import '../../../domain/usecases/get_customers_usecase.dart';
 import 'customers_state.dart';
@@ -11,15 +16,18 @@ const int _pageSize = 20;
 class CustomersCubit extends Cubit<CustomersState> {
   final GetCustomersUseCase _getCustomersUseCase;
   final GetCustomerFilterCountsUseCase _getCustomerFilterCountsUseCase;
+  final PendingOpsQueue? _pendingOpsQueue;
   Timer? _debounce;
   int _currentPage = 0;
 
   CustomersCubit({
     required GetCustomersUseCase getCustomersUseCase,
     required GetCustomerFilterCountsUseCase getCustomerFilterCountsUseCase,
-  }) : _getCustomersUseCase = getCustomersUseCase,
-       _getCustomerFilterCountsUseCase = getCustomerFilterCountsUseCase,
-       super(const CustomersState());
+    PendingOpsQueue? pendingOpsQueue,
+  })  : _getCustomersUseCase = getCustomersUseCase,
+        _getCustomerFilterCountsUseCase = getCustomerFilterCountsUseCase,
+        _pendingOpsQueue = pendingOpsQueue,
+        super(const CustomersState());
 
   Future<void> loadCustomers(String companyId) async {
     _currentPage = 0;
@@ -35,9 +43,22 @@ class CustomersCubit extends Cubit<CustomersState> {
       query: state.query.isNotEmpty ? state.query : null,
       companyId: companyId,
     );
+    final pending = await _pendingCreates();
 
     customerResult.fold(
       (failure) {
+        // Offline with queued creates: show the optimistic rows instead of
+        // an error (the offline banner marks them stale).
+        if (shouldEnqueueFailure(failure) && pending.isNotEmpty) {
+          emit(state.copyWith(
+            status: CustomersStatus.success,
+            customers: pending,
+            totalCount: pending.length,
+            hasMore: false,
+            pendingIds: pending.map((c) => c.id).toSet(),
+          ));
+          return;
+        }
         emit(state.copyWith(status: CustomersStatus.error, failure: failure));
       },
       (customersList) {
@@ -50,13 +71,14 @@ class CustomersCubit extends Cubit<CustomersState> {
           (filterCounts) {
             emit(
               state.copyWith(
-                status: customersList.isEmpty
+                status: customersList.isEmpty && pending.isEmpty
                     ? CustomersStatus.empty
                     : CustomersStatus.success,
-                customers: customersList,
+                customers: [...pending, ...customersList],
                 totalCount: filterCounts.totalCount,
                 filterCounts: filterCounts,
                 totalDebtSum: filterCounts.totalDebtSum,
+                pendingIds: pending.map((c) => c.id).toSet(),
               ),
             );
           },
@@ -108,6 +130,19 @@ class CustomersCubit extends Cubit<CustomersState> {
 
   Future<void> refresh(String companyId) async {
     await loadCustomers(companyId);
+  }
+
+  /// Optimistic entities for queued `customerCreate` ops (newest first).
+  Future<List<Customer>> _pendingCreates() async {
+    final queue = _pendingOpsQueue;
+    if (queue == null) return const [];
+    final ops = await queue.pending();
+    return ops
+        .where((op) => op.opType == PendingOpType.customerCreate)
+        .map(customerFromQueueOp)
+        .toList()
+        .reversed
+        .toList();
   }
 
   @override

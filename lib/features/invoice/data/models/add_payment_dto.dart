@@ -1,5 +1,5 @@
 /// DTO aligned with POST /invoices/:id/payments validation schema (addPaymentSchema).
-/// REST format: { amount, method, reference_number, notes }
+/// REST format: { amount, method, reference_number, notes, version? }
 /// invoiceId is kept for routing (path param) but NOT serialized into body.
 class AddPaymentDto {
   final String invoiceId;
@@ -7,6 +7,8 @@ class AddPaymentDto {
   final String method; // cash | card | bank_transfer | other
   final String? referenceNumber;
   final String? notes;
+  /// Invoice version from the last GET — gates the payment write.
+  final int? version;
 
   const AddPaymentDto({
     required this.invoiceId,
@@ -14,6 +16,7 @@ class AddPaymentDto {
     this.method = 'cash',
     this.referenceNumber,
     this.notes,
+    this.version,
   });
 
   /// Body payload only — invoiceId is used as URL param in data source.
@@ -23,6 +26,7 @@ class AddPaymentDto {
       'method': method,
       if (referenceNumber != null) 'reference_number': referenceNumber,
       if (notes != null) 'notes': notes,
+      if (version != null) 'version': version,
     };
   }
 
@@ -33,6 +37,7 @@ class AddPaymentDto {
       method: json['method'] as String? ?? 'cash',
       referenceNumber: json['reference_number'] as String?,
       notes: json['notes'] as String?,
+      version: (json['version'] as num?)?.toInt(),
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:makhzanflow/core/company/company_cubit.dart';
+import 'package:makhzanflow/core/constants/app_constants.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
 import 'package:makhzanflow/core/storage/file_upload_service.dart';
 import 'package:makhzanflow/features/companies/domain/usecases/create_company_full_usecase.dart';
@@ -57,6 +58,8 @@ class CreateCompanyCubit extends Cubit<CreateCompanyState> {
   Future<void> pickImageFromGallery() async {
     final file = await _picker.pickImage(
       source: ImageSource.gallery,
+      maxWidth: 1024,
+      maxHeight: 1024,
       imageQuality: 80,
     );
     if (file != null) {
@@ -67,6 +70,8 @@ class CreateCompanyCubit extends Cubit<CreateCompanyState> {
   Future<void> pickImageFromCamera() async {
     final file = await _picker.pickImage(
       source: ImageSource.camera,
+      maxWidth: 1024,
+      maxHeight: 1024,
       imageQuality: 80,
     );
     if (file != null) {
@@ -99,7 +104,10 @@ class CreateCompanyCubit extends Cubit<CreateCompanyState> {
 
     String? logoUrl;
     if (state.imagePath != null) {
-      final uploadResult = await _fileUploadService.toDataUri(state.imagePath!);
+      final uploadResult = await _fileUploadService.toDataUri(
+        state.imagePath!,
+        maxBytes: AppConstants.maxLogoSizeBytes,
+      );
       final shouldAbort = uploadResult.fold(
         (failure) {
           emit(state.copyWith(

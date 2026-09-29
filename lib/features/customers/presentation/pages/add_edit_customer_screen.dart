@@ -130,8 +130,11 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen>
                     label: AppStrings.customerNameLabel,
                     hintText: AppStrings.customerNameHint,
                     iconData: Icons.store_outlined,
+                    serverError: state.fieldErrors['name'],
                     validator: (value) {
-                      if (value == null || value.trim().isEmpty) return AppStrings.customerNameRequired;
+                      if (state.fieldErrors['name'] != null) return state.fieldErrors['name'];
+                      // Required on create only; optional on edit (backend §1.4).
+                      if (!_isEditMode && (value == null || value.trim().isEmpty)) return AppStrings.customerNameRequired;
                       return null;
                     },
                     onChanged: (value) => _cubit.updateName(value),
@@ -142,6 +145,7 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen>
                     label: AppStrings.customerOfficialNameLabel,
                     hintText: AppStrings.customerOfficialNameHint,
                     iconData: Icons.person_outline,
+                    serverError: state.fieldErrors['name_official'],
                     onChanged: (value) => _cubit.updateNameOfficial(value),
                   ),
                   const SizedBox(height: MFTokens.sp16),
@@ -151,6 +155,7 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen>
                     hintText: AppStrings.customerPhoneHint,
                     iconData: Icons.phone_outlined,
                     keyboardType: TextInputType.phone,
+                    serverError: state.fieldErrors['phone'],
                     onChanged: (value) => _cubit.updatePhone(value),
                   ),
                   const SizedBox(height: MFTokens.sp16),
@@ -159,6 +164,7 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen>
                     label: AppStrings.customerAddressLabel,
                     hintText: AppStrings.customerAddressHint,
                     iconData: Icons.location_on_outlined,
+                    serverError: state.fieldErrors['address'],
                     onChanged: (value) => _cubit.updateAddress(value),
                   ),
                   const SizedBox(height: MFTokens.sp16),

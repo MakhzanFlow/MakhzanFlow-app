@@ -139,8 +139,11 @@ class _ProductsScreenState extends State<ProductsScreen>
                           final product = state.products[index];
                           return ProductCard(
                             product: product,
+                            isPending:
+                                state.pendingIds.contains(product.id),
                             onTap: () => context.push(
                               AppRoutes.productDetailsPath(product.id),
+                              extra: product,
                             ),
                           );
                         }, childCount: state.products.length),
@@ -172,7 +175,14 @@ class _ProductsScreenState extends State<ProductsScreen>
             borderRadius: BorderRadius.circular(32),
           ),
           backgroundColor: accent,
-          onPressed: () => context.push(AppRoutes.productNew),
+            onPressed: () async {
+              final created = await context.push<bool>(AppRoutes.productNew);
+              if (created == true && context.mounted) {
+                context.read<ProductsCubit>().refresh(
+                      companyId: companyId,
+                    );
+              }
+            },
           child: const Icon(Icons.add, color: Colors.white),
         ),
       ),

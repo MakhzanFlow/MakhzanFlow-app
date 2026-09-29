@@ -4,9 +4,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:makhzanflow/core/company/company_cubit.dart';
 import 'package:makhzanflow/core/company/company_state.dart';
+import 'package:makhzanflow/core/constants/app_routes.dart';
 import 'package:makhzanflow/core/constants/app_strings.dart';
+import 'package:makhzanflow/core/di/service_locator.dart';
+import 'package:makhzanflow/core/sync/sync_cubit.dart';
+import 'package:makhzanflow/core/sync/sync_state.dart';
 import 'package:makhzanflow/core/theme/app_locale_cubit.dart';
 import 'package:makhzanflow/core/theme/mf_tokens.dart';
+import 'package:makhzanflow/core/widgets/app_snackbar.dart';
+import 'package:makhzanflow/shared/widgets/offline_banner.dart';
 import 'package:makhzanflow/features/shell/presentation/cubit/app_shell_state.dart';
 import '../cubit/app_shell_cubit.dart';
 import '../widgets/makhzanflow_bottom_nav.dart';
@@ -27,13 +33,23 @@ class _AppShellState extends State<AppShell> {
   DateTime? _lastBackPress;
 
   @override
+  void initState() {
+    super.initState();
+    if (sl.isRegistered<SyncCubit>()) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.read<SyncCubit>().refreshCounts();
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
     final currentIndex = widget.navigationShell.currentIndex;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark ? MFTokens.backgroundDark : MFTokens.backgroundLight;
 
-    return PopScope(
+    final content = PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
@@ -127,6 +143,38 @@ class _AppShellState extends State<AppShell> {
         ),
       ),
     );
+
+    if (!sl.isRegistered<SyncCubit>()) return OfflineBanner(child: content);
+    return OfflineBanner(
+      child: BlocListener<SyncCubit, SyncState>(
+        listenWhen: (_, current) => current is SyncDone,
+        listener: _onSyncDone,
+        child: content,
+      ),
+    );
+  }
+
+  void _onSyncDone(BuildContext context, SyncState state) {
+    final done = state as SyncDone;
+    final hasWork =
+        done.synced + done.conflicts + done.failed > 0 || done.paused;
+    if (!hasWork) return;
+    final parts = <String>[];
+    if (done.synced > 0) parts.add(AppStrings.syncedCount(done.synced));
+    if (done.conflicts > 0) {
+      parts.add('${AppStrings.syncNeedsReview} (${done.conflicts})');
+    }
+    if (done.failed > 0) parts.add(AppStrings.syncFailedCount(done.failed));
+    if (done.conflicts > 0) {
+      AppSnackbar.successWithAction(
+        context,
+        parts.join(' • '),
+        actionLabel: AppStrings.needsReviewTitle,
+        onAction: () => context.push(AppRoutes.syncReview),
+      );
+    } else {
+      AppSnackbar.success(context, parts.join(' • '));
+    }
   }
 
   void _syncRoute(BuildContext context, String location, int index) {

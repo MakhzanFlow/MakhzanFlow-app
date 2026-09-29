@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/theme/mf_tokens.dart';
-import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_strings.dart';
 
 class ProductFormFields extends StatefulWidget {
@@ -134,20 +133,6 @@ class _ProductFormFieldsState extends State<ProductFormFields> {
           onChanged: widget.onBarcodeChanged,
         ),
         const SizedBox(height: MFTokens.sp16),
-        _buildField(
-          label: AppStrings.productSkuLabel,
-          hint: AppStrings.productSkuHint,
-          controller: _skuController,
-          onChanged: widget.onSkuChanged,
-        ),
-        SizedBox(height: AppSizes.spacingMedium),
-        _buildField(
-          label: AppStrings.productBarcodeLabel,
-          hint: AppStrings.productBarcodeHint,
-          controller: _barcodeController,
-          onChanged: widget.onBarcodeChanged,
-        ),
-        SizedBox(height: AppSizes.spacingMedium),
         _buildField(
           label: AppStrings.productPriceLabel,
           hint: AppStrings.productPriceHint,

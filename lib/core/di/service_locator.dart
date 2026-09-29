@@ -2,6 +2,15 @@ import 'package:get_it/get_it.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:makhzanflow/core/theme/app_locale_cubit.dart';
+import 'package:makhzanflow/core/activity/activity_log_data_source.dart';
+import 'package:makhzanflow/core/sync/connectivity_monitor.dart';
+import 'package:makhzanflow/core/api/offline_cache_interceptor.dart';
+import 'package:makhzanflow/core/sync/create_image_uploader.dart';
+import 'package:makhzanflow/core/sync/pending_ops_queue.dart';
+import 'package:makhzanflow/features/customers/domain/services/customer_create_image_uploader.dart';
+import 'package:makhzanflow/features/products/domain/services/product_create_image_uploader.dart';
+import 'package:makhzanflow/core/sync/sync_cubit.dart';
+import 'package:makhzanflow/core/sync/sync_service.dart';
 import 'package:makhzanflow/core/api/api_client.dart';
 import 'package:makhzanflow/core/storage/file_upload_service.dart';
 import 'package:makhzanflow/core/storage/token_storage.dart';
@@ -37,6 +46,7 @@ import 'package:makhzanflow/features/companies/domain/usecases/demote_owner_to_m
 import 'package:makhzanflow/features/companies/domain/usecases/get_member_permissions_usecase.dart';
 import 'package:makhzanflow/features/companies/domain/usecases/leave_company_usecase.dart';
 import 'package:makhzanflow/features/companies/domain/usecases/delete_company_usecase.dart';
+import 'package:makhzanflow/features/companies/domain/usecases/restore_company_usecase.dart';
 import 'package:makhzanflow/features/companies/presentation/cubit/join_company_cubit.dart';
 import 'package:makhzanflow/features/companies/presentation/cubit/company_members_cubit.dart';
 import 'package:makhzanflow/features/companies/presentation/cubit/company_settings_cubit.dart';
@@ -50,6 +60,7 @@ import '../../features/auth/domain/usecases/sign_in_usecase.dart';
 import '../../features/auth/domain/usecases/sign_in_with_google_usecase.dart';
 import '../../features/auth/domain/usecases/sign_up_usecase.dart';
 import '../../features/auth/domain/usecases/sign_out_usecase.dart';
+import '../../features/auth/domain/usecases/sign_out_everywhere_usecase.dart';
 import '../../features/auth/domain/usecases/verify_email_usecase.dart';
 import '../../features/auth/domain/usecases/resend_verification_email_usecase.dart';
 import '../../features/auth/presentation/cubit/auth_cubit.dart';
@@ -104,6 +115,12 @@ import '../../features/dashboard/domain/repositories/dashboard_repository.dart';
 import '../../features/dashboard/domain/usecases/get_dashboard_stats_usecase.dart';
 import '../../features/dashboard/domain/usecases/get_dashboard_sales_usecase.dart';
 import '../../features/dashboard/presentation/cubit/dashboard_cubit.dart';
+import '../../features/payments/data/datasources/payment_remote_data_source.dart';
+import '../../features/payments/data/datasources/payment_remote_data_source_impl.dart';
+import '../../features/payments/data/repositories/payment_repository_impl.dart';
+import '../../features/payments/domain/repositories/payment_repository.dart';
+import '../../features/payments/domain/usecases/get_payments_usecase.dart';
+import '../../features/payments/presentation/cubit/payments_cubit.dart';
 
 final sl = GetIt.instance;
 
@@ -120,13 +137,25 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
   if (sp != null) {
     sl.registerLazySingleton<SharedPreferences>(() => sp!);
     sl.registerLazySingleton<AppLocaleCubit>(() => AppLocaleCubit(prefs: sp));
+    // Offline mutation queue (SharedPreferences JSON FIFO). Cubits take it as
+    // an optional dep and skip enqueue when absent (tests / no-prefs platforms).
+    sl.registerLazySingleton<PendingOpsQueue>(
+      () => PendingOpsQueue(prefs: sp!),
+    );
+    // Stale-while-offline GET cache (company-scoped keys).
+    sl.registerLazySingleton<SharedPrefsGetCache>(
+      () => SharedPrefsGetCache(prefs: sp!),
+    );
   } else {
     sl.registerLazySingleton<AppLocaleCubit>(() => AppLocaleCubit());
   }
   // Core: Token storage + API client + file upload
   sl.registerLazySingleton<TokenStorage>(() => TokenStorage());
   sl.registerLazySingleton<ApiClient>(
-    () => ApiClient(tokenStorage: sl<TokenStorage>()),
+    () => ApiClient(
+      tokenStorage: sl<TokenStorage>(),
+      getCache: _optional<SharedPrefsGetCache>(),
+    ),
   );
   sl.registerLazySingleton<FileUploadService>(
     () => FileUploadService(apiClient: sl<ApiClient>()),
@@ -137,6 +166,7 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
     () => AuthRemoteDataSourceImpl(
       apiClient: sl<ApiClient>(),
       tokenStorage: sl<TokenStorage>(),
+      prefs: _optional<SharedPreferences>(),
     ),
   );
 
@@ -158,6 +188,9 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
   sl.registerLazySingleton<SignOutUseCase>(
     () => SignOutUseCase(sl<AuthRepository>()),
   );
+  sl.registerLazySingleton<SignOutEverywhereUseCase>(
+    () => SignOutEverywhereUseCase(sl<AuthRepository>()),
+  );
   sl.registerLazySingleton<VerifyEmailUseCase>(
     () => VerifyEmailUseCase(sl<AuthRepository>()),
   );
@@ -178,6 +211,7 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
       signInWithGoogleUseCase: sl<SignInWithGoogleUseCase>(),
       signUpUseCase: sl<SignUpUseCase>(),
       signOutUseCase: sl<SignOutUseCase>(),
+      signOutEverywhereUseCase: sl<SignOutEverywhereUseCase>(),
       getCurrentUserUseCase: sl<GetCurrentUserUseCase>(),
       authStateChangesUseCase: sl<AuthStateChangesUseCase>(),
       verifyEmailUseCase: sl<VerifyEmailUseCase>(),
@@ -224,7 +258,10 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
 
   // Products: Cubits
   sl.registerFactory<ProductsCubit>(
-    () => ProductsCubit(getProductsUseCase: sl<GetProductsUseCase>()),
+    () => ProductsCubit(
+      getProductsUseCase: sl<GetProductsUseCase>(),
+      pendingOpsQueue: _optional<PendingOpsQueue>(),
+    ),
   );
 
   sl.registerFactory<AddEditProductCubit>(
@@ -233,6 +270,7 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
       uploadImageUseCase: sl<UploadProductImageUseCase>(),
       getProductUseCase: sl<GetProductUseCase>(),
       updateProductUseCase: sl<UpdateProductUseCase>(),
+      pendingOpsQueue: _optional<PendingOpsQueue>(),
     ),
   );
 
@@ -242,6 +280,7 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
       deleteProductUseCase: sl<DeleteProductUseCase>(),
       updateQuantityUseCase: sl<UpdateProductQuantityUseCase>(),
       getMovementsUseCase: sl<GetInventoryMovementsUseCase>(),
+      pendingOpsQueue: _optional<PendingOpsQueue>(),
     ),
   );
 
@@ -280,6 +319,7 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
     () => CustomersCubit(
       getCustomersUseCase: sl<GetCustomersUseCase>(),
       getCustomerFilterCountsUseCase: sl<GetCustomerFilterCountsUseCase>(),
+      pendingOpsQueue: _optional<PendingOpsQueue>(),
     ),
   );
 
@@ -289,6 +329,7 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
       uploadImageUseCase: sl<UploadCustomerImageUseCase>(),
       getCustomerUseCase: sl<GetCustomerUseCase>(),
       updateCustomerUseCase: sl<UpdateCustomerUseCase>(),
+      pendingOpsQueue: _optional<PendingOpsQueue>(),
     ),
   );
 
@@ -450,6 +491,9 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
   sl.registerLazySingleton<DeleteCompanyUseCase>(
     () => DeleteCompanyUseCase(sl<CompanyRepository>()),
   );
+  sl.registerLazySingleton<RestoreCompanyUseCase>(
+    () => RestoreCompanyUseCase(sl<CompanyRepository>()),
+  );
 
   // Join Company Cubit — must be a factory so each screen visit gets a fresh
   // instance; a singleton gets closed on screen dispose and crashes on re-entry.
@@ -485,6 +529,7 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
       regenerateCompanyJoinCodeUseCase: sl<RegenerateCompanyJoinCodeUseCase>(),
       leaveCompanyUseCase: sl<LeaveCompanyUseCase>(),
       deleteCompanyUseCase: sl<DeleteCompanyUseCase>(),
+      restoreCompanyUseCase: sl<RestoreCompanyUseCase>(),
       fileUploadService: sl<FileUploadService>(),
     ),
   );
@@ -492,11 +537,17 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
   // Permission Service
   sl.registerLazySingleton<PermissionService>(() => PermissionServiceImpl());
 
+  // Activity audit trail (GET /api/activity-logs/:entity/:entityId)
+  sl.registerLazySingleton<ActivityLogDataSource>(
+    () => ActivityLogDataSource(apiClient: sl<ApiClient>()),
+  );
+
   // Company Cubit
   sl.registerLazySingleton<CompanyCubit>(
     () => CompanyCubit(
       getUserCompaniesUseCase: sl<GetUserCompaniesUseCase>(),
       secureStorage: const FlutterSecureStorage(),
+      prefs: _optional<SharedPreferences>(),
     ),
   );
 
@@ -525,4 +576,53 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
       getDashboardSalesUseCase: sl<GetDashboardSalesUseCase>(),
     ),
   );
+
+  // Payments: Data source → repository → use case → cubit
+  sl.registerLazySingleton<PaymentRemoteDataSource>(
+    () => PaymentRemoteDataSourceImpl(apiClient: sl<ApiClient>()),
+  );
+  sl.registerLazySingleton<PaymentRepository>(
+    () => PaymentRepositoryImpl(sl<PaymentRemoteDataSource>()),
+  );
+  sl.registerLazySingleton<GetPaymentsUseCase>(
+    () => GetPaymentsUseCase(sl<PaymentRepository>()),
+  );
+  sl.registerFactory<PaymentsCubit>(
+    () => PaymentsCubit(getPaymentsUseCase: sl<GetPaymentsUseCase>()),
+  );
+
+  // Offline sync engine (prefs-backed queue required; otherwise skipped and
+  // cubits degrade to online-only behavior via _optional<PendingOpsQueue>()).
+  sl.registerLazySingleton<ConnectivityMonitor>(
+    () => ConnectivityPlusMonitor(),
+  );
+  if (sl.isRegistered<PendingOpsQueue>()) {
+    sl.registerLazySingleton<SyncService>(
+      () => SyncService(
+        queue: sl<PendingOpsQueue>(),
+        dio: sl<ApiClient>().dio,
+        monitor: sl<ConnectivityMonitor>(),
+        imageUploaders: [
+          ProductCreateImageUploader(
+            upload: sl<UploadProductImageUseCase>(),
+          ),
+          CustomerCreateImageUploader(
+            upload: sl<UploadCustomerImageUseCase>(),
+          ),
+        ],
+      ),
+    );
+    sl.registerFactory<SyncCubit>(
+      () => SyncCubit(
+        queue: sl<PendingOpsQueue>(),
+        service: sl<SyncService>(),
+      ),
+    );
+    // Connectivity events flow service → cubit (single wiring point).
+    sl<SyncService>().onSyncRequested = () => sl<SyncCubit>().syncNow();
+  }
 }
+
+/// Resolves [T] when registered (e.g. prefs-backed services absent in tests),
+/// otherwise null so dependents can degrade gracefully instead of crashing.
+T? _optional<T extends Object>() => sl.isRegistered<T>() ? sl<T>() : null;
