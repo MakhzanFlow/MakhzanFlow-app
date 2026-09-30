@@ -4,7 +4,7 @@ run-name: Android Play Store release ${{ github.ref_name }}
 on:
   push:
     tags:
-      - 'v*.*.*+*'
+      - 'v*'
 
 jobs:
   deploy:
@@ -70,6 +70,12 @@ jobs:
         run: |
           mkdir -p android/fastlane/secrets
           echo "${{ secrets.PLAY_STORE_JSON_KEY_BASE64 }}" | base64 --decode > android/fastlane/secrets/play-store-key.json
+
+      - name: Create .env file
+        run: |
+          cat > .env << 'EOF'
+          ${{ secrets.ENV_FILE }}
+          EOF
 
       # ── 4. Build & Deploy ─────────────────────────────────────────────
       - name: Build App Bundle
