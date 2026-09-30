@@ -52,6 +52,8 @@ supabase v2
 # Keystore and signing properties (sensitive — do not commit)
 android/key.properties
 android/app/upload-keystore.jks
+**/fastlane/secrets/
+*play-store*.json
 .agents
 .specify
 specs

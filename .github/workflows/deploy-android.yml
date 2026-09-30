@@ -1,0 +1,84 @@
+name: Deploy to Play Store
+run-name: Android Play Store release ${{ github.ref_name }}
+
+on:
+  push:
+    tags:
+      - 'v*.*.*+*'
+
+jobs:
+  deploy:
+    name: Build & Deploy to Play Store
+    runs-on: ubuntu-latest
+    steps:
+      # ── 1. Setup Tools ────────────────────────────────────────────────
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+          cache: "gradle"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          cache: true
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          working-directory: android
+
+      # ── 2. Install Dependencies ───────────────────────────────────────
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Install Fastlane dependencies
+        run: bundle install
+        working-directory: android
+
+      # ── 3. Prepare Signing, Versioning & Play Store Key ───────────────
+      - name: Parse version from tag
+        run: |
+          TAG=${GITHUB_REF#refs/tags/v}
+          VERSION_NAME=${TAG%+*}
+          BUILD_NUMBER=${TAG#*+}
+          echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
+          echo "Version name: $VERSION_NAME"
+          echo "Build number: $BUILD_NUMBER"
+
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
+
+      - name: Create key.properties
+        run: |
+          cat > android/key.properties << 'EOF'
+          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
+          storeFile=../app/upload-keystore.jks
+          EOF
+
+      - name: Decode Play Store JSON key
+        run: |
+          mkdir -p android/fastlane/secrets
+          echo "${{ secrets.PLAY_STORE_JSON_KEY_BASE64 }}" | base64 --decode > android/fastlane/secrets/play-store-key.json
+
+      # ── 4. Build & Deploy ─────────────────────────────────────────────
+      - name: Build App Bundle
+        run: |
+          flutter build appbundle \
+            --release \
+            --build-name="$VERSION_NAME" \
+            --build-number="$BUILD_NUMBER"
+
+      - name: Deploy to Play Store
+        run: bundle exec fastlane deploy
+        working-directory: android
