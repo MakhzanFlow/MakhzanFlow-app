@@ -2,7 +2,7 @@
 
 > 🧪 **Want to test the app?**
 > 1. Join first: [`githubtesters@googlegroups.com`](https://groups.google.com/g/githubtesters)
-> 2. Then download as tester: https://play.google.com/apps/testing/com.makhzan.flow
+> 2. Then download as tester: https://play.google.com/store/apps/details?id=com.makhzan.flow
 
 Arabic-first warehouse and supermarket distribution management mobile
 application built with Flutter and Supabase.
