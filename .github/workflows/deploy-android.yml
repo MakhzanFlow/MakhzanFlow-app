@@ -66,6 +66,19 @@ jobs:
             echo "storeFile=../app/upload-keystore.jks"
           } > android/key.properties
 
+      - name: Verify keystore (diagnostic)
+        run: |
+          echo "=== key.properties content ==="
+          cat android/key.properties
+          echo "=== Keystore file size ==="
+          wc -c android/app/upload-keystore.jks
+          echo "=== Verify keystore password ==="
+          keytool -list -keystore android/app/upload-keystore.jks \
+            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+            -alias "${{ secrets.KEY_ALIAS }}" \
+            && echo "✅ Keystore password OK" \
+            || echo "❌ Keystore password WRONG"
+
       - name: Decode Play Store JSON key
         run: |
           mkdir -p android/fastlane/secrets
